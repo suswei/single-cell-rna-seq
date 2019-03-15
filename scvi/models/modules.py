@@ -7,6 +7,7 @@ from torch.distributions import Normal
 
 from scvi.models.utils import one_hot
 
+import torch.nn.functional as F
 
 class FCLayers(nn.Module):
     r"""A helper class to build fully-connected layers for a neural network.
@@ -232,3 +233,17 @@ class Decoder(nn.Module):
         p_m = self.mean_decoder(p)
         p_v = torch.exp(self.var_decoder(p))
         return p_m, p_v
+
+
+class MINE_Net(nn.Module):
+
+    def __init__(self):
+        super(MINE_Net, self).__init__()
+        self.fc1 = nn.Linear(13166, 10)
+        self.fc2 = nn.Linear(10, 10)
+        self.fc3 = nn.Linear(10, 1)
+
+    def forward(self, x, y):
+        h1 = F.relu(self.fc1(x)+self.fc2(y))
+        h2 = self.fc3(h1)
+        return h2
