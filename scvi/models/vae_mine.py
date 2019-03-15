@@ -194,8 +194,10 @@ class VAE_mine(nn.Module):
         z_shuffle = np.random.permutation(z.detach().numpy())
         z_shuffle = Variable(torch.from_numpy(z_shuffle).type(torch.FloatTensor), requires_grad=True)
         minenet = MINE_Net()
-        pred_xz = minenet(x, z)
-        pred_x_z = minenet(x, z_shuffle)
+        pred_xz = minenet(batch_index, z)
+        pred_x_z = minenet(batch_index, z_shuffle)
+
+        #TODO: have another MINE net for library depth
 
         return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z
 

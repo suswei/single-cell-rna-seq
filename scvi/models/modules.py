@@ -237,9 +237,10 @@ class Decoder(nn.Module):
 
 class MINE_Net(nn.Module):
 
+    # TODO: make input nodes custom
     def __init__(self):
         super(MINE_Net, self).__init__()
-        self.fc1 = nn.Linear(13166, 10)
+        self.fc1 = nn.Linear(1, 10)
         self.fc2 = nn.Linear(10, 10)
         self.fc3 = nn.Linear(10, 1)
 
