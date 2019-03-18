@@ -20,7 +20,7 @@ torch.backends.cudnn.benchmark = True
 
 
 # VAE model
-class VAE_mine(nn.Module):
+class VAE_MINE(nn.Module):
     r"""Variational auto-encoder model.
 
     :param n_input: Number of input genes
@@ -193,6 +193,7 @@ class VAE_mine(nn.Module):
         # calculate MINE, code from MasanoriYamada/Mine_pytorch
         z_shuffle = np.random.permutation(z.detach().numpy())
         z_shuffle = Variable(torch.from_numpy(z_shuffle).type(torch.FloatTensor), requires_grad=True)
+        batch_index = Variable(batch_index.type(torch.FloatTensor), requires_grad=True)
         minenet = MINE_Net()
         pred_xz = minenet(batch_index, z)
         pred_x_z = minenet(batch_index, z_shuffle)
