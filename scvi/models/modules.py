@@ -237,7 +237,7 @@ class Decoder(nn.Module):
 
 class MINE_Net(nn.Module):
 
-    # TODO: make input nodes custom
+    # TODO: make input nodes custom, think more about designing this architecture
     def __init__(self):
         super(MINE_Net, self).__init__()
         self.fc1 = nn.Linear(1, 10)

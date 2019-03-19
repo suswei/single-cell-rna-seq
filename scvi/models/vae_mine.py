@@ -231,4 +231,5 @@ class VAE_MINE(nn.Module):
         # calculate MINE loss, expression for V(\theta) in Algorithm 1 MINE
         mine_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
 
+        # TODO: should return kl_divergence_z and mine_loss separately, in current state same penalty term is applied to them
         return reconst_loss + kl_divergence_l, kl_divergence_z + mine_loss
