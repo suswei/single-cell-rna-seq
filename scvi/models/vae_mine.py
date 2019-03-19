@@ -225,12 +225,10 @@ class VAE_MINE(nn.Module):
 
         kl_divergence_z = kl(Normal(qz_m, torch.sqrt(qz_v)), Normal(mean, scale)).sum(dim=1)
         kl_divergence_l = kl(Normal(ql_m, torch.sqrt(ql_v)), Normal(local_l_mean, torch.sqrt(local_l_var))).sum(dim=1)
-        kl_divergence = kl_divergence_z
 
         reconst_loss = self._reconstruction_loss(x, px_rate, px_r, px_dropout)
 
-        # calculate MINE loss
-        ret = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
-        mine_loss = - ret  # maximize
+        # calculate MINE loss, expression for V(\theta) in Algorithm 1 MINE
+        mine_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
 
-        return reconst_loss + kl_divergence_l, kl_divergence + mine_loss
+        return reconst_loss + kl_divergence_l, kl_divergence_z + mine_loss
