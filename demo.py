@@ -73,13 +73,14 @@ for key,dataset in datasets_dict.items():
     lr=0.0005
     use_batches=True
     use_cuda=False
-    train_size = 0.9
+    train_size = 0.2
 
     # different models
+
     vae_mine = VAE_MINE(dataset.nb_genes, n_batch=dataset.n_batches * use_batches)
     # TODO: sweep over kl penalty parameter
     # trainer_vae_mine = UnsupervisedTrainer(vae_mine, dataset, train_size=train_size, use_cuda=use_cuda, frequency=5, kl=100 )
-    trainer_vae_mine = UnsupervisedTrainer(vae_mine, dataset, train_size=train_size, use_cuda=use_cuda, frequency=5)
+    trainer_vae_mine = UnsupervisedTrainer(vae_mine, dataset, train_size=train_size, use_cuda=use_cuda, frequency=5, kl=1)
     trainer_vae_mine.train(n_epochs=n_epochs, lr=lr)
 
     vae = VAE(dataset.nb_genes, n_batch=dataset.n_batches * use_batches)
@@ -88,9 +89,15 @@ for key,dataset in datasets_dict.items():
 
     # visualize results
     n_samples_tsne = 1000
-    trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='tsne_SCVI+MINE_{}'.format(key))
+
+    trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='trainset_tsne_SCVI+MINE_{}'.format(key))
     plt.show()
-    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='tsne_SCVI_{}'.format(key))
+    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='trainset_tsne_SCVI_{}'.format(key))
+    plt.show()
+
+    trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='testset_tsne_SCVI+MINE_{}'.format(key))
+    plt.show()
+    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='testset_tsne_SCVI_{}'.format(key))
     plt.show()
 
     # TODO: figure out which of these should be high if batch effect is removed successfully, presumably some of these are about clustering the cell types correctly
@@ -102,19 +109,29 @@ for key,dataset in datasets_dict.items():
     # entropy_batch_mixing():
     #   entropy batch mixing (be, higher is better)
 
-    results = np.empty((0, 5), int)
-
-    print('scVI')
+    train_results = np.empty((0, 5), int)
+    print('scVI: train set')
     asw, nmi, ari, uca = trainer_vae.train_set.clustering_scores()
     be = trainer_vae.train_set.entropy_batch_mixing()
-    results = np.append(results, np.array([[asw, nmi, ari, uca, be]]), axis=0)
-
-    print('scVI+MINE')
+    train_results = np.append(train_results, np.array([[asw, nmi, ari, uca, be]]), axis=0)
+    print('scVI+MINE: train set')
     asw, nmi, ari, uca = trainer_vae_mine.train_set.clustering_scores()
     be = trainer_vae_mine.train_set.entropy_batch_mixing()
-    results = np.append(results, np.array([[asw, nmi, ari, uca, be]]), axis=0)
-
+    train_results = np.append(train_results, np.array([[asw, nmi, ari, uca, be]]), axis=0)
     alg = ["scVI", "scVI+MINE"]
+    barplot_list(train_results, alg, 'Clustering metrics train set {}'.format(key), save='trainset_clustering_metrics_{}'.format(key))
+    plt.show()
 
-    barplot_list(results, alg, 'Clustering metrics {}'.format(key), save = 'clustering_metrics_{}'.format(key))
+
+    test_results = np.empty((0, 5), int)
+    print('scVI: test set')
+    asw, nmi, ari, uca = trainer_vae.test_set.clustering_scores()
+    be = trainer_vae.test_set.entropy_batch_mixing()
+    test_results = np.append(test_results, np.array([[asw, nmi, ari, uca, be]]), axis=0)
+    print('scVI+MINE: test set')
+    asw, nmi, ari, uca = trainer_vae_mine.test_set.clustering_scores()
+    be = trainer_vae_mine.test_set.entropy_batch_mixing()
+    test_results = np.append(test_results, np.array([[asw, nmi, ari, uca, be]]), axis=0)
+    alg = ["scVI", "scVI+MINE"]
+    barplot_list(test_results, alg, 'Clustering metrics test set{}'.format(key), save='testset_clustering_metrics_{}'.format(key))
     plt.show()

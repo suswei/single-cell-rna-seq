@@ -43,6 +43,7 @@ class UnsupervisedTrainer(Trainer):
     def loss(self, tensors):
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
         reconst_loss, kl_divergence = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
+        print('penalty:{}'.format(kl_divergence))
         loss = torch.mean(reconst_loss + self.kl_weight * kl_divergence)
         return loss
 

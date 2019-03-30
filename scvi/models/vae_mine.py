@@ -225,11 +225,15 @@ class VAE_MINE(nn.Module):
 
         kl_divergence_z = kl(Normal(qz_m, torch.sqrt(qz_v)), Normal(mean, scale)).sum(dim=1)
         kl_divergence_l = kl(Normal(ql_m, torch.sqrt(ql_v)), Normal(local_l_mean, torch.sqrt(local_l_var))).sum(dim=1)
+        print('kl_divergence_z: {}'.format(kl_divergence_z.mean()))
+        print('kl_divergence_l: {}'.format(kl_divergence_l.mean()))
 
         reconst_loss = self._reconstruction_loss(x, px_rate, px_r, px_dropout)
+        print('reconst_loss: {}'.format(reconst_loss.mean()))
 
         # calculate MINE loss, expression for V(\theta) in Algorithm 1 MINE
         mine_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+        print('mine loss: {}'.format(mine_loss))
 
         # TODO: should return kl_divergence_z and mine_loss separately, in current state same penalty term is applied to them
-        return reconst_loss + kl_divergence_l, kl_divergence_z + mine_loss
+        return reconst_loss + kl_divergence_l + kl_divergence_z, mine_loss
