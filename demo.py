@@ -100,14 +100,13 @@ for key,dataset in datasets_dict.items():
     trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='testset_tsne_SCVI_{}'.format(key))
     plt.show()
 
-    # TODO: figure out which of these should be high if batch effect is removed successfully, presumably some of these are about clustering the cell types correctly
-    # clustering_scores():
+    # clustering_scores() -- these metrics measure clustering performance
     #   silhouette width (asw, higher is better),
     #   normalised mutual information (nmi, higher is better),
     #   adjusted rand index (ari, higher is better),
     #   unsupervised clustering accuracy (uca)
-    # entropy_batch_mixing():
-    #   entropy batch mixing (be, higher is better)
+    # entropy_batch_mixing() -- this metric measures batch effect
+    #   entropy batch mixing (be, higher is better meaning less batch effect)
 
     train_results = np.empty((0, 5), int)
     print('scVI: train set')
