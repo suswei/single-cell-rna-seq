@@ -236,15 +236,18 @@ class Decoder(nn.Module):
 
 
 class MINE_Net(nn.Module):
+    """
+    Takes two inputs nuisance and z, implements T_\theta(nuisance,z) \in \mathbb R function in MINE paper
+    Typically applied with nuisance representing either batch or library size and z representing latent code
+    """
 
-    # TODO: make input nodes custom, think more about designing this architecture
-    def __init__(self):
+    def __init__(self,n_input_nuisance,n_input_z,n_hidden_z,n_layers_z):
         super(MINE_Net, self).__init__()
-        self.fc1 = nn.Linear(1, 10)
-        self.fc2 = nn.Linear(10, 10)
-        self.fc3 = nn.Linear(10, 1)
+        self.nn_nuisance = nn.Linear(n_input_nuisance, 1)
+        self.nn_z = FCLayers(n_in=n_input_z, n_out=1,
+                                n_layers=n_layers_z,
+                                n_hidden=n_hidden_z, dropout_rate=0)
 
-    def forward(self, x, y):
-        h1 = F.relu(self.fc1(x)+self.fc2(y))
-        h2 = self.fc3(h1)
-        return h2
+    def forward(self, nuisance, z):
+        h = F.relu(self.nn_nuisance(nuisance)+self.nn_z(z))
+        return h

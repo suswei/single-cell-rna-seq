@@ -43,6 +43,8 @@ class VAE_MINE(nn.Module):
         * ``'nb'`` - Negative binomial distribution
         * ``'zinb'`` - Zero-inflated negative binomial distribution
 
+    :param n_hidden_z, n_layers_z: MINE network parameter for latent code
+
     Examples:
         >>> gene_dataset = CortexDataset()
         >>> vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * False,
@@ -53,7 +55,8 @@ class VAE_MINE(nn.Module):
     def __init__(self, n_input: int, n_batch: int = 0, n_labels: int = 0,
                  n_hidden: int = 128, n_latent: int = 10, n_layers: int = 1,
                  dropout_rate: float = 0.1, dispersion: str = "gene",
-                 log_variational: bool = True, reconstruction_loss: str = "zinb"):
+                 log_variational: bool = True, reconstruction_loss: str = "zinb",
+                 n_hidden_z: int = 5, n_layers_z: int = 10):
         super().__init__()
         self.dispersion = dispersion
         self.n_latent = n_latent
@@ -63,6 +66,9 @@ class VAE_MINE(nn.Module):
         self.n_batch = n_batch
         self.n_labels = n_labels
         self.n_latent_layers = 1  # not sure what this is for, no usages?
+
+        self.n_hidden_z = n_hidden_z
+        self.n_layers_z = n_layers_z
 
         if self.dispersion == "gene":
             self.px_r = torch.nn.Parameter(torch.randn(n_input, ))
@@ -194,7 +200,9 @@ class VAE_MINE(nn.Module):
         z_shuffle = np.random.permutation(z.detach().numpy())
         z_shuffle = Variable(torch.from_numpy(z_shuffle).type(torch.FloatTensor), requires_grad=True)
         batch_index = Variable(batch_index.type(torch.FloatTensor), requires_grad=True)
-        minenet = MINE_Net()
+        n_input_nuisance = batch_index.shape[1]
+        n_input_z = z.shape[1]
+        minenet = MINE_Net(n_input_nuisance,n_input_z,self.n_hidden_z,self.n_layers_z)
         pred_xz = minenet(batch_index, z)
         pred_x_z = minenet(batch_index, z_shuffle)
 

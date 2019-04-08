@@ -57,13 +57,15 @@ def barplot_list(data, alg, title, save=None, interest=0, prog=False, figsize=No
 
 
 retina_dataset = RetinaDataset()
-# TODO: why won't pbmc load?
+# TODO: HUI: why won't pbmc load?
 # pbmc_dataset = PbmcDataset()
-# TODO: weird error with calling clustering_scores on hemato trained vae
+# TODO: HUI: weird error with calling clustering_scores on hemato trained vae
 # hemato_dataset = HematoDataset()
 
 
 datasets_dict = {'retina': retina_dataset}
+# TODO: HUI: make sure the code below runs with pbmc and hemato. also are there other built-in datasets we can use?
+# datasets_dict = {'retina': retina_dataset, 'pbmc': pmbc_dataset, 'hemato': hemato_dataset}
 
 for key,dataset in datasets_dict.items():
 
