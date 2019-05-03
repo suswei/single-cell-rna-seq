@@ -56,7 +56,7 @@ class VAE_MINE(nn.Module):
                  n_hidden: int = 128, n_latent: int = 10, n_layers: int = 1,
                  dropout_rate: float = 0.1, dispersion: str = "gene",
                  log_variational: bool = True, reconstruction_loss: str = "zinb",
-                 n_hidden_z: int = 5, n_layers_z: int = 10):
+                 n_hidden_z: int = 5, n_layers_z: int = 10, MineLoss_Scale: int=1):
         super().__init__()
         self.dispersion = dispersion
         self.n_latent = n_latent
@@ -69,6 +69,7 @@ class VAE_MINE(nn.Module):
 
         self.n_hidden_z = n_hidden_z
         self.n_layers_z = n_layers_z
+        self.MineLoss_Scale = MineLoss_Scale
 
         if self.dispersion == "gene":
             self.px_r = torch.nn.Parameter(torch.randn(n_input, ))
@@ -242,6 +243,7 @@ class VAE_MINE(nn.Module):
         # calculate MINE loss, expression for V(\theta) in Algorithm 1 MINE
         mine_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
         print('mine loss: {}'.format(mine_loss))
+        print('scaled mine loss: {}'.format(self.MineLoss_Scale*mine_loss))
 
         # TODO: should return kl_divergence_z and mine_loss separately, in current state same penalty term is applied to them
-        return reconst_loss + kl_divergence_l + kl_divergence_z, mine_loss
+        return reconst_loss + kl_divergence_l + kl_divergence_z, self.MineLoss_Scale*mine_loss

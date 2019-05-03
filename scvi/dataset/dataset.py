@@ -128,7 +128,7 @@ class GeneExpressionDataset(Dataset):
             self.gene_names = self.gene_names[subset_genes]
         if hasattr(self, 'gene_symbols'):
             self.gene_symbols = self.gene_symbols[subset_genes]
-        self._X = self.X[:, subset_genes]
+        #self._X = self.X[:, subset_genes]
         if self.norm_X is not None:
             self.norm_X = self.norm_X[:, subset_genes]
         self.nb_genes = self.X.shape[1]
