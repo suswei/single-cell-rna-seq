@@ -4,6 +4,10 @@ show_plot = True
 
 
 import os
+os.getcwd()
+if not os.path.exists('./data/2019-04-11'):
+    os.makedirs('./data/2019-04-11')
+
 import numpy as np
 import pandas as pd
 from sklearn.manifold import TSNE
@@ -12,9 +16,6 @@ from scvi.dataset import *
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
 import torch
-
-
-
 
 def barplot_list(data, alg, title, save=None, interest=0, prog=False, figsize=None):
     ind = np.arange(len(alg))  # the x locations for the groups
@@ -56,16 +57,27 @@ def barplot_list(data, alg, title, save=None, interest=0, prog=False, figsize=No
         plt.savefig(save)
 
 
-retina_dataset = RetinaDataset()
-# TODO: HUI: why won't pbmc load?
-# pbmc_dataset = PbmcDataset()
-# TODO: HUI: weird error with calling clustering_scores on hemato trained vae
+retina_dataset = RetinaDataset(save_path=save_path)
+# TODO: HUI: why won't pbmc load? : delete line 131 in dataset.py because self._X has already been subsetted.
+pbmc_dataset = PbmcDataset(save_path=save_path)
+# TODO: HUI: weird error with calling clustering_scores on hemato trained vae :
+#            The error also happens when use the original SCVI, the error is ValueError: n_samples=3614 should be >= n_clusters=3979
+#            The reason for the error is that there is something wrong with the 'labels' and 'n_labels' attributes for the hemato_dataset
 # hemato_dataset = HematoDataset()
 
 
-datasets_dict = {'retina': retina_dataset}
+#datasets_dict = {'retina': retina_dataset}
+datasets_dict = {'retina': retina_dataset, 'pbmc': pbmc_dataset}
 # TODO: HUI: make sure the code below runs with pbmc and hemato. also are there other built-in datasets we can use?
-# datasets_dict = {'retina': retina_dataset, 'pbmc': pmbc_dataset, 'hemato': hemato_dataset}
+#            smfish_dataset: 4462 cells, 33 genes, 1 batch, 6 cell types
+#            brain_large_dataset: 1303182 cells, 720 genes, 1 batch, 1 cell type
+#            cortex_dataset: 3005 cells, 558 genes, 1 batch, 7 cell types
+#            pbmc_dataset: 11990 cells, 3346 genes, 2 batches, 9 cell types
+#            retina_dataset: 19829 cells, 13166 genes, 2 batches, 15 cell types
+#            hemato_dataset: 4016 cells, 7397 genes, 1 batch, 3979 cell types, I think hemato dataset can not be used.
+#            cbmc_dataset: 8617 cells, 20400 genes, 1 batch, 1 cell type
+#            brain_small_dataset: 9128 cells, 27998 genes, 1 batch, 10 cell typess
+
 
 for key,dataset in datasets_dict.items():
 
@@ -92,14 +104,14 @@ for key,dataset in datasets_dict.items():
     # visualize results
     n_samples_tsne = 1000
 
-    trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='trainset_tsne_SCVI+MINE_{}'.format(key))
+    trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='.\\result\\2019-04-11\\trainset_tsne_SCVI+MINE_{}'.format(key))
     plt.show()
-    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='trainset_tsne_SCVI_{}'.format(key))
+    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='.\\result\\2019-04-11\\trainset_tsne_SCVI_{}'.format(key))
     plt.show()
 
-    trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='testset_tsne_SCVI+MINE_{}'.format(key))
+    trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='.\\result\\2019-04-11\\testset_tsne_SCVI+MINE_{}'.format(key))
     plt.show()
-    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='testset_tsne_SCVI_{}'.format(key))
+    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='.\\result\\2019-04-11\\testset_tsne_SCVI_{}'.format(key))
     plt.show()
 
     # clustering_scores() -- these metrics measure clustering performance
@@ -120,7 +132,7 @@ for key,dataset in datasets_dict.items():
     be = trainer_vae_mine.train_set.entropy_batch_mixing()
     train_results = np.append(train_results, np.array([[asw, nmi, ari, uca, be]]), axis=0)
     alg = ["scVI", "scVI+MINE"]
-    barplot_list(train_results, alg, 'Clustering metrics train set {}'.format(key), save='trainset_clustering_metrics_{}'.format(key))
+    barplot_list(train_results, alg, 'Clustering metrics train set {}'.format(key), save='.\\result\\2019-04-11\\trainset_clustering_metrics_{}'.format(key))
     plt.show()
 
 
@@ -134,5 +146,5 @@ for key,dataset in datasets_dict.items():
     be = trainer_vae_mine.test_set.entropy_batch_mixing()
     test_results = np.append(test_results, np.array([[asw, nmi, ari, uca, be]]), axis=0)
     alg = ["scVI", "scVI+MINE"]
-    barplot_list(test_results, alg, 'Clustering metrics test set{}'.format(key), save='testset_clustering_metrics_{}'.format(key))
+    barplot_list(test_results, alg, 'Clustering metrics test set{}'.format(key), save='.\\result\\2019-04-11\\testset_clustering_metrics_{}'.format(key))
     plt.show()
