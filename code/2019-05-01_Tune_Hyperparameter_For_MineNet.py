@@ -3,7 +3,10 @@ n_epochs_all = None
 show_plot = True
 
 import os
-os.chdir(r'D:\UMelb\PhD_Projects\Project1_Modify_SCVI')
+os.getcwd()
+if not os.path.exists('./data/2019-05-06'):
+    os.makedirs('./data/2019-05-06')
+
 save_path = 'data/2019-05-06/'
 
 import numpy as np

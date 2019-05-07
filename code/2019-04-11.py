@@ -14,7 +14,9 @@ This is a temporary script file.
 
 import os
 os.getcwd()
-os.chdir(r'D:\UMelb\PhD_Projects\Project1_Modify_SCVI')
+if not os.path.exists('./data/2019-04-11'):
+    os.makedirs('./data/2019-04-11')
+
 save_path = 'data/2019-04-11/'
 
 from scvi.dataset import *
