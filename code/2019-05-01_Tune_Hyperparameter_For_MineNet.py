@@ -2,11 +2,9 @@
 n_epochs_all = None
 show_plot = True
 
-
-
 import os
 os.chdir(r'D:\UMelb\PhD_Projects\Project1_Modify_SCVI')
-save_path = 'data/2019-05-01/'
+save_path = 'data/2019-05-06/'
 
 import numpy as np
 import pandas as pd
@@ -16,9 +14,6 @@ from scvi.dataset import *
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
 import torch
-
-
-
 
 def barplot_list(data, alg, title, save=None, interest=0, prog=False, figsize=None):
     ind = np.arange(len(alg))  # the x locations for the groups
