@@ -4,10 +4,10 @@ show_plot = True
 
 import os
 os.getcwd()
-if not os.path.exists('./data/2019-05-06'):
-    os.makedirs('./data/2019-05-06')
+if not os.path.exists('./data/2019-05-01'):
+    os.makedirs('./data/2019-05-01')
 
-save_path = 'data/2019-05-06/'
+save_path = 'data/2019-05-01/'
 
 import numpy as np
 import pandas as pd
