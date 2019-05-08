@@ -5,11 +5,15 @@
 # The name of the job:
 SBATCH --job-name="2019-05-08_Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo"
 
-SBATCH --ntasks=1
-SBATCH --cpus-per-task=20
+SBATCH --nodes=2
+SBATCH --ntasks=2
+SBATCH --cpus-per-task=12
 
 # The maximum running time of the job in days-hours:mins:sec
 SBATCH --time=1-8:0:00
+
+# Load required modules
+module load Python/3.7.1-GCC-6.2.0
 
 # Batch arrays
 SBATCH --array=0-99
