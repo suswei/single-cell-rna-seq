@@ -6,13 +6,13 @@
 SBATCH --job-name="2019-05-08_Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo"
 
 SBATCH --ntasks=1
-SBATCH --cpus-per-task=8
+SBATCH --cpus-per-task=20
 
 # The maximum running time of the job in days-hours:mins:sec
-SBATCH --time=0-6:0:00
+SBATCH --time=1-6:0:00
 
 # Batch arrays
-SBATCH --array=0-31
+SBATCH --array=0-19
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)

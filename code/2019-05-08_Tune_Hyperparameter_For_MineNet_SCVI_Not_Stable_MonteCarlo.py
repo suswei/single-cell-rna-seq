@@ -1,3 +1,9 @@
+#SCVI or SCVI+MINE runs very slow on the Pbmc dataset, when the train_size=0.6,
+#for the monte carlo(B=100), if all the 20 hyperparameter combinations in the
+# 2019-05-01_Tune_Hyperparameter_For_MineNet.py file are run, 12 days will be needed
+#for 21 cups to finish the whole task. Therefore only one combination (n_latent_z: 30, n_layers_z:3,
+# MineLoss_Scale: 1000) is chosen to compare with original SCVI for Monte Carlo to see whether
+#SCVI+Mine does work better than SCVI
 import os
 if not os.path.exists('./data/2019-05-08'):
     os.makedirs('./data/2019-05-08')
@@ -17,11 +23,62 @@ from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
 import torch
 
+def barplot_list(data, alg, title, save=None, interest=0, prog=False, figsize=None):
+    ind = np.arange(len(alg))  # the x locations for the groups
+    width = 0.25  # the width of the bars
+    if figsize is None:
+        fig = plt.figure()
+
+    else:
+        fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111)
+
+    if len(data[0]) == 3:
+        width = 0.25  # the width of the bars
+
+    else:
+        width = 0.15
+
+    rects = []
+    color = ["r", "g", "y", "b", "purple"]
+    if prog:
+        color = ['darkred', "red", "tomato", "salmon"]
+    for i in range(len(data[0])):
+        rects.append(ax.barh(ind + i * width, data[:, i], width, color=color[i]))
+
+    anchor_param = (0.8, 0.8)
+    leg_rec = [x[0] for x in rects]
+    leg_lab = ('ASW', 'NMI', 'ARI', "UCA", "BE")
+    if prog:
+        leg_lab = ["2", "3", "4", "7"]
+    ax.legend(leg_rec, leg_lab[:len(data[0])])
+
+    # add some text for labels, title and axes ticks
+    ax.set_xlabel(title)
+    ax.set_yticks(ind + width)
+    ax.set_yticklabels(alg)
+    plt.tight_layout()
+
+    if save is not None:
+        plt.savefig(save)
+
 def main(taskid):
     """
     :param taskid: has to be an integer between 0 and len(dataloader_experiments)*len(debiasingsweep_experiments)-1
     :return:
     """
+    n_epochs_all = None
+    show_plot = True
+
+    n_hidden_z_array = np.asarray([30])
+    n_layers_z_array = np.asarray([3])
+    MineLoss_Scale_array = np.asarray([1000])
+    n_hidden_z_Mesh, n_layers_z_Mesh, MineLoss_Scale_Mesh = np.meshgrid(n_hidden_z_array, n_layers_z_array,
+                                                                        MineLoss_Scale_array)
+    pbmc_dataset = PbmcDataset(save_path=save_path)
+
+    datasets_dict = {'pbmc': pbmc_dataset}
+
     dataloader_config = {
             'dataset_id': ['F_P1'],
             'desired_batch_size_training': [None],
@@ -81,57 +138,8 @@ def main(taskid):
 
 
 
-n_epochs_all = None
-show_plot = True
 
 
-def barplot_list(data, alg, title, save=None, interest=0, prog=False, figsize=None):
-    ind = np.arange(len(alg))  # the x locations for the groups
-    width = 0.25  # the width of the bars
-    if figsize is None:
-        fig = plt.figure()
-
-    else:
-        fig = plt.figure(figsize=figsize)
-    ax = fig.add_subplot(111)
-
-    if len(data[0]) == 3:
-        width = 0.25  # the width of the bars
-
-    else:
-        width = 0.15
-
-    rects = []
-    color = ["r", "g", "y", "b", "purple"]
-    if prog:
-        color = ['darkred', "red", "tomato", "salmon"]
-    for i in range(len(data[0])):
-        rects.append(ax.barh(ind + i * width, data[:, i], width, color=color[i]))
-
-    anchor_param = (0.8, 0.8)
-    leg_rec = [x[0] for x in rects]
-    leg_lab = ('ASW', 'NMI', 'ARI', "UCA", "BE")
-    if prog:
-        leg_lab = ["2", "3", "4", "7"]
-    ax.legend(leg_rec, leg_lab[:len(data[0])])
-
-    # add some text for labels, title and axes ticks
-    ax.set_xlabel(title)
-    ax.set_yticks(ind + width)
-    ax.set_yticklabels(alg)
-    plt.tight_layout()
-
-    if save is not None:
-        plt.savefig(save)
-
-n_hidden_z_array = np.asarray([10,30])#I already use the default n_hidden_z = 5 to run, and the result is not improved much. Therefore, I use bigger two bigger values, one is small, the other is big
-n_layers_z_array = np.asarray([3,10])
-MineLoss_Scale_array = np.asarray([1000,5000,10000,50000,100000])
-n_hidden_z_Mesh, n_layers_z_Mesh, MineLoss_Scale_Mesh = np.meshgrid(n_hidden_z_array, n_layers_z_array, MineLoss_Scale_array)
-
-pbmc_dataset = PbmcDataset(save_path=save_path)
-
-datasets_dict = {'pbmc': pbmc_dataset}
 
 for i in range(n_hidden_z_Mesh.shape[0]):
     for j in range(n_hidden_z_Mesh.shape[1]):
