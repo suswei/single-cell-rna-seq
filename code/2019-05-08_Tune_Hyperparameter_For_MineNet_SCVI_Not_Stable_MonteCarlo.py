@@ -8,7 +8,7 @@ import os
 import sys
 import pandas as pd
 import matplotlib.pyplot as plt
-from scvi.dataset import *
+from scvi.dataset import PbmcDataset
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
 import torch
