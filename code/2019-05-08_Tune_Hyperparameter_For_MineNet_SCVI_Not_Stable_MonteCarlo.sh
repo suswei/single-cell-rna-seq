@@ -9,7 +9,7 @@
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-type=BEGIN
 #SBATCH --mail-type=END
-#SBATCH --mail-user=hui.li3@student.unimelb.edu.au
+#SBATCH --mail-user=hui.li3@student.unimelb.edu.au::
 
 # Load required modules
 module load Python/3.7.1-GCC-6.2.0
