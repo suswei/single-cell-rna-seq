@@ -6,6 +6,7 @@
 #SCVI+Mine does work better than SCVI
 import os
 import sys
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scvi.dataset import *
@@ -62,7 +63,7 @@ def main(taskid):
     plt.ylim(1150, 1600)
     plt.title("Blue for training error and orange for testing error")
 
-    fig1_path = '.\\result\\2019-05-08\\2019-05-08_training_testing_error_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc',taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
+    fig1_path = '.\\result\\2019-05-08\\2019-05-08_training_testing_error_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc',taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
     fig.savefig(fig1_path)
     plt.close(fig)
 
@@ -78,7 +79,7 @@ def main(taskid):
         torch.save(trainer_vae.model.state_dict(), vae_file_path)
 
     ll_train_set = trainer_vae.history["ll_train_set"]
-    ll_test_set = trainer_vaee.history["ll_test_set"]
+    ll_test_set = trainer_vae.history["ll_test_set"]
     x = np.linspace(0, 500, (len(ll_train_set)))
 
     fig = plt.figure(figsize=(14, 7))
@@ -87,7 +88,7 @@ def main(taskid):
     plt.ylim(1150, 1600)
     plt.title("Blue for training error and orange for testing error")
 
-    fig2_path = '.\\result\\2019-05-08\\2019-05-08_training_testing_error_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
+    fig2_path = '.\\result\\2019-05-08\\2019-05-08_training_testing_error_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
     fig.savefig(fig2_path)
     plt.close(fig)
 
