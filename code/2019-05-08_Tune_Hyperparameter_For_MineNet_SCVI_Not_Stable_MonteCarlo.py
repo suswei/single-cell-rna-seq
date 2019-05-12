@@ -52,6 +52,20 @@ def main(taskid):
         trainer_vae_mine.train(n_epochs=n_epochs, lr=lr)
         torch.save(trainer_vae_mine.model.state_dict(), vae_mine_file_path)
 
+    ll_train_set = trainer_vae_mine.history["ll_train_set"]
+    ll_test_set = trainer_vae_mine.history["ll_test_set"]
+    x = np.linspace(0, 500, (len(ll_train_set)))
+
+    fig = plt.figure(figsize=(14, 7))
+    plt.plot(x, ll_train_set)
+    plt.plot(x, ll_test_set)
+    plt.ylim(1150, 1600)
+    plt.title("Blue for training error and orange for testing error")
+
+    fig1_path = '.\\result\\2019-05-08\\2019-05-08_training_testing_error_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc',taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
+    fig.savefig(fig1_path)
+    plt.close(fig)
+
     vae = VAE(pbmc_dataset.nb_genes, n_batch=pbmc_dataset.n_batches * use_batches)
     trainer_vae = UnsupervisedTrainer(vae, pbmc_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5)
     vae_file_path = '%s\\Pbmc_Sample%s_Hidden%s_layers%s_MineLossScale%s_Vae.pk1'%(save_path, taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
@@ -63,6 +77,19 @@ def main(taskid):
         trainer_vae.train(n_epochs=n_epochs, lr=lr)
         torch.save(trainer_vae.model.state_dict(), vae_file_path)
 
+    ll_train_set = trainer_vae.history["ll_train_set"]
+    ll_test_set = trainer_vaee.history["ll_test_set"]
+    x = np.linspace(0, 500, (len(ll_train_set)))
+
+    fig = plt.figure(figsize=(14, 7))
+    plt.plot(x, ll_train_set)
+    plt.plot(x, ll_test_set)
+    plt.ylim(1150, 1600)
+    plt.title("Blue for training error and orange for testing error")
+
+    fig2_path = '.\\result\\2019-05-08\\2019-05-08_training_testing_error_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
+    fig.savefig(fig2_path)
+    plt.close(fig)
 
     n_samples_tsne = 1000
 
