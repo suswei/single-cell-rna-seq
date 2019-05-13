@@ -13,6 +13,7 @@
 
 # Load required modules
 module load Python/3.7.1-GCC-6.2.0
+module load web_proxy
 
 # check that the script is launched with sbatch
 if [ "x$SLURM_JOB_ID" == "x" ]; then
