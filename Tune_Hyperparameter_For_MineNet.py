@@ -13,7 +13,7 @@
 #     name: python3
 # ---
 
-# # 1. Overview  oooo
+# # 1. Overview
 #   
 # ## 1.1 Goal
 # Try to find the best hyperparameters for the neural network of mutual information between latent vector z and batch vector s.   
