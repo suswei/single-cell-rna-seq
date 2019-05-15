@@ -28,11 +28,12 @@ class UnsupervisedTrainer(Trainer):
     """
     default_metrics_to_monitor = ['ll']
 
-    def __init__(self, model, gene_dataset, train_size=0.8, test_size=None, kl=None, **kwargs):
+    def __init__(self, model, gene_dataset, train_size=0.8, test_size=None, kl=None, seed=0, **kwargs):
         super().__init__(model, gene_dataset, **kwargs)
         self.kl = kl
+        self.seed = seed
         if type(self) is UnsupervisedTrainer:
-            self.train_set, self.test_set = self.train_test(model, gene_dataset, train_size, test_size)
+            self.train_set, self.test_set = self.train_test(model, gene_dataset, train_size, test_size, seed=self.seed)
             self.train_set.to_monitor = ['ll']
             self.test_set.to_monitor = ['ll']
 
