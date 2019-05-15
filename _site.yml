@@ -1,6 +1,0 @@
-name: "single_cell_rna_seq"
-navbar:
-  title: "single_cell_rna_seq"
-  left:
-    - text: "Home"
-      href: index.html

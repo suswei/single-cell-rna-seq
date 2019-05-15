@@ -1,10 +1,10 @@
 ---
 jupyter:
   jupytext:
-    formats: ipynb,Rmd
+    formats: ipynb,md
     text_representation:
-      extension: .Rmd
-      format_name: rmarkdown
+      extension: .md
+      format_name: markdown
       format_version: '1.1'
       jupytext_version: 1.1.1
   kernelspec:
@@ -12,9 +12,7 @@ jupyter:
     language: python
     name: python3
 ---
----
-title: "single-cell-rna-seq"
----
+
 # 1. Overview
   
 ## 1.1 Goal
@@ -49,9 +47,9 @@ because n_latent_z=30, n_layers_z=3 seems produce most typical result after revi
 
 ## 4.1 Clustering metric results
 
-```{python slideshow={'slide_type': '-'}}
+```python slideshow={"slide_type": "-"}
 import os
-# %matplotlib inline
+%matplotlib inline
 
 file_paths = []
 subfile_titles = []
@@ -65,7 +63,7 @@ exec(open('D:\\UMelb\\PhD_Projects\\Project1_Modify_SCVI\\code\\SummarizeResult.
 SummarizeResult('image',file_paths,subfile_titles,'Fig1: Clustering metrics of train set between scVI and scVI+MINE')
 ```
 
-```{python slideshow={'slide_type': '-'}}
+```python slideshow={"slide_type": "-"}
 file_paths = []
 subfile_titles = []
 
@@ -91,7 +89,7 @@ Now that scVI is not stable, scVI+MINE is also not stable, it is not safe to say
 ## 4.2 Batch and Cell Labels result of train set between scVI and scVI+MINE
 For each row, left is scVI, right is scVI+MINE.
 
-```{python}
+```python
 file_paths = []
 subfile_titles = []
 
@@ -109,7 +107,7 @@ SummarizeResult('image',file_paths,subfile_titles,'Fig3: Trainset tsne plot')
 ## 4.3 Batch and Cell Labels result of test set between scVI and scVI+MINE 
 For each row, left is scVI, right is scVI+MINE.
 
-```{python}
+```python
 file_paths = []
 subfile_titles = []
 
@@ -153,6 +151,6 @@ Because SCVI is not stable even when the sample of Pbmc_dataset fed into the neu
 ## 5.3
 Find real data set with obvious batch effect. Because the pbmc dataset used now do not have obvious batch effect. The dataset  ,harmonizing datasets with different composition of cell types,used in the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1) could be a resource. And another thing is to simulate data set with obvious batch effect from ZINB model.
 
-```{python}
+```python
 
 ```
