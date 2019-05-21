@@ -4,10 +4,13 @@ show_plot = True
 
 import os
 os.getcwd()
-if not os.path.exists('./data/2019-05-01'):
-    os.makedirs('./data/2019-05-01')
+if not os.path.exists('data/Tune_Hyperparameter_For_Minenet/2019-05-01'):
+    os.makedirs('data/Tune_Hyperparameter_For_Minenet/2019-05-01')
+if not os.path.exists('result/Tune_Hyperparameter_For_Minenet/2019-05-01'):
+    os.makedirs('result/Tune_Hyperparameter_For_Minenet/2019-05-01')
 
-save_path = 'data/2019-05-01/'
+
+save_path = 'data/Tune_Hyperparameter_For_Minenet/2019-05-01/'
 
 import numpy as np
 import pandas as pd
@@ -96,14 +99,14 @@ for i in range(n_hidden_z_Mesh.shape[0]):
                     # visualize results
                     n_samples_tsne = 1000
 
-                    trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='.\\result\\2019-05-01\\trainset_tsne_SCVI+MINE_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
+                    trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='./result/Tune_Hyperparameter_For_Minenet/2019-05-01/trainset_tsne_SCVI+MINE_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
                     plt.show()
-                    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='.\\result\\2019-05-01\\trainset_tsne_SCVI_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
+                    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='./result/Tune_Hyperparameter_For_Minenet/2019-05-01/trainset_tsne_SCVI_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
                     plt.show()
 
-                    trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='.\\result\\2019-05-01\\testset_tsne_SCVI+MINE_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
+                    trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='./result/Tune_Hyperparameter_For_Minenet/2019-05-01/testset_tsne_SCVI+MINE_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
                     plt.show()
-                    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='.\\result\\2019-05-01\\testset_tsne_SCVI_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
+                    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='./result/Tune_Hyperparameter_For_Minenet/2019-05-01/testset_tsne_SCVI_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
                     plt.show()
 
                     # clustering_scores() -- these metrics measure clustering performance
@@ -124,7 +127,7 @@ for i in range(n_hidden_z_Mesh.shape[0]):
                     be = trainer_vae_mine.train_set.entropy_batch_mixing()
                     train_results = np.append(train_results, np.array([[asw, nmi, ari, uca, be]]), axis=0)
                     alg = ["scVI", "scVI+MINE"]
-                    barplot_list(train_results, alg, 'Clustering metrics train set {}'.format(key), save='.\\result\\2019-05-01\\trainset_clustering_metrics_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
+                    barplot_list(train_results, alg, 'Clustering metrics train set {}'.format(key), save='./result/Tune_Hyperparameter_For_Minenet/2019-05-01/trainset_clustering_metrics_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
                     plt.show()
 
 
@@ -138,5 +141,5 @@ for i in range(n_hidden_z_Mesh.shape[0]):
                     be = trainer_vae_mine.test_set.entropy_batch_mixing()
                     test_results = np.append(test_results, np.array([[asw, nmi, ari, uca, be]]), axis=0)
                     alg = ["scVI", "scVI+MINE"]
-                    barplot_list(test_results, alg, 'Clustering metrics test set{}'.format(key), save='.\\result\\2019-05-01\\testset_clustering_metrics_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
+                    barplot_list(test_results, alg, 'Clustering metrics test set{}'.format(key), save='./result/Tune_Hyperparameter_For_Minenet/2019-05-01/testset_clustering_metrics_{}_Hidden{}_layers{}_MineLossScale{}'.format(key,n_hidden_z,n_layers_z,MineLoss_Scale))
                     plt.show()

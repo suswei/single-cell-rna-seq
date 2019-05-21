@@ -16,12 +16,12 @@ import torch
 
 
 def main(taskid):
-    if not os.path.exists('data\\2019-05-08'):
-        os.makedirs('data\\2019-05-08')
-    if not os.path.exists('result\\2019-05-08'):
-        os.makedirs('result\\2019-05-08')
+    if not os.path.exists('data/Tune_Hyperparameter_For_Minenet/2019-05-08'):
+        os.makedirs('data/Tune_Hyperparameter_For_Minenet/2019-05-08')
+    if not os.path.exists('result/Tune_Hyperparameter_For_Minenet/2019-05-08'):
+        os.makedirs('result/Tune_Hyperparameter_For_Minenet/2019-05-08')
 
-    save_path = 'data\\2019-05-08\\'
+    save_path = 'data/Tune_Hyperparameter_For_Minenet/2019-05-08'
     n_hidden_z = 30
     n_layers_z = 3
     MineLoss_Scale = 1000
@@ -44,7 +44,7 @@ def main(taskid):
 
     vae_mine = VAE_MINE(pbmc_dataset.nb_genes, n_batch=pbmc_dataset.n_batches * use_batches, n_hidden_z=n_hidden_z, n_layers_z=n_layers_z, MineLoss_Scale=MineLoss_Scale)
     trainer_vae_mine = UnsupervisedTrainer(vae_mine, pbmc_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda,frequency=5, kl=1)
-    vae_mine_file_path = '%s\\Pbmc_Sample%s_Hidden%s_layers%s_MineLossScale%s_VaeMine.pk1'%(save_path, taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
+    vae_mine_file_path = '%s/Pbmc_Sample%s_Hidden%s_layers%s_MineLossScale%s_VaeMine.pk1'%(save_path, taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
 
     if os.path.isfile(vae_mine_file_path):
         trainer_vae_mine.model.load_state_dict(torch.load(vae_mine_file_path))
@@ -63,13 +63,13 @@ def main(taskid):
     plt.ylim(1150, 1600)
     plt.title("Blue for training error and orange for testing error")
 
-    fig1_path = 'result\\2019-05-08\\2019-05-08_training_testing_error_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc',taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
+    fig1_path = 'result/Tune_Hyperparameter_For_Minenet/2019-05-08/training_testing_error_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc',taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
     fig.savefig(fig1_path)
     plt.close(fig)
 
     vae = VAE(pbmc_dataset.nb_genes, n_batch=pbmc_dataset.n_batches * use_batches)
     trainer_vae = UnsupervisedTrainer(vae, pbmc_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5)
-    vae_file_path = '%s\\Pbmc_Sample%s_Hidden%s_layers%s_MineLossScale%s_Vae.pk1'%(save_path, taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
+    vae_file_path = '%s/Pbmc_Sample%s_Hidden%s_layers%s_MineLossScale%s_Vae.pk1'%(save_path, taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
 
     if os.path.isfile(vae_file_path):
         trainer_vae.model.load_state_dict(torch.load(vae_file_path))
@@ -88,20 +88,20 @@ def main(taskid):
     plt.ylim(1150, 1600)
     plt.title("Blue for training error and orange for testing error")
 
-    fig2_path = 'result\\2019-05-08\\2019-05-08_training_testing_error_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
+    fig2_path = 'result/Tune_Hyperparameter_For_Minenet/2019-05-08/training_testing_error_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
     fig.savefig(fig2_path)
     plt.close(fig)
 
     n_samples_tsne = 1000
 
-    trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result\\2019-05-08\\trainset_tsne_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc',taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
+    trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-08/trainset_tsne_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc',taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
     plt.show()
-    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result\\2019-05-08\\trainset_tsne_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
+    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-08/trainset_tsne_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
     plt.show()
 
-    trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result\\2019-05-08\\testset_tsne_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
+    trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-08/testset_tsne_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
     plt.show()
-    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result\\2019-05-08\\testset_tsne_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
+    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-08/testset_tsne_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
     plt.show()
 
     # clustering_scores() -- these metrics measure clustering performance
@@ -134,7 +134,7 @@ def main(taskid):
     Label_DataFrame = pd.DataFrame(Label,columns=['Label'])
 
     clustering_metric2 = pd.concat([Label_DataFrame, clustering_metric.reset_index(drop=True)],axis=1)
-    clustering_metric2.to_csv('result\\2019-05-08\\Pbmc_Sample%s_Hidden%s_layers%s_MineLossScale%s_ClusterMetric.csv'%(taskid, n_hidden_z, n_layers_z, MineLoss_Scale), index=None, header=True)
+    clustering_metric2.to_csv('result/Tune_Hyperparameter_For_Minenet/2019-05-08/Pbmc_Sample%s_Hidden%s_layers%s_MineLossScale%s_ClusterMetric.csv'%(taskid, n_hidden_z, n_layers_z, MineLoss_Scale), index=None, header=True)
 
 
 # Run the actual program
