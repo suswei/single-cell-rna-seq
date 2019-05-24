@@ -156,7 +156,7 @@ class Trainer:
         pass
 
     def data_loaders_loop(self):  # returns an zipped iterable corresponding to loss signature
-        data_loaders_loop = [self._posteriors[name] for name in self.posteriors_loop]
+        data_loaders_loop = [self._posteriors[name] for name in self.posteriors_loop] #posteriors_loop is a list:['train_set']
         return zip(data_loaders_loop[0], *[cycle(data_loader) for data_loader in data_loaders_loop[1:]])
 
     def register_posterior(self, name, value):
