@@ -1,26 +1,9 @@
 #!/bin/bash
+for num in {1..100} ; do
+echo sbatch -p mig --job-name lihui10098777.${num} --account punim0614 --ntasks=1 --cpus-per-task=3 --mem=10000 --mail-type=END --mail-user=hui.li3@student.unimelb.edu.au --time=2-0:0:00 -e \"slurm_output/slurm-%A_%a.out\" --wrap=\"module load Python/3.7.1-GCC-6.2.0\; source venv/bin/activate\; module load web_proxy\; python Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.py $num \"
+sleep 1
 
-#SBATCH --job-name="2019-05-08_Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo"
-#SBATCH --nodes=2
-#SBATCH --ntasks=2
-#SBATCH --cpus-per-task=12
-#SBATCH --time=1-8:0:00
-#SBATCH --array=0-99
-#SBATCH --mail-type=FAIL
-#SBATCH --mail-type=BEGIN
-#SBATCH --mail-type=END
-#SBATCH --mail-user=hui.li3@student.unimelb.edu.au::
-
-# Load required modules
-module load Python/3.7.1-GCC-6.2.0
-module load web_proxy
-
-# check that the script is launched with sbatch
-if [ "x$SLURM_JOB_ID" == "x" ]; then
-   echo "You need to submit your job to the queuing system with sbatch"
-   exit 1
-fi
-
-# Run the job from the directory where it was launched (default)
-# The job command(s):
-python 2019-05-08_Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.py ${SLURM_ARRAY_TASK_ID}
+sbatch -p mig --job-name lihui10098777.${num} --account punim0614 --ntasks=1 --cpus-per-task=3 --mem=10000 --mail-type=END --mail-user=hui.li3@student.unimelb.edu.au  --time=2-0:0:00 -e "slurm_output/slurm-%A_%a.out" --wrap="module load Python/3.7.1-GCC-6.2.0; source venv/bin/activate; module load web_proxy; python Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.py $num"
+sleep 1
+done
+echo "All jobs submitted!\n"
