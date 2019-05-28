@@ -19,7 +19,7 @@ jupyter:
 <a href='#section2'><p style="margin-left: 40px"><b><font size="+1">1.1 Single Cell RNA Seq</font></b></p></a>
 <a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 Deep Learning Neural Network</font></b></p></a>
 <a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 SCVI</font></b></p></a>
-<a href='#section5'><p style="margin-left: 40px"><b><font size="+1">1.4 Problems</font></b></p></a>
+<a href='#section5'><p style="margin-left: 40px"><b><font size="+1">1.4 Mutual Information</font></b></p></a>
 <b><font size="+2">2. Have Done and Discussion</font></b>
 <a href='#section6'><p style="margin-left: 40px"><b><font size="+1">2.1 Break SCVI</font></b></p></a>
 <p style="margin-left: 40px"><b><font size="+1">2.2 Tune Hyperparameter For MineNet</font></b></p>
@@ -36,11 +36,20 @@ jupyter:
 
 <a id='section3'></a>
 
+Tensor is a generalization of matrix with one obvious difference: a tensor is a mathematical entity that lives in a structure and interacts with other mathematical entities. If one transforms the other entities in the structure in a regular way, then the tensor must obey a related transformation rule.
+Tensorflow vs Pytorch (which one is better for deep learning?)
+
 
 <a id='section4'></a>
 
 
 <a id='section5'></a>
+
+Rewrite the following, because it is copied from wikipedia:
+Mutual information (MI) of two random variables is a measure of the mutual dependence between the two variables. Let <b><i>X</i></b> be a pair of random variables with values over the space $\mathcal{X}$ X $\mathcal{Y}$. If their joint distribution is \textbf{\textit{P}}_{(\textbf{\textit{X,Y}})}} and the marginal distributions are {\displaystyle P_{X}} P_X and {\displaystyle P_{Y}} {\displaystyle P_{Y}}, the mutual information is defined as
+MI determines how similar the joint distribution of the pair <b>(<i>X,Y</i>)</b> is to the product of the marginal distributions of <b><i>X</i></b> and <b><i>Y</i></b>, and is more general than the correlation coefficient which only determines linear dependency. Mutual information contains information about all dependence—linear and nonlinear—and not just linear dependence as the correlation coefficient measures. 
+
+
 
 
 <a id='section6'></a>
@@ -191,7 +200,7 @@ regression, logistic regression etc can be also considered as a type of simple d
 
 <b><font size="3">2.2.2.1 Goal</font></b> 
 
-Compare SCVI and SCVI+MINE from 100 monte carlo samples for one hyperparameter configuration: n_latent_z:30, n_layers_z:3, MineLoss_Scale: 1000.   
+Compare SCVI and SCVI+MINE from 100 monte carlo samples for 20 hyperparameter configurations on pbmc dataset 
   
 The hyperparameters refers to: 
  - n_latent_z: number of nodes in each latent layer for the neural network of mutual information.
@@ -200,11 +209,11 @@ The hyperparameters refers to:
 
 <b><font size="3">2.2.2.3 Design</font></b>
  
- - n_latent_z: 30.
- - n_layers_z: 3.
- - MineLoss_Scale: 1000. 
+ - n_latent_z: [10, 30].
+ - n_layers_z: [3, 10].
+ - MineLoss_Scale: [1000, 5000, 10000, 50000, 100000]. 
      
-The reason to choose only one configuration among the 20 is just that computing facility is slow and limited. Before faster and more abundant computing resources are available, only one configuration is carried out for the monte carlo simulation. n_latent_z:30, n_layers_z:3, MineLoss_Scale:1000 seems to be the configuration at which SCVI+MINE works better than SCVI more obviously based on raw results in step 1 of Tune Hyperparameter For MineNet. Therefore, it is chosen for the monte carlo experiment. Each time, pbmc dataset is randomly splitted into training set and test set at 6:4 ratio. For every random training set, use both SCVI and SCVI+MINE. Repeat the process 100 times. Get the averaged clustering metrics from the 100 iterations for both SCVI and SCVI+MINE, and compare which is better based on the averaged clustering metrics.
+Each time, pbmc dataset is randomly splitted into training set and test set at 6:4 ratio. For every random training set, apply SCVI once and SCVI+MINE with the 20 different hyperparameter configurations. Repeat the process 100 times. Get the averaged clustering metrics from the 100 iterations for SCVI and SCVI+MINE with the 20 different hyperparameter configurations, and compare which is better based on the averaged clustering metrics.
 
 <b><font size="3">2.2.2.3 Get Data</font></b>
 
@@ -212,25 +221,44 @@ pbmc dataset is built-in scVI dataset. just use the function PbmcDataset() in sc
 
 <b><font size="3">2.2.2.4 Code</font></b>
 
-The code is in code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.py, and code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.sh. The .sh file is for job submission in spartan system with the command: sbatch Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.sh
+The code is code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.sh. code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.py. code/SummarizeResult.py The .sh file is for job submission in spartan system with the command: sh Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.sh.
 
 <b><font size="3">2.2.2.5 Result and Lab Meeting Discussion</font></b>
 
-The raw result is stored in ./result/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo/2019-05-08/, and the corresponding summaried result is shown here.
+The raw result is stored in ./result/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo/2019-05-26/, and the corresponding summaried result is shown here.
 
 ```python
-Average_ClusteringMetric_Barplot(dataset_name = "Pbmc", file_number = 100, n_hidden_z = 30, n_layers_z =3, MineLossScale = 1000)
+import itertools
+Average_ClusteringMetric_Barplot(dataset_name = "Pbmc",results_dict = "result/Tune_Hyperparameter_For_MineNet/2019-05-26/", n_sample = 100, hyperparameter_config = {'n_hidden_z':[10,30],'n_layers_z':[3,10],'MineLoss_Scale':[1000,5000,10000,50000,100000]})
 
+```
+
+```python
+hyperparameter_config = {
+        'n_hidden_z': [10,30],
+        'n_layers_z': [3,10],
+        'MineLoss_Scale': [1000,5000,10000,50000,100000]
+    }
+keys, values = zip(*hyperparameter_config.items())
+hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 file_paths = []
-for i,set in enumerate(['trainset','testset']):
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-08\\%s_mean_clustering_metrics_Pbmc_Hidden30_layers3_MineLossScale1000_100samples.png'%(set)]
+    
+for i in range(len(hyperparameter_experiments)):
+    key, value = zip(*hyperparameter_experiments[i].items())
+    n_hidden_z = value[0]
+    n_layers_z = value[1]
+    MineLoss_Scale = value[2]
+    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-26\\trainset_mean_clustering_metrics_Pbmc_Hidden%s_layers%s_MineLossScale%s_100samples.png'%(n_hidden_z,n_layers_z, MineLoss_Scale)]
+    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-26\\testset_mean_clustering_metrics_Pbmc_Hidden%s_layers%s_MineLossScale%s_100samples.png'%(n_hidden_z,n_layers_z, MineLoss_Scale)]
 
 SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig3: Mean Clustering metrics from 100 samples")
 ```
 
-There is not much difference for the 4 clustering metrics. One phenomenon is that the ASW is much lower than asw result in step 1 for Tune Hyperparameter For MineNet. At first, it was guessed that it is because of large standard error. However, later, after standard error is added, the large standard error explanation can be ruled out. <font color=red>But is there other explanation???</font>.
+Among the 20 hyperparameter configurations, n_hidden_z = 10, n_layers_z = 10, MineLoss_Scale = 1000 seems work best with smaller standard deviation.
 
-Although in the code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.sh file, I set the task id from 0-99 which means 100 monte carlos, however, when the final task is finished, there is running error for task id = 31, 39, 46, 47, 49, 55, 59,63,67,70,74,75. The error is that there are NaN values for penalty:tensor([nan, nan,....,nan]). This means the upper Fig3 only shows the average cluster metrics of 88 monte carlos. In order to figure out the reason for the errors, I run the main() function in the code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.py file on my own computer for taskid = [31], and taskid=[39]. However, it runs successfully without any error. Therefore, we guess it is because of the randomness from the stochastic gradient decent process which is due to the initialization of the network parameter, or the minibatch of the training process etc, and the optimization process is not finished successfully. <font color=red>Find supporting information online???</font>. 
+ASW here is no longer lower than asw result in step 1 for Tune Hyperparameter For MineNet. In the last version of the step 2 result, only one configuration was run. Among the 100 samples for that configuration, there is running error for task id = 31, 39, 46, 47, 49, 55, 59,63,67,70,74,75. However, the main() function in the code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.py file runs successfully on my own computer when I tried for taskid = [31], and taskid=[39]. At first, we guess it is because of the randomness from the stochastic gradient decent process which is due to the initialization of the network parameter, or the minibatch of the training process etc. Moreover, when I check the asw for taskid=[31] and [39] which are run on my own computer, it is much higher than the other 88 tasks run on the server. If I check the slurm*.out file for the 88 tasks, there is a warning message: DeprecationWarning: The linear_assignment function is deprecated in 0.21 and will be removed from 0.23. Use scipy.optimize.linear_sum_assignment instead. (linear_assignment is used in posterior.py) Maybe it could be the reason to produce errors for the 12 task ids not run, and lower asw for the left 88 taskids. 
+
+To  solve the problem of inconsistency of versions of packages on my own computer and on the server, I create a virtualenv in the working directory on the server and installed the required packages of the same version on my computer listed in Project1_Modify_SCVI-requirements.txt file. Everytime when a task is run, the virtualenv will be activated. Check the code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.sh file. As for how to create a virtualenv, ref to the links [virtualenv](https://docs.python-guide.org/dev/virtualenvs/), [requirements](https://pip.readthedocs.io/en/1.1/requirements.html).
 
 
 <a id='section9'></a>
@@ -238,11 +266,13 @@ Although in the code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.
 
 <b><font size="+1">3.1 Tune Hyperparameter For MineNet</font></b>
 
-The ASW for the n_latent_z=30, n_layers_z=3, MineLossScale=1000 in step 2 result for Tune Hyperparameter For MineNet is much lower than ASW in step 1 result. <font color=red>why???</font>.  Choose n_latent_z=30, n_layers_z=3, MineLossScale=1000 based on result in step 1 may be is not very reliable, and we can hardly make any conclusion from result in step 2. Therefore, we decide to run 100 monte carlos for the 20 configurations.
+Carry out the monte carlo experiment for all the 20 configurations, after that, we can think of improving the architecture of the neural network for MineNet including the activation function etc. 
 
-After the monte carlo experiment for the 20 configurations, we can think of improving the architecture of the neural network for MineNet including the activation function etc. 
+<b><font size="+1">3.2 Difference between the estimated lower bound and true mutual information</font></b>
 
-<b><font size="+1">3.2 Datasets</font></b>
+Deep neural network is used to estimate the lower bound for mutual information. But the question is whether the deep neural network can really estimate the lower bound precisly and how close is the lower bound to the true mutual information. We can minimize the mutual information by minimizing the lower bound only when the lower bound is very close to the true mutual inforamtion.
+
+<b><font size="+1">3.3 Datasets</font></b>
 
 Find real data set with obvious batch effect. Because the pbmc dataset used now do not have obvious batch effect. The dataset  ,harmonizing datasets with different composition of cell types,used in the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1) could be a resource. And another thing is to simulate data set with obvious batch effect from ZINB model.
 

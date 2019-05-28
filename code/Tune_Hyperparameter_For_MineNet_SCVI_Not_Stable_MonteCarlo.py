@@ -1,9 +1,4 @@
-#SCVI or SCVI+MINE runs very slow on the Pbmc dataset, when the train_size=0.6,
-#for the monte carlo(B=100), if all the 20 hyperparameter combinations in the
-# 2019-05-01_Tune_Hyperparameter_For_MineNet.py file are run, 12 days will be needed
-#for 21 cups to finish the whole task. Therefore only one combination (n_latent_z: 30, n_layers_z:3,
-# MineLoss_Scale: 1000) is chosen to compare with original SCVI for Monte Carlo to see whether
-#SCVI+Mine does work better than SCVI
+#Run 100 Monte Carlo Samples for 20 hyperparameter configurations
 import os
 import sys
 import numpy as np
@@ -13,18 +8,24 @@ from scvi.dataset import *
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
 import torch
+import itertools
 
 
 def main(taskid):
-    if not os.path.exists('data/Tune_Hyperparameter_For_Minenet/2019-05-08'):
-        os.makedirs('data/Tune_Hyperparameter_For_Minenet/2019-05-08')
-    if not os.path.exists('result/Tune_Hyperparameter_For_Minenet/2019-05-08'):
-        os.makedirs('result/Tune_Hyperparameter_For_Minenet/2019-05-08')
+    if not os.path.exists('data/Tune_Hyperparameter_For_Minenet/2019-05-26'):
+        os.makedirs('data/Tune_Hyperparameter_For_Minenet/2019-05-26')
+    if not os.path.exists('result/Tune_Hyperparameter_For_Minenet/2019-05-26'):
+        os.makedirs('result/Tune_Hyperparameter_For_Minenet/2019-05-26')
 
-    save_path = 'data/Tune_Hyperparameter_For_Minenet/2019-05-08'
-    n_hidden_z = 30
-    n_layers_z = 3
-    MineLoss_Scale = 1000
+    save_path = 'data/Tune_Hyperparameter_For_Minenet/2019-05-26'
+
+    hyperparameter_config = {
+        'n_hidden_z': [10,30],
+        'n_layers_z': [3,10],
+        'MineLoss_Scale': [1000,5000,10000,50000,100000]
+    }
+    keys, values = zip(*hyperparameter_config.items())
+    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     pbmc_dataset = PbmcDataset(save_path=save_path)
 
@@ -42,34 +43,58 @@ def main(taskid):
     use_cuda = False
     train_size = 0.6
 
-    vae_mine = VAE_MINE(pbmc_dataset.nb_genes, n_batch=pbmc_dataset.n_batches * use_batches, n_hidden_z=n_hidden_z, n_layers_z=n_layers_z, MineLoss_Scale=MineLoss_Scale)
-    trainer_vae_mine = UnsupervisedTrainer(vae_mine, pbmc_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda,frequency=5, kl=1)
-    vae_mine_file_path = '%s/Pbmc_Sample%s_Hidden%s_layers%s_MineLossScale%s_VaeMine.pk1'%(save_path, taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
+    n_samples_tsne = 1000
+    clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be'])
 
-    if os.path.isfile(vae_mine_file_path):
-        trainer_vae_mine.model.load_state_dict(torch.load(vae_mine_file_path))
-        trainer_vae_mine.model.eval()
-    else:
-        trainer_vae_mine.train(n_epochs=n_epochs, lr=lr)
-        torch.save(trainer_vae_mine.model.state_dict(), vae_mine_file_path)
+    for i in range(len(hyperparameter_experiments)):
+        key, value = zip(*hyperparameter_experiments[i].items())
+        n_hidden_z = value[0]
+        n_layers_z = value[1]
+        MineLoss_Scale = value[2]
 
-    ll_train_set = trainer_vae_mine.history["ll_train_set"]
-    ll_test_set = trainer_vae_mine.history["ll_test_set"]
-    x = np.linspace(0, 500, (len(ll_train_set)))
+        vae_mine = VAE_MINE(pbmc_dataset.nb_genes, n_batch=pbmc_dataset.n_batches * use_batches, n_hidden_z=n_hidden_z, n_layers_z=n_layers_z, MineLoss_Scale=MineLoss_Scale)
+        trainer_vae_mine = UnsupervisedTrainer(vae_mine, pbmc_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda,frequency=5, kl=1)
+        vae_mine_file_path = '%s/Pbmc_Sample%s_Hidden%s_layers%s_MineLossScale%s_VaeMine.pk1'%(save_path, taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
 
-    fig = plt.figure(figsize=(14, 7))
-    plt.plot(x, ll_train_set)
-    plt.plot(x, ll_test_set)
-    plt.ylim(1150, 1600)
-    plt.title("Blue for training error and orange for testing error")
+        if os.path.isfile(vae_mine_file_path):
+            trainer_vae_mine.model.load_state_dict(torch.load(vae_mine_file_path))
+            trainer_vae_mine.model.eval()
+        else:
+            trainer_vae_mine.train(n_epochs=n_epochs, lr=lr)
+            torch.save(trainer_vae_mine.model.state_dict(), vae_mine_file_path)
 
-    fig1_path = 'result/Tune_Hyperparameter_For_Minenet/2019-05-08/training_testing_error_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc',taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
-    fig.savefig(fig1_path)
-    plt.close(fig)
+        ll_train_set = trainer_vae_mine.history["ll_train_set"]
+        ll_test_set = trainer_vae_mine.history["ll_test_set"]
+        x = np.linspace(0, 500, (len(ll_train_set)))
+
+        fig = plt.figure(figsize=(14, 7))
+        plt.plot(x, ll_train_set)
+        plt.plot(x, ll_test_set)
+        plt.ylim(1150, 1600)
+        plt.title("Blue for training error and orange for testing error")
+
+        fig1_path = 'result/Tune_Hyperparameter_For_Minenet/2019-05-26/training_testing_error_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc',taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
+        fig.savefig(fig1_path)
+        plt.close(fig)
+
+        trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-26/trainset_tsne_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
+        trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-26/testset_tsne_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
+
+        asw, nmi, ari, uca = trainer_vae_mine.train_set.clustering_scores()
+        be = trainer_vae_mine.train_set.entropy_batch_mixing()
+        label = 'sample%s_VaeMine_trainset_Hidden%s_layers%s_MineLossScale%s'%(taskid, n_hidden_z,n_layers_z,MineLoss_Scale)
+        intermediate_dataframe1 = pd.DataFrame.from_dict({'Label':[label],'asw':[asw],'nmi':[nmi],'ari':[ari],'uca':[uca],'be':[be]})
+        clustering_metric = pd.concat([clustering_metric, intermediate_dataframe1], axis=0)
+
+        asw, nmi, ari, uca = trainer_vae_mine.test_set.clustering_scores()
+        be = trainer_vae_mine.test_set.entropy_batch_mixing()
+        label = 'sample%s_VaeMine_testset_Hidden%s_layers%s_MineLossScale%s' % (taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
+        intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
+        clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
 
     vae = VAE(pbmc_dataset.nb_genes, n_batch=pbmc_dataset.n_batches * use_batches)
     trainer_vae = UnsupervisedTrainer(vae, pbmc_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5)
-    vae_file_path = '%s/Pbmc_Sample%s_Hidden%s_layers%s_MineLossScale%s_Vae.pk1'%(save_path, taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
+    vae_file_path = '%s/Pbmc_Sample%s_Vae.pk1'%(save_path, taskid)
 
     if os.path.isfile(vae_file_path):
         trainer_vae.model.load_state_dict(torch.load(vae_file_path))
@@ -88,21 +113,12 @@ def main(taskid):
     plt.ylim(1150, 1600)
     plt.title("Blue for training error and orange for testing error")
 
-    fig2_path = 'result/Tune_Hyperparameter_For_Minenet/2019-05-08/training_testing_error_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}.png'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale)
+    fig2_path = 'result/Tune_Hyperparameter_For_Minenet/2019-05-26/training_testing_error_SCVI_{}_Sample{}.png'.format('Pbmc', taskid)
     fig.savefig(fig2_path)
     plt.close(fig)
 
-    n_samples_tsne = 1000
-
-    trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-08/trainset_tsne_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc',taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
-    plt.show()
-    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-08/trainset_tsne_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
-    plt.show()
-
-    trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-08/testset_tsne_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
-    plt.show()
-    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-08/testset_tsne_SCVI_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
-    plt.show()
+    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-26/trainset_tsne_SCVI_{}_Sample{}'.format('Pbmc', taskid))
+    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-26/testset_tsne_SCVI_{}_Sample{}'.format('Pbmc', taskid))
 
     # clustering_scores() -- these metrics measure clustering performance
     #   silhouette width (asw, higher is better),
@@ -112,29 +128,20 @@ def main(taskid):
     #   entropy_batch_mixing() -- this metric measures batch effect
     #   entropy batch mixing (be, higher is better meaning less batch effect)
 
-    clustering_metric = np.empty((0, 5), int)
+
     asw, nmi, ari, uca = trainer_vae.train_set.clustering_scores()
     be = trainer_vae.train_set.entropy_batch_mixing()
-    clustering_metric = np.append(clustering_metric, np.array([[asw, nmi, ari, uca, be]]),axis=0)
-
-    asw, nmi, ari, uca = trainer_vae_mine.train_set.clustering_scores()
-    be = trainer_vae_mine.train_set.entropy_batch_mixing()
-    clustering_metric = np.append(clustering_metric, np.array([[asw, nmi, ari, uca, be]]),axis=0)
+    label = 'sample%s_Vae_trainset' % (taskid)
+    intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
+    clustering_metric = pd.concat([clustering_metric, intermediate_dataframe1], axis=0)
 
     asw, nmi, ari, uca = trainer_vae.test_set.clustering_scores()
     be = trainer_vae.test_set.entropy_batch_mixing()
-    clustering_metric = np.append(clustering_metric, np.array([[asw, nmi, ari, uca, be]]),axis=0)
+    label = 'sample%s_Vae_testset' % (taskid)
+    intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
+    clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
 
-    asw, nmi, ari, uca = trainer_vae_mine.test_set.clustering_scores()
-    be = trainer_vae_mine.test_set.entropy_batch_mixing()
-    clustering_metric = np.append(clustering_metric, np.array([[asw, nmi, ari, uca, be]]),axis=0)
-
-    clustering_metric = pd.DataFrame(clustering_metric)
-    Label = {'Label':['vae_train', 'vaemine_train', 'vae_test', 'vaemine_test']}
-    Label_DataFrame = pd.DataFrame(Label,columns=['Label'])
-
-    clustering_metric2 = pd.concat([Label_DataFrame, clustering_metric.reset_index(drop=True)],axis=1)
-    clustering_metric2.to_csv('result/Tune_Hyperparameter_For_Minenet/2019-05-08/Pbmc_Sample%s_Hidden%s_layers%s_MineLossScale%s_ClusterMetric.csv'%(taskid, n_hidden_z, n_layers_z, MineLoss_Scale), index=None, header=True)
+    clustering_metric.to_csv('result/Tune_Hyperparameter_For_Minenet/2019-05-26/Pbmc_Sample%s_ClusterMetric.csv'%(taskid), index=None, header=True)
 
 
 # Run the actual program

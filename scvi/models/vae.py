@@ -59,7 +59,7 @@ class VAE(nn.Module):
         self.n_latent_layers = 1  # not sure what this is for, no usages?
 
         if self.dispersion == "gene":
-            self.px_r = torch.nn.Parameter(torch.randn(n_input, ))
+            self.px_r = torch.nn.Parameter(torch.randn(n_input, )) #create a tensor filled with random numbers from a normal distribution, consider as module parameter
         elif self.dispersion == "gene-batch":
             self.px_r = torch.nn.Parameter(torch.randn(n_input, n_batch))
         elif self.dispersion == "gene-label":
