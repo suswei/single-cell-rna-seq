@@ -1,9 +1,4 @@
-#SCVI or SCVI+MINE runs very slow on the Pbmc dataset, when the train_size=0.6,
-#for the monte carlo(B=100), if all the 20 hyperparameter combinations in the
-# 2019-05-01_Tune_Hyperparameter_For_MineNet.py file are run, 12 days will be needed
-#for 21 cups to finish the whole task. Therefore only one combination (n_latent_z: 30, n_layers_z:3,
-# MineLoss_Scale: 1000) is chosen to compare with original SCVI for Monte Carlo to see whether
-#SCVI+Mine does work better than SCVI
+#Run 100 Monte Carlo Samples for 20 hyperparameter configurations
 import os
 import sys
 import numpy as np
@@ -83,9 +78,7 @@ def main(taskid):
         plt.close(fig)
 
         trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-26/trainset_tsne_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
-        plt.show()
         trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-26/testset_tsne_SCVI+MINE_{}_Sample{}_Hidden{}_layers{}_MineLossScale{}'.format('Pbmc', taskid, n_hidden_z, n_layers_z, MineLoss_Scale))
-        plt.show()
 
         asw, nmi, ari, uca = trainer_vae_mine.train_set.clustering_scores()
         be = trainer_vae_mine.train_set.entropy_batch_mixing()
@@ -125,9 +118,7 @@ def main(taskid):
     plt.close(fig)
 
     trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-26/trainset_tsne_SCVI_{}_Sample{}'.format('Pbmc', taskid))
-    plt.show()
     trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/Tune_Hyperparameter_For_Minenet/2019-05-26/testset_tsne_SCVI_{}_Sample{}'.format('Pbmc', taskid))
-    plt.show()
 
     # clustering_scores() -- these metrics measure clustering performance
     #   silhouette width (asw, higher is better),

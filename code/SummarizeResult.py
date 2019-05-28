@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 import pandas as pd
+import itertools
+
 
 def SummarizeResult(result_type: str = 'image', file_paths: list = ['Not_Specified'],
                     subfile_titles: list = ['Not_Specified'], figtitle: str = 'Not_Specified', n_column: int = 2):
@@ -27,7 +29,10 @@ def SummarizeResult(result_type: str = 'image', file_paths: list = ['Not_Specifi
                     plt.imshow(image)
             else:
                 for i, image in enumerate(images):
-                    ax[i//2,i-(i//2)*2] = plt.subplot(len(images) / columns + 1, columns, i + 1)
+                    if len(images)%columns == 0:
+                        ax[i // 2, i - (i // 2) * 2] = plt.subplot(len(images) / columns, columns, i + 1)
+                    else:
+                        ax[i // 2, i - (i // 2) * 2] = plt.subplot(len(images) / columns + 1, columns, i + 1)
                     ax[i//2,i-(i//2)*2].axis('off')
                     if subfile_titles != ['Not_Specified']:
                        ax[i//2,i-(i//2)*2].set_title(subfile_titles[i])
@@ -36,7 +41,7 @@ def SummarizeResult(result_type: str = 'image', file_paths: list = ['Not_Specifi
                 n_blank = columns - (len(images)%2)
                 for j in range(n_blank):
                    ax[-1, -(j+1)].axis('off')
-            fig.suptitle(figtitle, y=1.03, fontsize=18, verticalalignment='top')
+            fig.suptitle(figtitle, y=1.02, fontsize=18, verticalalignment='top')
 
 def barplot_list(data, error_data, alg, title, save=None, interest=0, prog=False, figsize=None):
     ind = np.arange(len(alg))  # the x locations for the groups
@@ -78,53 +83,61 @@ def barplot_list(data, error_data, alg, title, save=None, interest=0, prog=False
         plt.savefig(save)
     plt.close(fig)
 
-def Average_ClusteringMetric_Barplot(dataset_name: str = "Pbmc", file_number: int = 100, n_hidden_z: int = 30,
-                                     n_layers_z: int =3, MineLossScale: float = 1000):
-    cluster_metric_dataframes = pd.DataFrame(columns = ['label', 'asw', 'nmi', 'ari', 'uca', 'be'])
-    for i in range(file_number):
-        if i not in [31, 39, 46, 47, 49, 55, 59,63,67,70,74,75]:
+def Average_ClusteringMetric_Barplot(dataset_name: str = "Pbmc", results_dict: str = 'NA', n_sample: int = 100, hyperparameter_config = {'n_hidden_z':[10,30],'n_layers_z':[3,10],'MineLoss_Scale':[1000,5000,10000,50000,100000]}):
 
-            file_path = "result/Tune_Hyperparameter_For_MineNet/2019-05-08/" + dataset_name + "_Sample" + str(i) + "_Hidden" + str(n_hidden_z) + "_layers" + str(n_layers_z) + "_MineLossScale" + str(MineLossScale) + "_ClusterMetric.csv"
+    cluster_metric_dataframes = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be'])
+    for i in range(n_sample):
+        file_path = results_dict + dataset_name + '_Sample%s_ClusterMetric.csv' % (i)
+        cluster_metric_dataframe = pd.read_csv(file_path)
+        cluster_metric_dataframes = pd.concat([cluster_metric_dataframes, cluster_metric_dataframe], axis=0)
 
-            cluster_metric_dataframe = pd.read_csv(file_path)
-            cluster_metric_dataframe.columns = ['label', 'asw', 'nmi', 'ari', 'uca', 'be']
-            cluster_metric_dataframes = cluster_metric_dataframes.append(cluster_metric_dataframe)
-    vae_train = cluster_metric_dataframes[cluster_metric_dataframes.label.isin(["vae_train"])]
-    vae_Mine_train = cluster_metric_dataframes[cluster_metric_dataframes.label.isin(["vaemine_train"])]
-    vae_test = cluster_metric_dataframes[cluster_metric_dataframes.label.isin(["vae_test"])]
-    vae_Mine_test = cluster_metric_dataframes[cluster_metric_dataframes.label.isin(["vaemine_test"])]
+    vae_train = cluster_metric_dataframes[cluster_metric_dataframes['Label'].str.match('^sample.*._Vae_trainset$')]
+    vae_test = cluster_metric_dataframes[cluster_metric_dataframes['Label'].str.match('^sample.*._Vae_testset$')]
 
     vae_train_mean = vae_train.mean().values
     vae_train_std = vae_train.std().values
 
-    vae_Mine_train_mean = vae_Mine_train.mean().values
-    vae_Mine_train_std = vae_Mine_train.std().values
-
     vae_test_mean = vae_test.mean().values
     vae_test_std = vae_test.std().values
 
-    vae_Mine_test_mean = vae_Mine_test.mean().values
-    vae_Mine_test_std = vae_Mine_test.std().values
+    keys, values = zip(*hyperparameter_config.items())
+    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    vae_vae_Mine_train_mean = np.vstack([vae_train_mean, vae_Mine_train_mean])
-    vae_vae_Mine_train_std = np.vstack([vae_train_std, vae_Mine_train_std])
+    for j in range(len(hyperparameter_experiments)):
+        key, value = zip(*hyperparameter_experiments[j].items())
+        n_hidden_z = value[0]
+        n_layers_z = value[1]
+        MineLoss_Scale = value[2]
 
-    vae_vae_Mine_test_mean = np.vstack([vae_test_mean, vae_Mine_test_mean])
-    vae_vae_Mine_test_std = np.vstack([vae_test_std, vae_Mine_test_std])
 
-    vae_vae_Mine_mean_dataframe = pd.DataFrame(np.vstack([vae_vae_Mine_train_mean, vae_vae_Mine_test_mean]), columns=['asw', 'nmi', 'ari', 'uca', 'be'])
-    vae_vae_Mine_mean_dataframe = pd.concat([pd.DataFrame({'label':['vae_train_mean','vae+Mine_train_mean','vae_test_mean','vae+Mine_test_mean']}),vae_vae_Mine_mean_dataframe],axis=1)
+        vae_Mine_train = cluster_metric_dataframes[cluster_metric_dataframes['Label'].str.match('^sample.*._VaeMine_trainset_Hidden%s_layers%s_MineLossScale%s$'%( n_hidden_z,n_layers_z,MineLoss_Scale))]
+        vae_Mine_test = cluster_metric_dataframes[cluster_metric_dataframes['Label'].str.match('^sample.*._VaeMine_testset_Hidden%s_layers%s_MineLossScale%s$'%( n_hidden_z,n_layers_z,MineLoss_Scale))]
 
-    vae_vae_Mine_std_dataframe = pd.DataFrame(np.vstack([vae_vae_Mine_train_std, vae_vae_Mine_test_std]),columns=['asw', 'nmi', 'ari', 'uca', 'be'])
-    vae_vae_Mine_std_dataframe = pd.concat([pd.DataFrame({'label': ['vae_train_std', 'vae+Mine_train_std', 'vae_test_std', 'vae+Mine_test_std']}), vae_vae_Mine_std_dataframe], axis=1)
+        vae_Mine_train_mean = vae_Mine_train.mean().values
+        vae_Mine_train_std = vae_Mine_train.std().values
 
-    vae_vae_Mine_mean_dataframe.to_csv('./result/Tune_Hyperparameter_For_Minenet/2019-05-08/mean_clustering_metrics.csv', index = None, header=True)
-    vae_vae_Mine_std_dataframe.to_csv('./result/Tune_Hyperparameter_For_Minenet/2019-05-08/std_clustering_metrics.csv', index=None, header=True)
+        vae_Mine_test_mean = vae_Mine_test.mean().values
+        vae_Mine_test_std = vae_Mine_test.std().values
 
-    barplot_list(vae_vae_Mine_train_mean, error_data=vae_vae_Mine_train_std,alg = ["scVI", "scVI+MINE"],
-                 title = "Train Set Mean Clustering Metrics from %s samples"%(file_number),
-                 save='./result/Tune_Hyperparameter_For_Minenet/2019-05-08/trainset_mean_clustering_metrics_%s_Hidden%s_layers%s_MineLossScale%s_%ssamples'%(dataset_name, n_hidden_z,n_layers_z,MineLossScale,file_number))
-    barplot_list(vae_vae_Mine_test_mean, error_data=vae_vae_Mine_test_std, alg=["scVI", "scVI+MINE"],
-                 title="Test Set Mean Clustering Metrics from %s samples" % (file_number),
-                 save='./result/Tune_Hyperparameter_For_Minenet/2019-05-08/testset_mean_clustering_metrics_%s_Hidden%s_layers%s_MineLossScale%s_%ssamples' %(dataset_name, n_hidden_z, n_layers_z, MineLossScale, file_number))
+        vae_vae_Mine_train_mean = np.vstack([vae_train_mean, vae_Mine_train_mean])
+        vae_vae_Mine_train_std = np.vstack([vae_train_std, vae_Mine_train_std])
+
+        vae_vae_Mine_test_mean = np.vstack([vae_test_mean, vae_Mine_test_mean])
+        vae_vae_Mine_test_std = np.vstack([vae_test_std, vae_Mine_test_std])
+
+        vae_vae_Mine_mean_dataframe = pd.DataFrame(np.vstack([vae_vae_Mine_train_mean, vae_vae_Mine_test_mean]), columns=['asw', 'nmi', 'ari', 'uca', 'be'])
+        vae_vae_Mine_mean_dataframe = pd.concat([pd.DataFrame({'label':['vae_train_mean','vae+Mine_train_mean','vae_test_mean','vae+Mine_test_mean']}),vae_vae_Mine_mean_dataframe],axis=1)
+
+        vae_vae_Mine_std_dataframe = pd.DataFrame(np.vstack([vae_vae_Mine_train_std, vae_vae_Mine_test_std]),columns=['asw', 'nmi', 'ari', 'uca', 'be'])
+        vae_vae_Mine_std_dataframe = pd.concat([pd.DataFrame({'label': ['vae_train_std', 'vae+Mine_train_std', 'vae_test_std', 'vae+Mine_test_std']}), vae_vae_Mine_std_dataframe], axis=1)
+
+        vae_vae_Mine_mean_dataframe.to_csv('./result/Tune_Hyperparameter_For_Minenet/2019-05-26/mean_clustering_metrics_Hidden%s_layers%s_MineLossScale%s.csv'%(n_hidden_z, n_layers_z, MineLoss_Scale), index = None, header=True)
+        vae_vae_Mine_std_dataframe.to_csv('./result/Tune_Hyperparameter_For_Minenet/2019-05-26/std_clustering_metrics_Hidden%s_layers%s_MineLossScale%s.csv'%(n_hidden_z, n_layers_z, MineLoss_Scale), index=None, header=True)
+
+        barplot_list(vae_vae_Mine_train_mean, error_data=vae_vae_Mine_train_std,alg = ["scVI", "scVI+MINE"],
+                     title = "Train Set Mean Clustering Metrics Hidden%s layers%s MineLossScale%s"%(n_hidden_z, n_layers_z, MineLoss_Scale),
+                     save='./result/Tune_Hyperparameter_For_Minenet/2019-05-26/trainset_mean_clustering_metrics_%s_Hidden%s_layers%s_MineLossScale%s_%ssamples'%(dataset_name, n_hidden_z,n_layers_z, MineLoss_Scale,n_sample))
+        barplot_list(vae_vae_Mine_test_mean, error_data=vae_vae_Mine_test_std, alg=["scVI", "scVI+MINE"],
+                     title="Test Set Mean Clustering Metrics Hidden%s layers%s MineLossScale%s"%(n_hidden_z, n_layers_z, MineLoss_Scale),
+                     save='./result/Tune_Hyperparameter_For_Minenet/2019-05-26/testset_mean_clustering_metrics_%s_Hidden%s_layers%s_MineLossScale%s_%ssamples' %(dataset_name, n_hidden_z, n_layers_z, MineLoss_Scale, n_sample))
 
