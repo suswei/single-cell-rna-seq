@@ -251,3 +251,60 @@ class MINE_Net(nn.Module):
     def forward(self, nuisance, z):
         h = F.relu(self.nn_nuisance(nuisance)+self.nn_z(z))
         return h
+
+
+class MINE_Net2(nn.Module):
+    """
+    Takes two inputs nuisance and z, implements T_\theta(nuisance,z) \in \mathbb R function in MINE paper
+    Typically applied with nuisance representing either batch or library size and z representing latent code
+    """
+
+    def __init__(self,n_input_nuisance,n_input_z,n_hidden_z,n_layers_z):
+        super(MINE_Net2, self).__init__()
+        self.nn_nuisance = FCLayers(n_in=n_input_nuisance, n_out=1,
+                                n_layers=n_layers_z,
+                                n_hidden=n_hidden_z, dropout_rate=0)
+        self.nn_z = FCLayers(n_in=n_input_z, n_out=1,
+                                n_layers=n_layers_z,
+                                n_hidden=n_hidden_z, dropout_rate=0)
+
+    def forward(self, nuisance, z):
+        h = F.relu(self.nn_nuisance(nuisance)+self.nn_z(z))
+        return h
+
+
+class MINE_Net3(nn.Module):
+    def __init__(self,n_input_nuisance, n_input_z, H):
+        super(MINE_Net3, self).__init__()
+        self.fc1 = nn.Linear(n_input_nuisance, H)
+        self.fc2 = nn.Linear(n_input_z, H)
+        self.fc3 = nn.Linear(H, 1)
+
+    def forward(self, x, y):
+        h1 = F.relu(self.fc1(x)+self.fc2(y))
+        h2 = self.fc3(h1)
+        return h2
+
+
+class MINE_Net4(nn.Module):
+    def __init__(self, xy_dim, layers):
+        super(MINE_Net4, self).__init__()
+        self.xy_dim = xy_dim
+
+        modules = [nn.Linear(xy_dim, layers[0]), nn.ReLU()]
+
+        prev_layer = layers[0]
+        for layer in layers[1:]:
+            modules.append(nn.Linear(prev_layer, layer))
+            modules.append(nn.ReLU())
+            prev_layer = layer
+
+        modules.append(nn.Linear(prev_layer, 1))
+        self.linears = nn.Sequential(*modules)
+
+    def forward(self, xy, x, n_dim):
+        h = self.linears(xy)
+        y = xy[:, n_dim:]
+        xy_2 = torch.cat((x, y), 1)
+        h2 = self.linears(xy_2)
+        return h, h2

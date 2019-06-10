@@ -1,18 +1,17 @@
-#Compare MINE, MINE in SCVI+MINE estimator for mutual information with true mutual information
 import os
 import sys
 import numpy as np
 import pandas as pd
 import torch
-from scvi.models.modules import MINE_Net
+from scvi.models.modules import MINE_Net, MINE_Net2, MINE_Net3, MINE_Net4
 import itertools
 from scipy.stats import multivariate_normal
 from sklearn.model_selection._split import _validate_shuffle_split
 from torch.autograd import Variable
+from tqdm import tqdm
 
 hyperparameter_config = {
-        'n_hidden_z': [10],
-        'n_layers_z': [10, 30, 50],
+        'Net_Name': ['Mine_Net2', 'Mine_Net3', 'Mine_Net4'],
         'Gaussian_Dimension': [2, 20],
         'sample_size': [14388],
         'rho': [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
@@ -20,7 +19,7 @@ hyperparameter_config = {
 keys, values = zip(*hyperparameter_config.items())
 hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-for taskid in range(26):
+for taskid in range(13):
     if not os.path.exists('data/Tune_Hyperparameter_For_Minenet/2019-06-04'):
         os.makedirs('data/Tune_Hyperparameter_For_Minenet/2019-06-04')
     if not os.path.exists('result/Tune_Hyperparameter_For_Minenet/2019-06-04'):
@@ -33,14 +32,13 @@ for taskid in range(26):
     batch_size = 128
     seed = 0
 
-    final_dataframe = pd.DataFrame(columns=['n_hidden_z', 'n_layers_z', 'variable_dimension', 'sample_size', 'rho', 'true_MI', 'estimated_training_MI', 'estimated_testing_MI'])
-    for i in [taskid*3, taskid*3+1, taskid*3+2]:
+    final_dataframe = pd.DataFrame(columns=['variable_dimension', 'sample_size', 'rho', 'true_MI', 'estimated_training_MI', 'estimated_testing_MI','final_loss'])
+    for i in [taskid*2, taskid*2+1]:
         key, value = zip(*hyperparameter_experiments[i].items())
-        n_hidden_z = value[0]
-        n_layers_z = value[1]
-        Gaussian_Dimension = value[2]
-        sample_size = value[3]
-        rho = value[4]
+        Net_Name = value[0]
+        Gaussian_Dimension = value[1]
+        sample_size = value[2]
+        rho = value[3]
 
 
         entropy1 = multivariate_normal.entropy(Gaussian_Dimension*[0], np.identity(Gaussian_Dimension))
@@ -66,13 +64,17 @@ for taskid in range(26):
 
         training_tensor = Variable(torch.from_numpy(dataset2[indices_train,:]).type(torch.FloatTensor))
         testing_tensor = Variable(torch.from_numpy(dataset2[indices_test, :]).type(torch.FloatTensor))
-        minenet = MINE_Net(n_input_nuisance= Gaussian_Dimension, n_input_z= Gaussian_Dimension, n_hidden_z=n_hidden_z, n_layers_z=n_layers_z)
+        if Net_Name == 'Mine_Net2':
+            minenet = MINE_Net2(n_input_nuisance=Gaussian_Dimension, n_input_z=Gaussian_Dimension, n_hidden_z=10, n_layers_z=10)
+        elif Net_Name == 'Mine_Net3':
+            minenet = MINE_Net3(n_input_nuisance= Gaussian_Dimension, n_input_z= Gaussian_Dimension, H=10)
+        elif Net_Name == 'Mine_Net4':
+            layers = [32, 16]
+            minenet = MINE_Net4(training_tensor.shape[-1], layers)
 
-        params = filter(lambda p: p.requires_grad, minenet.parameters())
-        optimizer = torch.optim.Adam(params, lr=lr, eps=0.01)
-
-        minenet.train()
-        for epoch in range(n_epochs):
+        optimizer = torch.optim.Adam(minenet.parameters(), lr=lr)
+        plot_loss = []
+        for epoch in tqdm(range(n_epochs)):
 
             # X is a torch Variable
             permutation = torch.randperm(training_tensor.size()[0])
@@ -90,12 +92,15 @@ for taskid in range(26):
                 batch_x_shuffle = Variable(torch.from_numpy(batch_x_shuffle).type(torch.FloatTensor), requires_grad=True)
                 batch_y = Variable(batch_y.type(torch.FloatTensor), requires_grad=True)
 
-                pred_xy = minenet(batch_y, batch_x)
-                pred_x_y = minenet(batch_y, batch_x_shuffle)
-
+                if Net_Name in ['Mine_Net2', 'Mine_Net3']:
+                    pred_xy = minenet(batch_y, batch_x)
+                    pred_x_y = minenet(batch_y, batch_x_shuffle)
+                elif Net_Name == 'Mine_Net4':
+                    pred_xy, pred_x_y = minenet(xy=training_tensor[indices, :], x=batch_x_shuffle, n_dim=Gaussian_Dimension)
                 mine_loss = torch.mean(pred_xy) - torch.log(torch.mean(torch.exp(pred_x_y)))
                 loss = -1 * mine_loss
-                optimizer.zero_grad()  # clear previous gradients
+                plot_loss.append(loss.data.numpy())
+                minenet.zero_grad()  # clear previous gradients
                 loss.backward() # compute gradients of all variables wrt loss
                 optimizer.step() # perform updates using calculated gradients
 
@@ -106,8 +111,11 @@ for taskid in range(26):
         train_x_shuffle = Variable(torch.from_numpy(train_x_shuffle).type(torch.FloatTensor), requires_grad=True)
         train_y = Variable(train_y.type(torch.FloatTensor), requires_grad=True)
 
-        train_pred_xy = minenet(train_y, train_x)
-        train_pred_x_y = minenet(train_y, train_x_shuffle)
+        if Net_Name in ['Mine_Net2', 'Mine_Net3']:
+            train_pred_xy = minenet(train_y, train_x)
+            train_pred_x_y = minenet(train_y, train_x_shuffle)
+        elif Net_Name == 'Mine_Net4':
+            train_pred_xy, train_pred_x_y = minenet(xy=training_tensor[:, :], x=train_x_shuffle, n_dim=Gaussian_Dimension)
 
         estimated_training_MI = torch.mean(train_pred_xy) - torch.log(torch.mean(torch.exp(train_pred_x_y)))
         estimated_training_MI = torch.Tensor.cpu(estimated_training_MI).detach().numpy().item()
@@ -118,22 +126,25 @@ for taskid in range(26):
         test_x_shuffle = Variable(torch.from_numpy(test_x_shuffle).type(torch.FloatTensor), requires_grad=True)
         test_y = Variable(test_y.type(torch.FloatTensor), requires_grad=True)
 
-        test_pred_xy = minenet(test_y, test_x)
-        test_pred_x_y = minenet(test_y, test_x_shuffle)
+        if Net_Name in ['Mine_Net2', 'Mine_Net3']:
+            test_pred_xy = minenet(test_y, test_x)
+            test_pred_x_y = minenet(test_y, test_x_shuffle)
+        elif Net_Name == 'Mine_Net4':
+            test_pred_xy, test_pred_x_y = minenet(xy=testing_tensor[:, :], x=test_x_shuffle, n_dim=Gaussian_Dimension)
 
         estimated_testing_MI = torch.mean(test_pred_xy) - torch.log(torch.mean(torch.exp(test_pred_x_y)))
         estimated_testing_MI = torch.Tensor.cpu(estimated_testing_MI).detach().numpy().item()
 
-        dict = {'n_hidden_z': [n_hidden_z],'n_layers_z': [n_layers_z], 'variable_dimension': [Gaussian_Dimension],'sample_size':[sample_size], 'rho':[rho], 'true_MI': [true_MI], 'estimated_training_MI': [estimated_training_MI], 'estimated_testing_MI': [estimated_testing_MI]}
+        final_loss = -np.array(plot_loss).reshape(-1, )[-1]
+
+        dict = {'variable_dimension': [Gaussian_Dimension],'sample_size':[sample_size], 'rho':[rho], 'true_MI': [true_MI], 'estimated_training_MI': [estimated_training_MI], 'estimated_testing_MI': [estimated_testing_MI], 'final_loss':[final_loss]}
         intermediate_dataframe = pd.DataFrame.from_dict(dict)
         final_dataframe = pd.concat([final_dataframe,intermediate_dataframe])
-    final_dataframe.to_csv('result/Tune_Hyperparameter_For_Minenet/2019-06-04/Taskid%s_Compare_mine_estimator_with_true_MI.csv'%(taskid), index=None, header=True)
-
-
-
-
-
-
-
+    if Net_Name == 'Mine_Net2':
+        final_dataframe.to_csv('result/Tune_Hyperparameter_For_Minenet/2019-06-04/Taskid%s_Compare2_mine_estimator_with_true_MI.csv'%(taskid), index=None, header=True)
+    elif Net_Name == 'Mine_Net3':
+        final_dataframe.to_csv('result/Tune_Hyperparameter_For_Minenet/2019-06-04/Taskid%s_Compare3_mine_estimator_with_true_MI.csv' % (taskid), index=None, header=True)
+    elif Net_Name == 'Mine_Net4':
+        final_dataframe.to_csv('result/Tune_Hyperparameter_For_Minenet/2019-06-04/Taskid%s_Compare4_mine_estimator_with_true_MI.csv' % ( taskid), index=None, header=True)
 
 
