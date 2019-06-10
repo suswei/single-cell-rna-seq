@@ -1,3 +1,5 @@
+
+
 from abc import abstractmethod
 import copy
 
@@ -26,6 +28,9 @@ class SequentialSubsetSampler(SubsetRandomSampler):
     def __iter__(self):
         return iter(self.indices)
 
+def _init_fn(worker_id):
+    np.random.seed(int(0))
+# put worker_init_fn=_init_fn in the DataLoader() function
 
 class Posterior:
     r"""The functional data unit. A `Posterior` instance is instanciated with a model and a gene_dataset, and
@@ -90,6 +95,7 @@ class Posterior:
             self.data_loader_kwargs.update({'collate_fn': gene_dataset.collate_fn})
         self.data_loader_kwargs.update({'sampler': sampler})
         self.data_loader = DataLoader(gene_dataset, **self.data_loader_kwargs)
+
 
     @abstractmethod
     def accuracy(self, verbose=False):

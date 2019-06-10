@@ -11,7 +11,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from tqdm import trange
 
 from scvi.inference.posterior import Posterior
-
+import random
 
 class Trainer:
     r"""The abstract Trainer class for training a PyTorch model and monitoring its statistics. It should be
@@ -112,6 +112,17 @@ class Trainer:
             for self.epoch in pbar:
                 self.on_epoch_begin()
                 pbar.update(1)
+
+                #make the minibatches the same for every input datasets
+                #torch.manual_seed(0)
+                #torch.cuda.manual_seed(0)
+                #torch.cuda.manual_seed_all(0)  # if you are using multi-GPU.
+                #np.random.seed(0)  # Numpy module.
+                #random.seed(0)  # Python random module.
+                #torch.manual_seed(0)
+                #torch.backends.cudnn.benchmark = False
+                #torch.backends.cudnn.deterministic = True
+
                 for tensors_list in self.data_loaders_loop():
                     loss = self.loss(*tensors_list)
                     optimizer.zero_grad()

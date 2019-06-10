@@ -204,8 +204,8 @@ class VAE_MINE(nn.Module):
         n_input_nuisance = batch_index.shape[1]
         n_input_z = z.shape[1]
         minenet = MINE_Net(n_input_nuisance,n_input_z,self.n_hidden_z,self.n_layers_z)
-        pred_xz = minenet(batch_index, z)
-        pred_x_z = minenet(batch_index, z_shuffle)
+        pred_xz = minenet(batch_index, z) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
+        pred_x_z = minenet(batch_index, z_shuffle) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
 
         #TODO: have another MINE net for library depth
 
@@ -232,18 +232,18 @@ class VAE_MINE(nn.Module):
         mean = torch.zeros_like(qz_m)
         scale = torch.ones_like(qz_v)
 
-        kl_divergence_z = kl(Normal(qz_m, torch.sqrt(qz_v)), Normal(mean, scale)).sum(dim=1)
-        kl_divergence_l = kl(Normal(ql_m, torch.sqrt(ql_v)), Normal(local_l_mean, torch.sqrt(local_l_var))).sum(dim=1)
+        kl_divergence_z = kl(Normal(qz_m, torch.sqrt(qz_v)), Normal(mean, scale)).sum(dim=1) #kl_divergence_z: dimension [128]
+        kl_divergence_l = kl(Normal(ql_m, torch.sqrt(ql_v)), Normal(local_l_mean, torch.sqrt(local_l_var))).sum(dim=1)#kl_divergence_l: dimension [128]
         print('kl_divergence_z: {}'.format(kl_divergence_z.mean()))
         print('kl_divergence_l: {}'.format(kl_divergence_l.mean()))
 
-        reconst_loss = self._reconstruction_loss(x, px_rate, px_r, px_dropout)
+        reconst_loss = self._reconstruction_loss(x, px_rate, px_r, px_dropout) # reconst_loss: dimension [128]
         print('reconst_loss: {}'.format(reconst_loss.mean()))
 
         # calculate MINE loss, expression for V(\theta) in Algorithm 1 MINE
-        mine_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+        mine_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z))) #mine_loss: dimension: [1]
         print('mine loss: {}'.format(mine_loss))
         print('scaled mine loss: {}'.format(self.MineLoss_Scale*mine_loss))
 
         # TODO: should return kl_divergence_z and mine_loss separately, in current state same penalty term is applied to them
-        return reconst_loss + kl_divergence_l + kl_divergence_z, self.MineLoss_Scale*mine_loss
+        return reconst_loss + kl_divergence_l+ kl_divergence_z, self.MineLoss_Scale*mine_loss

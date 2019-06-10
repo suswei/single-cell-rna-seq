@@ -45,7 +45,7 @@ class UnsupervisedTrainer(Trainer):
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
         reconst_loss, kl_divergence = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
         print('penalty:{}'.format(kl_divergence))
-        loss = torch.mean(reconst_loss + self.kl_weight * kl_divergence)
+        loss = torch.mean(reconst_loss + self.kl_weight * kl_divergence) #why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
         return loss
 
     def on_epoch_begin(self):

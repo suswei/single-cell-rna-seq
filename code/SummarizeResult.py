@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 import pandas as pd
+import glob2
 import itertools
 
 
@@ -131,13 +132,110 @@ def Average_ClusteringMetric_Barplot(dataset_name: str = "Pbmc", results_dict: s
         vae_vae_Mine_std_dataframe = pd.DataFrame(np.vstack([vae_vae_Mine_train_std, vae_vae_Mine_test_std]),columns=['asw', 'nmi', 'ari', 'uca', 'be'])
         vae_vae_Mine_std_dataframe = pd.concat([pd.DataFrame({'label': ['vae_train_std', 'vae+Mine_train_std', 'vae_test_std', 'vae+Mine_test_std']}), vae_vae_Mine_std_dataframe], axis=1)
 
-        vae_vae_Mine_mean_dataframe.to_csv('./result/Tune_Hyperparameter_For_Minenet/2019-05-26/mean_clustering_metrics_Hidden%s_layers%s_MineLossScale%s.csv'%(n_hidden_z, n_layers_z, MineLoss_Scale), index = None, header=True)
-        vae_vae_Mine_std_dataframe.to_csv('./result/Tune_Hyperparameter_For_Minenet/2019-05-26/std_clustering_metrics_Hidden%s_layers%s_MineLossScale%s.csv'%(n_hidden_z, n_layers_z, MineLoss_Scale), index=None, header=True)
+        vae_vae_Mine_mean_dataframe.to_csv(results_dict+'mean_clustering_metrics_Hidden%s_layers%s_MineLossScale%s.csv'%(n_hidden_z, n_layers_z, MineLoss_Scale), index = None, header=True)
+        vae_vae_Mine_std_dataframe.to_csv(results_dict+'std_clustering_metrics_Hidden%s_layers%s_MineLossScale%s.csv'%(n_hidden_z, n_layers_z, MineLoss_Scale), index=None, header=True)
 
         barplot_list(vae_vae_Mine_train_mean, error_data=vae_vae_Mine_train_std,alg = ["scVI", "scVI+MINE"],
                      title = "Train Set Mean Clustering Metrics Hidden%s layers%s MineLossScale%s"%(n_hidden_z, n_layers_z, MineLoss_Scale),
-                     save='./result/Tune_Hyperparameter_For_Minenet/2019-05-26/trainset_mean_clustering_metrics_%s_Hidden%s_layers%s_MineLossScale%s_%ssamples'%(dataset_name, n_hidden_z,n_layers_z, MineLoss_Scale,n_sample))
+                     save=results_dict+'trainset_mean_clustering_metrics_%s_Hidden%s_layers%s_MineLossScale%s_%ssamples'%(dataset_name, n_hidden_z,n_layers_z, MineLoss_Scale,n_sample))
         barplot_list(vae_vae_Mine_test_mean, error_data=vae_vae_Mine_test_std, alg=["scVI", "scVI+MINE"],
                      title="Test Set Mean Clustering Metrics Hidden%s layers%s MineLossScale%s"%(n_hidden_z, n_layers_z, MineLoss_Scale),
-                     save='./result/Tune_Hyperparameter_For_Minenet/2019-05-26/testset_mean_clustering_metrics_%s_Hidden%s_layers%s_MineLossScale%s_%ssamples' %(dataset_name, n_hidden_z, n_layers_z, MineLoss_Scale, n_sample))
+                     save=results_dict+'testset_mean_clustering_metrics_%s_Hidden%s_layers%s_MineLossScale%s_%ssamples' %(dataset_name, n_hidden_z, n_layers_z, MineLoss_Scale, n_sample))
+
+
+def Summarize_Compare_NNEstimator_TrueMI(results_dict: str = 'NA', MineNet_Info = {'model':['Mine_Net'], 'Hyperparameter':{'n_hidden_z': [10], 'n_layers_z':[10,30,50], 'Gaussian_Dimension': [2, 20], 'sample_size': [14388]}}):
+
+    if list(MineNet_Info.values())[0][0] == 'Mine_Net':
+       final_dataframe = pd.DataFrame(columns=['variable_dimension', 'sample_size', 'rho', 'true_MI', 'estimated_training_MI', 'estimated_testing_MI'])
+       filelist = glob2.glob(results_dict + 'Taskid*_Compare_*.csv')
+    else:
+        final_dataframe = pd.DataFrame(columns=['variable_dimension', 'sample_size', 'rho', 'true_MI', 'estimated_training_MI', 'estimated_testing_MI', 'final_loss'])
+        if list(MineNet_Info.values())[0][0] == 'Mine_Net2':
+            filelist = [f for f in glob2.glob(results_dict + "Taskid*_Compare2_*.csv")]
+        elif list(MineNet_Info.values())[0][0] == 'Mine_Net3':
+            filelist = [f for f in glob2.glob(results_dict + "Taskid*_Compare3_*.csv")]
+        elif list(MineNet_Info.values())[0][0] == 'Mine_Net4':
+            filelist = [f for f in glob2.glob(results_dict + "Taskid*_Compare4_*.csv")]
+
+    for file_path in filelist:
+        intermediate_dataframe = pd.read_csv(file_path)
+        final_dataframe = pd.concat([final_dataframe, intermediate_dataframe], sort=True)
+
+    if list(MineNet_Info.values())[0][0] == 'Mine_Net':
+        MineNet_Info_Dict = list(MineNet_Info.values())[1]
+        keys, values = zip(*MineNet_Info_Dict.items())
+        MineNet_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+        for i in range(len(MineNet_experiments)):
+            key, value = zip(*MineNet_experiments[i].items())
+            n_hidden_z = value[0]
+            n_layers_z = value[1]
+            Gaussian_Dimension = value[2]
+            sample_size = value[3]
+
+            subset_final_dataframe = final_dataframe[(final_dataframe.variable_dimension==Gaussian_Dimension) & (final_dataframe.n_hidden_z==n_hidden_z) & (final_dataframe.n_layers_z==n_layers_z) & (final_dataframe.sample_size==sample_size)].sort_values('rho', ascending=True)
+            rho_2 = subset_final_dataframe.loc[:,['rho']].values
+            true_MI2 = subset_final_dataframe.loc[:,['true_MI']].values
+            estimated_training_MI2 = subset_final_dataframe.loc[:,['estimated_training_MI']].values
+            estimated_testing_MI2 = subset_final_dataframe.loc[:,['estimated_testing_MI']].values
+
+            fig = plt.figure(figsize=(14, 7))
+            lines1 = plt.plot(rho_2, true_MI2, rho_2, estimated_training_MI2)
+            plt.setp(lines1[0], linewidth=2)
+            plt.setp(lines1[1], linewidth=2)
+
+            plt.legend(('true MI', 'estimated training MI'),loc='upper right')
+            plt.xlabel('rho')
+            plt.title('n_hidden_z = %s, n_layers_z = %s, variable_dimension = %s, sample_size =  %s, training'%(n_hidden_z, n_layers_z, Gaussian_Dimension, sample_size))
+            fig.savefig('result/Tune_Hyperparameter_For_Minenet/2019-06-04/Mine_Net_n_hidden_z%s_n_layers_z%s_variable_dimension%s_sample_size%s_training.png'%(n_hidden_z, n_layers_z, Gaussian_Dimension, sample_size))
+            plt.close(fig)
+
+            fig = plt.figure(figsize=(14, 7))
+            lines2 = plt.plot(rho_2, true_MI2, rho_2, estimated_testing_MI2)
+            plt.setp(lines2[0], linewidth=2)
+            plt.setp(lines2[1], linewidth=2)
+
+            plt.legend(('true MI', 'estimated testing MI'), loc='upper right')
+            plt.xlabel('rho')
+            plt.title('n_hidden_z = %s, n_layers_z = %s, variable_dimension = %s, sample_size = %s, testing' % (n_hidden_z, n_layers_z, Gaussian_Dimension, sample_size))
+            fig.savefig('result/Tune_Hyperparameter_For_Minenet/2019-06-04/Mine_Net_n_hidden_z%s_n_layers_z%s_variable_dimension%s_sample_size%s_testing.png' %(n_hidden_z, n_layers_z, Gaussian_Dimension, sample_size))
+            plt.close(fig)
+
+    if list(MineNet_Info.values())[0][0] in ['Mine_Net2','Mine_Net3','Mine_Net4']:
+        MineNet_Info_Dict = list(MineNet_Info.values())[1]
+        keys, values = zip(*MineNet_Info_Dict.items())
+        MineNet_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+        for i in range(len(MineNet_experiments)):
+            key, value = zip(*MineNet_experiments[i].items())
+            Gaussian_Dimension = value[0]
+            sample_size = value[1]
+
+            subset_final_dataframe = final_dataframe[(final_dataframe.variable_dimension == Gaussian_Dimension) & (final_dataframe.sample_size == sample_size)].sort_values('rho', ascending=True)
+            rho_2 = subset_final_dataframe.loc[:, ['rho']].values
+            true_MI2 = subset_final_dataframe.loc[:, ['true_MI']].values
+            estimated_training_MI2 = subset_final_dataframe.loc[:, ['estimated_training_MI']].values
+            estimated_testing_MI2 = subset_final_dataframe.loc[:, ['estimated_testing_MI']].values
+
+            fig = plt.figure(figsize=(14, 7))
+            lines1 = plt.plot(rho_2, true_MI2, rho_2, estimated_training_MI2)
+            plt.setp(lines1[0], linewidth=2)
+            plt.setp(lines1[1], linewidth=2)
+
+            plt.legend(('true MI', 'estimated training MI'), loc='upper right')
+            plt.xlabel('rho')
+            plt.title('variable_dimension = %s, sample_size =  %s, training' % (Gaussian_Dimension, sample_size))
+            fig.savefig('result/Tune_Hyperparameter_For_Minenet/2019-06-04/' + list(MineNet_Info.values())[0][0] + '_variable_dimension%s_sample_size%s_training.png'%(Gaussian_Dimension, sample_size))
+            plt.close(fig)
+
+            fig = plt.figure(figsize=(14, 7))
+            lines2 = plt.plot(rho_2, true_MI2, rho_2, estimated_testing_MI2)
+            plt.setp(lines2[0], linewidth=2)
+            plt.setp(lines2[1], linewidth=2)
+
+            plt.legend(('true MI', 'estimated testing MI'), loc='upper right')
+            plt.xlabel('rho')
+            plt.title('variable_dimension = %s, sample_size = %s, testing' % (Gaussian_Dimension, sample_size))
+            fig.savefig('result/Tune_Hyperparameter_For_Minenet/2019-06-04/' + list(MineNet_Info.values())[0][0] + '_variable_dimension%s_sample_size%s_testing.png'%(Gaussian_Dimension, sample_size))
+            plt.close(fig)
 

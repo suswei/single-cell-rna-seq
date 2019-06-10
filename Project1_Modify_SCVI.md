@@ -25,31 +25,55 @@ jupyter:
 <p style="margin-left: 40px"><b><font size="+1">2.2 Tune Hyperparameter For MineNet</font></b></p>
 <a href='#section7'><p style="margin-left: 60px"><b><font size="+1">2.2.1 step 1</font></b></p></a>
 <a href='#section8'><p style="margin-left: 60px"><b><font size="+1">2.2.2 step 2</font></b></p></a>
+<a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.3 Compare MineNet estimator with true mutual inforamtion</font></b></p></a>
 
-<a href='#section9'><b><font size="+2">3. To Does</font></b></a>
+<a href='#section10'><b><font size="+2">3. To Does</font></b></a>
+
+<a href='#section11'><b><font size="+2">4. Useful Tools and Information</font></b></a>
+
 <br/><br/>
 <br/><br/>
 
 
 <a id='section2'></a>
+<b><font size="+1">1.1 Single Cell RNA Seq</font></b>
+
+In single cell RNA seq, batch effect could come from when the sample is processed and when sequencing takes place, sequence platform, which individual the samples come from, how the sample is treated. Sometimes, biological difference can also be considered as batch effect based on different research aims. For example, if T cells from blood samples and T cells from other samples are combined together, and the research aim is to investigate the difference between norm T cells and abnormal T cells, we do not want the origin of the T cells to influence the result, here the origins of the T cells although are biological factors, it is considered as batch effect.
+
+For a given dataset, how can we know there is batch difference at the beginning. The most easiest way is to do some exploratory analysis, like draw the tsne plot using SCVI, if the batch difference is big like from two different sequencing platform, it will be very easy to see. Or we can 
 
 
 <a id='section3'></a>
+<b><font size="+1">1.2 Deep Learning Neural Network</font></b>
 
 Tensor is a generalization of matrix with one obvious difference: a tensor is a mathematical entity that lives in a structure and interacts with other mathematical entities. If one transforms the other entities in the structure in a regular way, then the tensor must obey a related transformation rule.
 Tensorflow vs Pytorch (which one is better for deep learning?)
 
+Generally, to tune deep learning network:To find the best deep learning network, factors to consider are number of nodes in latent layer (width), number of hidden layers (depth), learning rate, optimizer, regularization, activation function according to [the book](https://www.deeplearningbook.org/) and the [deep learning specification](https://www.coursera.org/specializations/deep-learning?) on coursera. Write down more details here. Do we need to consider all the factors to tune the MINE deep learning network? Yes, eventually, we need to consider all the factors, with some clever strategy illustrated in [this paper](https://deepmind.com/blog/population-based-training-neural-networks/) 
+
 
 <a id='section4'></a>
+<b><font size="+1">1.3 SCVI</font></b>
 
 
 <a id='section5'></a>
+<b><font size="+1">1.4 Mutual Information</font></b>
 
 Rewrite the following, because it is copied from wikipedia:
 Mutual information (MI) of two random variables is a measure of the mutual dependence between the two variables. Let <b><i>X</i></b> be a pair of random variables with values over the space $\mathcal{X}$ X $\mathcal{Y}$. If their joint distribution is \textbf{\textit{P}}_{(\textbf{\textit{X,Y}})}} and the marginal distributions are {\displaystyle P_{X}} P_X and {\displaystyle P_{Y}} {\displaystyle P_{Y}}, the mutual information is defined as
 MI determines how similar the joint distribution of the pair <b>(<i>X,Y</i>)</b> is to the product of the marginal distributions of <b><i>X</i></b> and <b><i>Y</i></b>, and is more general than the correlation coefficient which only determines linear dependency. Mutual information contains information about all dependence—linear and nonlinear—and not just linear dependence as the correlation coefficient measures. 
 
+According to the paper [mutual information neural estimation](https://arxiv.org/pdf/1801.04062.pdf), both deep neural network architecture and the sample size of input dataset are important to shrink the difference between the estimator and true value of the mutual information.
 
+  Sample size: There is a method of calculating the required sample size recommended in the paper, understand the equation better.   
+  
+  To tune MINE, apart from the general factors for general deep learning network, in the paper, it is talked about that a naive application of stochastic gradient estimation leads to a biased estimate of the full batch gradient, the bias can be reduced by replacing the estimate in the demonimator by an exponential moving average, which will imporove all-around performance of MINE. Get more details about it.
+
+The mutual information neural estimation is only for continuous variables? The mutual information neural estimation is compared with the true value and k-NN-based non-parametric estimator in the paper for multivariate gaussian random variabls.
+
+  Between two continuous variable: we can compare the neural network estimator with the true value of mutual inforamtion for multivariate gaussian random variables. How to produce a positive definitive covariance matrix for the joint distribution of two multivariate gaussian. Why the method used in the original paper works.
+  
+  Between one continuous and one discrete variable: compare the neural network estimator with the nearest neighbour estimator [Mutual information between discrete and continuous data sets](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0087357&type=printable).
 
 
 <a id='section6'></a>
@@ -67,27 +91,55 @@ MI determines how similar the joint distribution of the pair <b>(<i>X,Y</i>)</b>
 
 <b><font size="3">2.1.5.1 Change Library Size</font></b>
 
+<b><font size="3">2.1.5.2 Change number of genes with expression</font></b>
 
+<b><font size="3">2.1.5.3 Change gene's expression proportion</font></b>
+
+Because only 9 genes are expressed in all cells, genes that are expressed in 80% cells (58 genes), 60% cells (117 genes) and 50% cells (168 genes) are selected respectively. All these 58, 117 and 168 genes have median expression in the first 200 places. All the other unselected genes will remain unchanged. Among the 58 (117/168) genes, arrange their expression levels in descending order, increase the last 1/4 of the genes' expression proportion by a certain times in a specific batch so that the expression ratio for a certain gene in batch0:batch1 is 0.2, 0.5, 2, 5, and rescale the rest of the genes among the 58 (117/168) genes. For example, in order to make batch0:batch1 be 0.2, increase the last 1/4 genes' expression proportion by 5 times in batch 1. in order to make batch0:batch1 be 5, increase the last 1/4 genes' expression proportion by 5 times in batch 0.
+
+The result is as follows:
+
+```python
+import os
+%matplotlib inline
+exec(open('code\\SummarizeResult.py').read())
+
+file_paths = []
+subfile_titles = []
+thresholds = [1,2,3]
+
+for i,threshold in enumerate(thresholds):
+    file_paths = file_paths + ['result\\Break_SCVI\\2019-05-01\\trainset_clustering_metrics_for_PropThreshold%s.png'%(threshold)]
+    subfile_titles = subfile_titles + ['Trainset clustering metrics changing expression proportions %s'%(threshold)]
+
+SummarizeResult('image',file_paths,subfile_titles,'Fig1: Clustering metrics of train set by changing gene expression proportions')
+```
+
+Why when the ratio is 5, batch mixing entropy is even higher than that when the ratio is 2? Maybe it is because scvi is not stable, run different iterations.
+
+<!-- #region -->
 <a id='section7'></a>
 <b><font size="+1">2.2.1 Tune Hyperparameter For MineNet: step1</font></b>
 
 <b><font size="3">2.2.1.1 Goal</font></b> 
 
-Try to find the best hyperparameters for the neural network of mutual information between latent vector z and batch vector s.   
-  
-The hyperparameters refers to: 
- - n_latent_z: number of nodes in each latent layer for the neural network of mutual information.
- - n_layers_z: number of layers for the neural network of mutual information.
- - MineLoss_Scale: the scale parameter for the mutual information.
+Try to find the best hyperparameters for the neural network of mutual information between latent vector z and batch vector s.
+
+The hyperparameters refers to:
+
+n_latent_z: number of nodes in each latent layer for the neural network of mutual information.
+n_layers_z: number of layers for the neural network of mutual information.
+MineLoss_Scale: the scale parameter for the mutual information.
 
 <b><font size="3">2.2.1.2 Design</font></b>
 
-Produce 20 combinations for the 3 hyperparameters: 
- - n_latent_z: [10, 30].
- - n_layers_z: [3, 10].
- - MineLoss_Scale: [1000, 5000, 10000, 50000, 100000]. 
-     
-The reason to choose 10, and 30 for n_latent_z is that the default value for n_latent_z in the VAE_MINE.py is 5, it is found   that n_latent_z=5 has no difference from n_latent_z=1. Therefore, tuning value for n_latent_z starts from 10. For MineLoss_Scale, 1000, 5000, 10000, 50000, 100000 are chosen because reconstruction loss could be several thousands, while mutual information is smaller than 1. For each combination of the three hyperparameter, run scVI, and scVI+MINE on built-in pbmc dataset. The split ratio for training and testing set is 6:4.
+Produce 20 combinations for the 3 hyperparameters:
+
+n_latent_z: [10, 30].
+n_layers_z: [3, 10].
+MineLoss_Scale: [1000, 5000, 10000, 50000, 100000].
+The reason to choose 10, and 30 for n_latent_z is that the default value for n_latent_z in the VAE_MINE.py is 5, it is found that n_latent_z=5 has no difference from n_latent_z=1. Therefore, tuning value for n_latent_z starts from 10. For MineLoss_Scale, 1000, 5000, 10000, 50000, 100000 are chosen because reconstruction loss could be several thousands, while mutual information is smaller than 1. For each combination of the three hyperparameter, run scVI, and scVI+MINE on built-in pbmc dataset. The split ratio for training and testing set is 6:4.
+
 
 <b><font size="3">2.2.1.3 Get Data</font></b>
 
@@ -99,16 +151,12 @@ The code is in code/Tune_Hyperparameter_For_MineNet.py
 
 <b><font size="3">2.2.1.5 Result and Lab Meeting Discussion</font></b>
 
-The raw result of Tuning Hyperparameters for MineNet using 20 combinations is stored in ./result/Tune_Hyperparameter_For_MineNet/2019-05-01/, and the corresponding summaried result is shown here.
-Only n_latent_z=30, n_layers_z=3, MineLoss_Scale=[1000, 5000, 10000, 50000, 100000] is demonstrated in the summarized result
-because n_latent_z=30, n_layers_z=3 seems produce most typical result after reviewing all the results of 20 combinations.
+The raw result of Tuning Hyperparameters for MineNet using 20 combinations is stored in ./result/Tune_Hyperparameter_For_MineNet/2019-05-01/, and the corresponding summaried result is shown here. Only n_latent_z=30, n_layers_z=3, MineLoss_Scale=[1000, 5000, 10000, 50000, 100000] is demonstrated in the summarized result because n_latent_z=30, n_layers_z=3 seems produce most typical result after reviewing all the results of 20 combinations.
 
 <b><font size="3">2.2.1.5.1 Clustering metric result</font></b>
+<!-- #endregion -->
 
 ```python slideshow={"slide_type": "-"}
-import os
-%matplotlib inline
-
 file_paths = []
 subfile_titles = []
 MineLoss_Scales = [1000,5000,10000,50000,100000]
@@ -117,7 +165,6 @@ for i,MineLoss_Scale in enumerate(MineLoss_Scales):
     file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-01\\trainset_clustering_metrics_pbmc_Hidden30_layers3_MineLossScale%s.png'%(MineLoss_Scale)]
     subfile_titles = subfile_titles + ['Trainset n_latent_z:30 n_layers_z:3 MineLoss_Scale:%s'%(MineLoss_Scales[i])]
 
-exec(open('code\\SummarizeResult.py').read())
 SummarizeResult('image',file_paths,subfile_titles,'Fig1: Clustering metrics of train set between scVI and scVI+MINE')
 ```
 
@@ -200,7 +247,7 @@ regression, logistic regression etc can be also considered as a type of simple d
 
 <b><font size="3">2.2.2.1 Goal</font></b> 
 
-Compare SCVI and SCVI+MINE from 100 monte carlo samples for 20 hyperparameter configurations on pbmc dataset 
+Compare SCVI and SCVI+MINE from 100 monte carlo samples for 20 hyperparameter configurations on pbmc dataset, and retina dataset 
   
 The hyperparameters refers to: 
  - n_latent_z: number of nodes in each latent layer for the neural network of mutual information.
@@ -213,11 +260,12 @@ The hyperparameters refers to:
  - n_layers_z: [3, 10].
  - MineLoss_Scale: [1000, 5000, 10000, 50000, 100000]. 
      
-Each time, pbmc dataset is randomly splitted into training set and test set at 6:4 ratio. For every random training set, apply SCVI once and SCVI+MINE with the 20 different hyperparameter configurations. Repeat the process 100 times. Get the averaged clustering metrics from the 100 iterations for SCVI and SCVI+MINE with the 20 different hyperparameter configurations, and compare which is better based on the averaged clustering metrics.
+Each time, pbmc(retina) dataset is randomly splitted into training set and test set at 6:4 ratio. For every random training set, apply SCVI once and SCVI+MINE with the 20 different hyperparameter configurations. Repeat the process 100 times. Get the averaged clustering metrics from the 100 iterations for SCVI and SCVI+MINE with the 20 different hyperparameter configurations, and compare which is better based on the averaged clustering metrics.
 
 <b><font size="3">2.2.2.3 Get Data</font></b>
 
-pbmc dataset is built-in scVI dataset. just use the function PbmcDataset() in scvi.dataset to load the dataset
+pbmc dataset is scVI built-in dataset. just use the function PbmcDataset() in scvi.dataset to load the dataset.
+retina dataset is also scVI built-in dataset, just use the function RetinaDataset() in scvi.dataset to load the dataset.
 
 <b><font size="3">2.2.2.4 Code</font></b>
 
@@ -225,7 +273,7 @@ The code is code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.sh. 
 
 <b><font size="3">2.2.2.5 Result and Lab Meeting Discussion</font></b>
 
-The raw result is stored in ./result/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo/2019-05-26/, and the corresponding summaried result is shown here.
+The raw result is stored in ./result/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo/2019-05-26/ for pbmc, and in ./result/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo/2019-05-28/ for retina, and the corresponding summaried result is shown here.
 
 ```python
 import itertools
@@ -251,7 +299,7 @@ for i in range(len(hyperparameter_experiments)):
     file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-26\\trainset_mean_clustering_metrics_Pbmc_Hidden%s_layers%s_MineLossScale%s_100samples.png'%(n_hidden_z,n_layers_z, MineLoss_Scale)]
     file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-26\\testset_mean_clustering_metrics_Pbmc_Hidden%s_layers%s_MineLossScale%s_100samples.png'%(n_hidden_z,n_layers_z, MineLoss_Scale)]
 
-SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig3: Mean Clustering metrics from 100 samples")
+SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig3: Pbmc Mean Clustering metrics from 100 samples")
 ```
 
 Among the 20 hyperparameter configurations, n_hidden_z = 10, n_layers_z = 10, MineLoss_Scale = 1000 seems work best with smaller standard deviation.
@@ -260,8 +308,141 @@ ASW here is no longer lower than asw result in step 1 for Tune Hyperparameter Fo
 
 To  solve the problem of inconsistency of versions of packages on my own computer and on the server, I create a virtualenv in the working directory on the server and installed the required packages of the same version on my computer listed in Project1_Modify_SCVI-requirements.txt file. Everytime when a task is run, the virtualenv will be activated. Check the code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.sh file. As for how to create a virtualenv, ref to the links [virtualenv](https://docs.python-guide.org/dev/virtualenvs/), [requirements](https://pip.readthedocs.io/en/1.1/requirements.html).
 
+```python
+import itertools
+Average_ClusteringMetric_Barplot(dataset_name = "Retina",results_dict = "result/Tune_Hyperparameter_For_MineNet/2019-05-28/", n_sample = 100, hyperparameter_config = {'n_hidden_z':[10,30],'n_layers_z':[3,10],'MineLoss_Scale':[1000,5000,10000,50000,100000]})
 
+```
+
+```python
+hyperparameter_config = {
+        'n_hidden_z': [10,30],
+        'n_layers_z': [3,10],
+        'MineLoss_Scale': [1000,5000,10000,50000,100000]
+    }
+keys, values = zip(*hyperparameter_config.items())
+hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+file_paths = []
+    
+for i in range(len(hyperparameter_experiments)):
+    key, value = zip(*hyperparameter_experiments[i].items())
+    n_hidden_z = value[0]
+    n_layers_z = value[1]
+    MineLoss_Scale = value[2]
+    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-28\\trainset_mean_clustering_metrics_Retina_Hidden%s_layers%s_MineLossScale%s_100samples.png'%(n_hidden_z,n_layers_z, MineLoss_Scale)]
+    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-28\\testset_mean_clustering_metrics_Retina_Hidden%s_layers%s_MineLossScale%s_100samples.png'%(n_hidden_z,n_layers_z, MineLoss_Scale)]
+
+SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig4: Retina Mean Clustering metrics from 100 samples")
+```
+
+According to Fig4, no matter what the configuration is, batch mixing entropy for SCVI+MINE is slightly lower than batch mixing entropy for SCVI, about 0.01-0.05 smaller. What does 0.01-0.05 smaller mean for batch mixing entropy. In order to answer this question, I need to check the range (from minimum to maximum value) of batch mixing entropy.
+
+<!-- #region -->
 <a id='section9'></a>
+<b><font size="+1">2.3 Compare MineNet estimator with true mutual inforamtion</font></b>
+
+<b><font size="3">2.3.1 Goal</font></b> 
+
+Try to reproduce the result in Figure 1 in the papar [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf), which compares the MineNet mutual inforamtion estimator with the true mutual information between two multivariate gaussian random variables.
+
+<b><font size="3">2.3.2 Design</font></b>
+
+Try four MineNet architectures which are Mine_Net, Mine_Net2, Mine_Net3, Mine_Net4, coded in ./scvi/models/modules.py,  compare estimator from each MineNet architectures with true mutual information. 
+
+The hyperparameter for Mine_Net:
+n_hidden_z: [10],
+n_layers_z: [10, 30, 50],
+Gaussian_Dimension: [2, 20],
+sample_size: [14388],
+rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+The hyperparameter for Mine_Net2:
+n_hidden_z: [10],
+n_layers_z: [10,
+Gaussian_Dimension: [2, 20],
+sample_size: [14388],
+rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+The hyperparameter for Mine_Net3:
+H : [10]
+Gaussian_Dimension: [2, 20],
+sample_size: [14388],
+rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+The hyperparameter for Mine_Net4:
+layers = [32, 16]
+Gaussian_Dimension: [2, 20],
+sample_size: [14388],
+rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+
+<b><font size="3">2.3.3 Code</font></b>
+
+code/Compare_MINE_with_True_mutual_information.py produces result to compare estimator from Mine_Net with true mutual inforamtion. code/Compare_MINE_with_True_mutual_information2.py produces result to compare estimator from Mine_Net2, Mine_Net3, Mine_Net4 with true mutual inforamtion. code/SummarizeResult.py to summarize the final result.
+
+<b><font size="3">2.3.4 Result and Lab Meeting Discussion</font></b>
+
+The raw result of Tuning Hyperparameters for MineNet using 20 combinations is stored in ./result/Compare_MineNet_Estimator_with_true_MI/2019-06-04/, and the corresponding summaried result is shown here. Figure5 is for Mine_Net, Figure6 is for Mine_Net2, Figure7 is for Mine_Net3, Figure8 is for Mine_Net4. For Mine_Net4, when Gaussian_Dimension=20, rho = -0.99, -0.9, 0.9, 0.99, Mine_Net4 returns none estimated mutual inforamtion. Why?
+<!-- #endregion -->
+
+```python
+import os
+%matplotlib inline
+exec(open('code\\SummarizeResult.py').read())
+Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/Tune_Hyperparameter_For_MineNet/2019-06-04/', MineNet_Info = {'model':['Mine_Net'], 'Hyperparameter':{'n_hidden_z': [10], 'n_layers_z':[10,30,50], 'Gaussian_Dimension': [2, 20], 'sample_size': [14388]}})
+Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/Tune_Hyperparameter_For_MineNet/2019-06-04/', MineNet_Info = {'model':['Mine_Net2'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388]}})
+Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/Tune_Hyperparameter_For_MineNet/2019-06-04/', MineNet_Info = {'model':['Mine_Net3'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388]}})
+Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/Tune_Hyperparameter_For_MineNet/2019-06-04/', MineNet_Info = {'model':['Mine_Net4'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388]}})
+
+```
+
+```python
+hyperparameter_config = {
+        'n_hidden_z': [10],
+        'n_layers_z': [10, 30, 50],
+        'Gaussian_Dimension': [2, 20],
+        'sample_size': [14388]
+    }
+keys, values = zip(*hyperparameter_config.items())
+hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+file_paths = []
+    
+for i in range(len(hyperparameter_experiments)):
+    key, value = zip(*hyperparameter_experiments[i].items())
+    n_hidden_z = value[0]
+    n_layers_z = value[1]
+    Gaussian_Dimension = value[2]
+    sample_size = value[3]
+    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-06-04\\Mine_Net_n_hidden_z%s_n_layers_z%s_variable_dimension%s_sample_size%s_training.png'%(n_hidden_z,n_layers_z, Gaussian_Dimension, sample_size)]
+    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-06-04\\Mine_Net_n_hidden_z%s_n_layers_z%s_variable_dimension%s_sample_size%s_testing.png'%(n_hidden_z,n_layers_z, Gaussian_Dimension, sample_size)]
+
+SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig5: Compare Mine_Net estimator with true MI")
+```
+
+```python
+hyperparameter_config = {
+        'Net_Name' : ['Mine_Net2', 'Mine_Net3', 'Mine_Net4'],
+        'Gaussian_Dimension' : [2, 20],
+        'sample_size' : [14388]
+    }
+keys, values = zip(*hyperparameter_config.items())
+hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+file_paths = []
+    
+for i in range(len(hyperparameter_experiments)):
+    key, value = zip(*hyperparameter_experiments[i].items())
+    Net_Name = value[0]
+    Gaussian_Dimension = value[1]
+    sample_size = value[2]
+    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-06-04\\%s_variable_dimension%s_sample_size%s_training.png'%(Net_Name, Gaussian_Dimension, sample_size)]
+    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-06-04\\%s_variable_dimension%s_sample_size%s_testing.png'%(Net_Name, Gaussian_Dimension, sample_size)]
+
+SummarizeResult(result_type='image', file_paths=file_paths[0:4], figtitle="Fig6: Compare Mine_Net2 estimator with true MI")
+SummarizeResult(result_type='image', file_paths=file_paths[4:8], figtitle="Fig7: Compare Mine_Net3 estimator with true MI")
+SummarizeResult(result_type='image', file_paths=file_paths[8:], figtitle="Fig8: Compare Mine_Net4 estimator with true MI")
+```
+
+<a id='section10'></a>
 <b><font size="+2">3. To Does</font></b>
 
 <b><font size="+1">3.1 Tune Hyperparameter For MineNet</font></b>
@@ -276,6 +457,10 @@ Deep neural network is used to estimate the lower bound for mutual information. 
 
 Find real data set with obvious batch effect. Because the pbmc dataset used now do not have obvious batch effect. The dataset  ,harmonizing datasets with different composition of cell types,used in the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1) could be a resource. And another thing is to simulate data set with obvious batch effect from ZINB model.
 
-```python
 
-```
+<a id='section11'></a>
+<b><font size="+2">4. Useful Tools and Information</font></b>
+
+<b><font size="+1">4.1 Version control for jupyter notebook</font></b>
+[how-to-version-control-jupyter](https://nextjournal.com/schmudde/how-to-version-control-jupyter)
+[]
