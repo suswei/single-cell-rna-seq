@@ -302,9 +302,85 @@ class MINE_Net4(nn.Module):
         modules.append(nn.Linear(prev_layer, 1))
         self.linears = nn.Sequential(*modules)
 
-    def forward(self, xy, x, n_dim):
+    def forward(self, xy, x_shuffle, x_n_dim):
         h = self.linears(xy)
-        y = xy[:, n_dim:]
-        xy_2 = torch.cat((x, y), 1)
+        y = xy[:, x_n_dim:]
+        xy_2 = torch.cat((x_shuffle, y), 1)
         h2 = self.linears(xy_2)
         return h, h2
+
+
+# discrete_continuous_info(d, c) estimates the mutual information between a
+# discrete vector 'd' and a continuous vector 'c' using
+# nearest-neighbor statistics.  Similar to the estimator described by
+# Kraskov et. al. ("Estimating Mutual Information", PRE 2004)
+# Each vector in c & d is stored as a column in an array:
+# c.shape = (vector length, # samples).
+import numpy as np
+import math
+import scipy
+def discrete_continuous_info(d, c, k:int = 3, base: float = 2):
+    # First, bin the continuous data 'c' according to the discrete symbols 'd'
+    # d and c are array
+    first_symbol = []
+    symbol_IDs = d.shape[1]*[0]
+    c_split = []
+    cs_indices = []
+    num_d_symbols = 0
+
+    for c1 in range(d.shape[1]):
+
+        symbol_IDs[c1] = num_d_symbols + 1
+
+        for c2 in range(num_d_symbols):
+            if d[:,c1] == d[:, first_symbol[c2]]:
+                symbol_IDs[c1] = c2
+                break
+        if symbol_IDs[c1] > num_d_symbols:
+            num_d_symbols = num_d_symbols + 1
+            first_symbol = first_symbol + [c1]
+            c_split = c_split + [np.array([c[:,c1]]).transpose()]
+            cs_indices = cs_indices + [np.array([[c1]])]
+        else:
+            c_split[symbol_IDs[c1]-1] = np.concatenate((c_split[symbol_IDs[c1]-1], np.array([c[:,c1]]).transpose()), axis=1)
+            cs_indices[symbol_IDs[c1]-1] = np.concatenate((cs_indices[symbol_IDs[c1]-1], np.array([[c1]])), axis=1)
+
+    # Second, compute the neighbor statistic for each data pair (c, d) using
+    # the binned c_split list
+
+    m_tot = 0
+    av_psi_Nd = 0
+    V = d.shape[1]*[0]
+    all_c_distances = c.shape[1]*[0]
+    psi_ks = 0
+
+    for c_bin in range(num_d_symbols):
+        one_k = min(k, c_split[c_bin].shape[1]-1)
+        if one_k > 0:
+            c_distances = c_split[c_bin].shape[1]*[0]
+            c_split_one = np.asmatrix(c_split[c_bin])
+            for pivot in range(c_split[c_bin].shape[1]):
+                # find the radius of our volume using only those samples with
+                # the particular value of the discrete symbol 'd'
+                for cv in range(c_split[c_bin].shape[1]):
+                    vector_diff = c_split_one[:,cv] - c_split_one[:,pivot]
+                    c_distances[cv] = math.sqrt(np.matmul(vector_diff.transpose(),vector_diff)[0,0])
+                eps_over_2 = sorted(c_distances)[one_k]
+                c_matrix = np.asmatrix(c)
+
+                for cv in range(c.shape[1]):
+                    vector_diff = c_matrix[:,cv]-c_split_one[:,pivot]
+                    all_c_distances[cv] = math.sqrt(np.matmul(vector_diff.transpose(),vector_diff)[0,0])
+
+                m =  max(len(list(filter(lambda x: x <= eps_over_2, all_c_distances)))-1,0)
+                m_tot = m_tot + scipy.special.digamma(m)
+                V[cs_indices[c_bin][0,pivot]] = (2*eps_over_2)**(d.shape[0])
+        else:
+            m_tot = m_tot + scipy.special.digamma(num_d_symbols*2)
+
+        p_d = (c_split[c_bin].shape[1])/(d.shape[1])
+        av_psi_Nd = av_psi_Nd + p_d*scipy.special.digamma(p_d*(d.shape[1]))
+        psi_ks = psi_ks + p_d*scipy.special.digamma(max(one_k, 1))
+
+    f = (scipy.special.digamma(d.shape[1]) - av_psi_Nd + psi_ks - m_tot/(d.shape[1]))/math.log(base)
+    return f

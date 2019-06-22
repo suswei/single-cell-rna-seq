@@ -13,51 +13,50 @@ jupyter:
     name: python3
 ---
 
+<!-- #region -->
 <a id='section1'></a>
 <h1><center>Project1_Modify_SCVI</center></h1>
 <b><font size="+2">1. Introduction</font></b>
-<a href='#section2'><p style="margin-left: 40px"><b><font size="+1">1.1 Single Cell RNA Seq</font></b></p></a>
-<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 Deep Learning Neural Network</font></b></p></a>
+<a href='#section2'><p style="margin-left: 40px"><b><font size="+1">1.1 Deep Learning Network</font></b></p></a>
+<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 Invariance of Deep Learning</font></b></p></a>
 <a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 SCVI</font></b></p></a>
-<a href='#section5'><p style="margin-left: 40px"><b><font size="+1">1.4 Mutual Information</font></b></p></a>
+<a href='#section5'><p style="margin-left: 40px"><b><font size="+1">1.4 Modified SCVI</font></b></p></a>
+
 <b><font size="+2">2. Have Done and Discussion</font></b>
 <a href='#section6'><p style="margin-left: 40px"><b><font size="+1">2.1 Break SCVI</font></b></p></a>
 <p style="margin-left: 40px"><b><font size="+1">2.2 Tune Hyperparameter For MineNet</font></b></p>
 <a href='#section7'><p style="margin-left: 60px"><b><font size="+1">2.2.1 step 1</font></b></p></a>
 <a href='#section8'><p style="margin-left: 60px"><b><font size="+1">2.2.2 step 2</font></b></p></a>
-<a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.3 Compare MineNet estimator with true mutual inforamtion</font></b></p></a>
+<a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.3 Compare estimated mutual inforamtion with true mutual inforamtion</font></b></p></a>
+<a href='#section9'><p style="margin-left: 60px"><b><font size="+1">2.3.1 gaussian gaussian</font></b></p></a>
+<a href='#section10'><p style="margin-left: 60px"><b><font size="+1">2.3.2 gaussian categorical</font></b></p></a>
+<a href='#section11'><p style="margin-left: 60px"><b><font size="+1">2.3.3 gaussian lognormal</font></b></p></a>
 
-<a href='#section10'><b><font size="+2">3. To Does</font></b></a>
 
-<a href='#section11'><b><font size="+2">4. Useful Tools and Information</font></b></a>
+<a href='#section12'><b><font size="+2">3. To Does</font></b></a>
+
+<a href='#section13'><b><font size="+2">4. Useful Tools and Information</font></b></a>
 
 <br/><br/>
 <br/><br/>
-
+<!-- #endregion -->
 
 <a id='section2'></a>
-<b><font size="+1">1.1 Single Cell RNA Seq</font></b>
-
-In single cell RNA seq, batch effect could come from when the sample is processed and when sequencing takes place, sequence platform, which individual the samples come from, how the sample is treated. Sometimes, biological difference can also be considered as batch effect based on different research aims. For example, if T cells from blood samples and T cells from other samples are combined together, and the research aim is to investigate the difference between norm T cells and abnormal T cells, we do not want the origin of the T cells to influence the result, here the origins of the T cells although are biological factors, it is considered as batch effect.
-
-For a given dataset, how can we know there is batch difference at the beginning. The most easiest way is to do some exploratory analysis, like draw the tsne plot using SCVI, if the batch difference is big like from two different sequencing platform, it will be very easy to see. Or we can 
-
-
-<a id='section3'></a>
-<b><font size="+1">1.2 Deep Learning Neural Network</font></b>
+<b><font size="+1">1.1 Deep Learning Neural Network</font></b>
 
 Tensor is a generalization of matrix with one obvious difference: a tensor is a mathematical entity that lives in a structure and interacts with other mathematical entities. If one transforms the other entities in the structure in a regular way, then the tensor must obey a related transformation rule.
 Tensorflow vs Pytorch (which one is better for deep learning?)
 
 Generally, to tune deep learning network:To find the best deep learning network, factors to consider are number of nodes in latent layer (width), number of hidden layers (depth), learning rate, optimizer, regularization, activation function according to [the book](https://www.deeplearningbook.org/) and the [deep learning specification](https://www.coursera.org/specializations/deep-learning?) on coursera. Write down more details here. Do we need to consider all the factors to tune the MINE deep learning network? Yes, eventually, we need to consider all the factors, with some clever strategy illustrated in [this paper](https://deepmind.com/blog/population-based-training-neural-networks/) 
 
+<!-- #region -->
+<a id='section3'></a>
+<b><font size="+1">1.2 Invariance of Deep Learning</font></b>
 
-<a id='section4'></a>
-<b><font size="+1">1.3 SCVI</font></b>
 
+[Measuring Invariances in Deep Networks](https://ai.stanford.edu/~ang/papers/nips09-MeasuringInvariancesDeepNetworks.pdf)
 
-<a id='section5'></a>
-<b><font size="+1">1.4 Mutual Information</font></b>
+Mutual Information
 
 Rewrite the following, because it is copied from wikipedia:
 Mutual information (MI) of two random variables is a measure of the mutual dependence between the two variables. Let <b><i>X</i></b> be a pair of random variables with values over the space $\mathcal{X}$ X $\mathcal{Y}$. If their joint distribution is \textbf{\textit{P}}_{(\textbf{\textit{X,Y}})}} and the marginal distributions are {\displaystyle P_{X}} P_X and {\displaystyle P_{Y}} {\displaystyle P_{Y}}, the mutual information is defined as
@@ -74,6 +73,24 @@ The mutual information neural estimation is only for continuous variables? The m
   Between two continuous variable: we can compare the neural network estimator with the true value of mutual inforamtion for multivariate gaussian random variables. How to produce a positive definitive covariance matrix for the joint distribution of two multivariate gaussian. Why the method used in the original paper works.
   
   Between one continuous and one discrete variable: compare the neural network estimator with the nearest neighbour estimator [Mutual information between discrete and continuous data sets](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0087357&type=printable).
+
+
+<!-- #endregion -->
+
+<a id='section4'></a>
+<b><font size="+1">1.3 SCVI</font></b>
+
+Single Cell RNA Seq
+
+In single cell RNA seq, batch effect could come from when the sample is processed and when sequencing takes place, sequence platform, which individual the samples come from, how the sample is treated. Sometimes, biological difference can also be considered as batch effect based on different research aims. For example, if T cells from blood samples and T cells from other samples are combined together, and the research aim is to investigate the difference between norm T cells and abnormal T cells, we do not want the origin of the T cells to influence the result, here the origins of the T cells although are biological factors, it is considered as batch effect.
+
+For a given dataset, how can we know there is batch difference at the beginning. The most easiest way is to do some exploratory analysis, like draw the tsne plot using SCVI, if the batch difference is big like from two different sequencing platform, it will be very easy to see. Or we can 
+
+
+<a id='section5'></a>
+<b><font size="+1">1.4 Modified SCVI</font></b>
+
+
 
 
 <a id='section6'></a>
@@ -127,17 +144,22 @@ Try to find the best hyperparameters for the neural network of mutual informatio
 
 The hyperparameters refers to:
 
-n_latent_z: number of nodes in each latent layer for the neural network of mutual information.
-n_layers_z: number of layers for the neural network of mutual information.
-MineLoss_Scale: the scale parameter for the mutual information.
+    -n_latent_z: number of nodes in each latent layer for the neural network of mutual information.
+
+    -n_layers_z: number of layers for the neural network of mutual information.
+
+    -MineLoss_Scale: the scale parameter for the mutual information.
 
 <b><font size="3">2.2.1.2 Design</font></b>
 
 Produce 20 combinations for the 3 hyperparameters:
 
-n_latent_z: [10, 30].
-n_layers_z: [3, 10].
-MineLoss_Scale: [1000, 5000, 10000, 50000, 100000].
+    n_latent_z: [10, 30].
+
+    n_layers_z: [3, 10].
+
+    MineLoss_Scale: [1000, 5000, 10000, 50000, 100000].
+
 The reason to choose 10, and 30 for n_latent_z is that the default value for n_latent_z in the VAE_MINE.py is 5, it is found that n_latent_z=5 has no difference from n_latent_z=1. Therefore, tuning value for n_latent_z starts from 10. For MineLoss_Scale, 1000, 5000, 10000, 50000, 100000 are chosen because reconstruction loss could be several thousands, while mutual information is smaller than 1. For each combination of the three hyperparameter, run scVI, and scVI+MINE on built-in pbmc dataset. The split ratio for training and testing set is 6:4.
 
 
@@ -337,71 +359,97 @@ SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig4: Reti
 
 According to Fig4, no matter what the configuration is, batch mixing entropy for SCVI+MINE is slightly lower than batch mixing entropy for SCVI, about 0.01-0.05 smaller. What does 0.01-0.05 smaller mean for batch mixing entropy. In order to answer this question, I need to check the range (from minimum to maximum value) of batch mixing entropy.
 
-<!-- #region -->
-<a id='section9'></a>
-<b><font size="+1">2.3 Compare MineNet estimator with true mutual inforamtion</font></b>
 
-<b><font size="3">2.3.1 Goal</font></b> 
+<a id='section9'></a>
+<b><font size="+1">2.3 Compare estimated mutual information with true mutual inforamtion</font></b>
+
+<b><font size="+1">2.3.1 gaussian and gaussian </font></b>
+
+<b><font size="3">2.3.1.1 Goal</font></b> 
 
 Try to reproduce the result in Figure 1 in the papar [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf), which compares the MineNet mutual inforamtion estimator with the true mutual information between two multivariate gaussian random variables.
 
-<b><font size="3">2.3.2 Design</font></b>
+<b><font size="3">2.3.1.2 Design</font></b>
 
-Try four MineNet architectures which are Mine_Net, Mine_Net2, Mine_Net3, Mine_Net4, coded in ./scvi/models/modules.py,  compare estimator from each MineNet architectures with true mutual information. 
+Try four MineNet architectures which are Mine_Net, Mine_Net2, Mine_Net3, Mine_Net4, coded in ./scvi/models/modules.py, and compare estimator from each MineNet architecture with true mutual information. 
+
+The main difference between Mine_Net3, Mine_Net4 and Mine_Net, Mine_Net2 is that MineNet, MineNet2 first transforms two random variables into two real number, and do linear combination and activation for the two real numbers. While, MineNet3, MineNet4 transforms two random variables into two vectors, then do linear combination and activation for the two vectors, finally convert the combined vector into a real number. The main difference between Mine_Net3 and Mine_Net4 is that Mine_Net3 transforms the two random variables into two vectors separately, while Mine_Net4 transforms the matrix containing the two random variables together to a combined vector.
 
 The hyperparameter for Mine_Net:
-n_hidden_z: [10],
-n_layers_z: [10, 30, 50],
-Gaussian_Dimension: [2, 20],
-sample_size: [14388],
-rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+    -n_hidden_z: [10],
+
+    -n_layers_z: [10, 30, 50],
+
+    -Gaussian_Dimension: [2, 20],
+
+    -sample_size: [14388],
+
+    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
 
 The hyperparameter for Mine_Net2:
-n_hidden_z: [10],
-n_layers_z: [10,
-Gaussian_Dimension: [2, 20],
-sample_size: [14388],
-rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+    -n_hidden_z: [10],
+
+    -n_layers_z: [10,
+
+    -Gaussian_Dimension: [2, 20],
+
+    -sample_size: [14388],
+
+    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
 
 The hyperparameter for Mine_Net3:
-H : [10]
-Gaussian_Dimension: [2, 20],
-sample_size: [14388],
-rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+    -H : [10] (H means the dimension of the vectors)
+
+    -Gaussian_Dimension: [2, 20],
+
+    -sample_size: [14388],
+
+    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
 
 The hyperparameter for Mine_Net4:
-layers = [32, 16]
-Gaussian_Dimension: [2, 20],
-sample_size: [14388],
-rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+    -layers = [32, 16] (the node number of the two hidden layers which converts the random variables matrix into a vector)
+
+    -Gaussian_Dimension: [2, 20],
+
+    -sample_size: [14388],
+
+    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
 
 
-<b><font size="3">2.3.3 Code</font></b>
+<b><font size="3">2.3.1.3 Code</font></b>
 
-code/Compare_MINE_with_True_mutual_information.py produces result to compare estimator from Mine_Net with true mutual inforamtion. code/Compare_MINE_with_True_mutual_information2.py produces result to compare estimator from Mine_Net2, Mine_Net3, Mine_Net4 with true mutual inforamtion. code/SummarizeResult.py to summarize the final result.
+code/compare_gaussian_gaussian_estimatedMI_with_trueMI.py produces result to compare estimator from Mine_Net with true mutual inforamtion. code/compare_gaussian_gaussian_estimatedMI_with_trueMI2.py produces result to compare estimator from Mine_Net2, Mine_Net3, Mine_Net4 with true mutual inforamtion. code/SummarizeResult.py to summarize the final result.
 
-<b><font size="3">2.3.4 Result and Lab Meeting Discussion</font></b>
+<b><font size="3">2.3.1.4 Result and Lab Meeting Discussion</font></b>
 
-The raw result of Tuning Hyperparameters for MineNet using 20 combinations is stored in ./result/Compare_MineNet_Estimator_with_true_MI/2019-06-04/, and the corresponding summaried result is shown here. Figure5 is for Mine_Net, Figure6 is for Mine_Net2, Figure7 is for Mine_Net3, Figure8 is for Mine_Net4. For Mine_Net4, when Gaussian_Dimension=20, rho = -0.99, -0.9, 0.9, 0.99, Mine_Net4 returns none estimated mutual inforamtion. Why?
-<!-- #endregion -->
+The raw result is stored in ./result/compare_estimatedMI_with_trueMI/gaussian_gaussian/, and the corresponding summarized result is shown here. Figure5 is for Mine_Net, Figure6 is for Mine_Net2, Figure7 is for Mine_Net3, Figure8 is for Mine_Net4. For Mine_Net4, when Gaussian_Dimension=20, rho = -0.99, -0.9, 0.9, 0.99, the estimated mutual inforamtion returned by Mine_Net4 is NaN. Why?: it is because the learning rate is too large for the situation when Gaussian_Dimension=20, rho= -0.99, -0.9, 0.9, 0.99, the loss for mini batches becomes NaN. when learning rate is decreased from 0.0005 to 0.00005, no NaN value is returned. torch.optim.lr_scheduler provides several methods to adjust the learning rate based on the number of epochs. torch.optim.lr_scheduler.ReduceLROnPlateau allows dynamic learning rate reducing based on some validation measurements.
 
 ```python
 import os
 %matplotlib inline
 exec(open('code\\SummarizeResult.py').read())
-Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/Tune_Hyperparameter_For_MineNet/2019-06-04/', MineNet_Info = {'model':['Mine_Net'], 'Hyperparameter':{'n_hidden_z': [10], 'n_layers_z':[10,30,50], 'Gaussian_Dimension': [2, 20], 'sample_size': [14388]}})
-Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/Tune_Hyperparameter_For_MineNet/2019-06-04/', MineNet_Info = {'model':['Mine_Net2'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388]}})
-Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/Tune_Hyperparameter_For_MineNet/2019-06-04/', MineNet_Info = {'model':['Mine_Net3'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388]}})
-Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/Tune_Hyperparameter_For_MineNet/2019-06-04/', MineNet_Info = {'model':['Mine_Net4'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388]}})
+Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/compare_estimatedMI_with_trueMI/gaussian_gaussian/', MineNet_Info = {'model':['Mine_Net'], 'Hyperparameter':{'n_hidden_z': [10], 'n_layers_z':[10,30,50], 'Gaussian_Dimension': [2, 20], 'sample_size': [14388], 'train_size': [0.5]}})
+Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/compare_estimatedMI_with_trueMI/gaussian_gaussian/', MineNet_Info = {'model':['Mine_Net2'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388], 'train_size': [0.5]}})
+Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/compare_estimatedMI_with_trueMI/gaussian_gaussian/', MineNet_Info = {'model':['Mine_Net3'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388], 'train_size': [0.5]}})
+Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/compare_estimatedMI_with_trueMI/gaussian_gaussian/', MineNet_Info = {'model':['Mine_Net4'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388], 'train_size': [0.5]}})
 
 ```
 
 ```python
+import math
 hyperparameter_config = {
         'n_hidden_z': [10],
         'n_layers_z': [10, 30, 50],
         'Gaussian_Dimension': [2, 20],
-        'sample_size': [14388]
+        'sample_size': [14388],
+        'train_size': [0.5]
     }
 keys, values = zip(*hyperparameter_config.items())
 hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -413,8 +461,9 @@ for i in range(len(hyperparameter_experiments)):
     n_layers_z = value[1]
     Gaussian_Dimension = value[2]
     sample_size = value[3]
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-06-04\\Mine_Net_n_hidden_z%s_n_layers_z%s_variable_dimension%s_sample_size%s_training.png'%(n_hidden_z,n_layers_z, Gaussian_Dimension, sample_size)]
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-06-04\\Mine_Net_n_hidden_z%s_n_layers_z%s_variable_dimension%s_sample_size%s_testing.png'%(n_hidden_z,n_layers_z, Gaussian_Dimension, sample_size)]
+    train_size = value[4]
+    file_paths = file_paths + ['result\\compare_estimatedMI_with_trueMI\\gaussian_gaussian\\Mine_Net_n_hidden_z%s_n_layers_z%s_variable_dimension%s_sample_size%s_training.png'%(n_hidden_z,n_layers_z, Gaussian_Dimension, math.floor(sample_size*train_size))]
+    file_paths = file_paths + ['result\\compare_estimatedMI_with_trueMI\\gaussian_gaussian\\Mine_Net_n_hidden_z%s_n_layers_z%s_variable_dimension%s_sample_size%s_testing.png'%(n_hidden_z,n_layers_z, Gaussian_Dimension, math.floor(sample_size*(1-train_size)))]
 
 SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig5: Compare Mine_Net estimator with true MI")
 ```
@@ -423,7 +472,8 @@ SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig5: Comp
 hyperparameter_config = {
         'Net_Name' : ['Mine_Net2', 'Mine_Net3', 'Mine_Net4'],
         'Gaussian_Dimension' : [2, 20],
-        'sample_size' : [14388]
+        'sample_size' : [14388],
+        'train_size': [0.5]
     }
 keys, values = zip(*hyperparameter_config.items())
 hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -434,33 +484,91 @@ for i in range(len(hyperparameter_experiments)):
     Net_Name = value[0]
     Gaussian_Dimension = value[1]
     sample_size = value[2]
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-06-04\\%s_variable_dimension%s_sample_size%s_training.png'%(Net_Name, Gaussian_Dimension, sample_size)]
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-06-04\\%s_variable_dimension%s_sample_size%s_testing.png'%(Net_Name, Gaussian_Dimension, sample_size)]
+    train_size = value[3]
+    file_paths = file_paths + ['result\\compare_estimatedMI_with_trueMI\\gaussian_gaussian\\%s_variable_dimension%s_sample_size%s_training.png'%(Net_Name, Gaussian_Dimension, math.floor(sample_size*train_size))]
+    file_paths = file_paths + ['result\\compare_estimatedMI_with_trueMI\\gaussian_gaussian\\%s_variable_dimension%s_sample_size%s_testing.png'%(Net_Name, Gaussian_Dimension, math.floor(sample_size*(1-train_size)))]
 
-SummarizeResult(result_type='image', file_paths=file_paths[0:4], figtitle="Fig6: Compare Mine_Net2 estimator with true MI")
-SummarizeResult(result_type='image', file_paths=file_paths[4:8], figtitle="Fig7: Compare Mine_Net3 estimator with true MI")
-SummarizeResult(result_type='image', file_paths=file_paths[8:], figtitle="Fig8: Compare Mine_Net4 estimator with true MI")
+SummarizeResult(result_type='image', file_paths=file_paths[0:4], figtitle="Fig6: Compare Mine_Net2 estimated MI with true MI for gaussian and gaussian")
+SummarizeResult(result_type='image', file_paths=file_paths[4:8], figtitle="Fig7: Compare Mine_Net3 estimated MI with true MI for gaussian and gaussian")
+SummarizeResult(result_type='image', file_paths=file_paths[8:], figtitle="Fig8: Compare Mine_Net4 estimated MI with true MI for gaussian and gaussian")
 ```
 
 <a id='section10'></a>
+<b><font size="+1">2.3.2 gaussian and categorical </font></b>
+
+<b><font size="3">2.3.2.1 Goal</font></b> 
+
+Use the nearest neighbor method in the papar [Mutual Information between Discrete and Continuous
+Data Sets](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0087357&type=printable) to estimate mutual inforamtion between continuous gaussian variable and categorical variable. 
+
+<b><font size="3">2.3.2.2 Design</font></b>
+
+One dimension categorical variable with 3 categories, and one dimension gaussian variables.
+
+One dimension categorical variable with 3 categories, and 4 dimension gaussian variables. (The reason to choose dimension 4 for gaussian variable is because the multivariate dimension integration in matlab is time-demanding when dimension is larger than 4)
+
+For both cases above, choose 13 different combinations of categorical variable and gaussian variable by determining the probability distribution for the categorical variable, and the gaussian distribution conditional on the categorical variable. For each combination, calculate the true mutual information according to the definition of mutual information. Then get the estimated mutual information. In order to get estimated mutual information for each combination, get 10000 samples from the joint distribution of the categorical and gaussian variable, use nearest neighbor method to estimate mutual information, repeat this process 100 times, get the average of the 100 estimated mutual information as the final estimated mutual inforamtion for this combination, and compare it with its true mutual information. Repeat the whole process for the left 12 combinations, and plot the true mutual information, averaged estimated mutual information and standard deviation of the estimated mutual information.
+
+<b><font size="3">2.3.2.3 Code</font></b>
+
+code/compare_gaussian_categorical_estimatedMI_with_trueMI.m, code/discrete_continuous_info.m, code/discrete_continuous_info_fast.m, code/integralN.m, produce the results. code/SummarizeResult.py displays the results.
+
+<b><font size="3">2.3.2.4 Result and Lab Meeting Discussion</font></b>
+
+The result is stored in ./result/compare_estimatedMI_with_trueMI/gaussian_categorical/.
+
+```python
+exec(open('code\\SummarizeResult.py').read())
+hyperparameter_config = {
+        'iterations' : [100],
+        'samples' : [10000],
+        'discrete_dim' : [1],
+        'gaussian_dim': [1,4]
+    }
+keys, values = zip(*hyperparameter_config.items())
+hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+file_paths = []
+    
+for i in range(len(hyperparameter_experiments)):
+    key, value = zip(*hyperparameter_experiments[i].items())
+    iteration = value[0]
+    sample_size = value[1]
+    discrete_dim = value[2]
+    gaussian_dimension = value[3]
+    file_paths = file_paths + ['result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\%siterations_%ssamples_discrete%s_gaussian%s.png'%(iteration, sample_size, discrete_dim, gaussian_dimension)]
+    
+SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig9: Compare estimated MI with true MI for gaussian and categorical")
+```
+
+<a id='section12'></a>
 <b><font size="+2">3. To Does</font></b>
 
 <b><font size="+1">3.1 Tune Hyperparameter For MineNet</font></b>
 
-Carry out the monte carlo experiment for all the 20 configurations, after that, we can think of improving the architecture of the neural network for MineNet including the activation function etc. 
+Carry out the monte carlo experiment for all the 20 configurations, after that, we can think of improving the architecture of the neural network for MineNet including the activation function etc.
+
+Try to apply the adversarial network architecture between SCVI and MINE
 
 <b><font size="+1">3.2 Difference between the estimated lower bound and true mutual information</font></b>
 
-Deep neural network is used to estimate the lower bound for mutual information. But the question is whether the deep neural network can really estimate the lower bound precisly and how close is the lower bound to the true mutual information. We can minimize the mutual information by minimizing the lower bound only when the lower bound is very close to the true mutual inforamtion.
+Deep neural network is used to estimate the lower bound for mutual information between two continuous random variables. But the question is whether the deep neural network can really estimate the lower bound precisely and how close is the lower bound to the true mutual information. We can minimize the mutual information by minimizing the lower bound only when the lower bound is very close to the true mutual inforamtion.
+
+Also check how the mutual inforamtion network estimator works between a categorical random variable and continuous random variable.
 
 <b><font size="+1">3.3 Datasets</font></b>
 
 Find real data set with obvious batch effect. Because the pbmc dataset used now do not have obvious batch effect. The dataset  ,harmonizing datasets with different composition of cell types,used in the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1) could be a resource. And another thing is to simulate data set with obvious batch effect from ZINB model.
 
 
-<a id='section11'></a>
+<a id='section13'></a>
 <b><font size="+2">4. Useful Tools and Information</font></b>
 
 <b><font size="+1">4.1 Version control for jupyter notebook</font></b>
+
 [how-to-version-control-jupyter](https://nextjournal.com/schmudde/how-to-version-control-jupyter)
-[]
+
+[jupytext](https://github.com/mwouts/jupytext/blob/master/README.md)
+
+```python
+
+```
