@@ -13,7 +13,6 @@ jupyter:
     name: python3
 ---
 
-<!-- #region -->
 <a id='section1'></a>
 <h1><center>Project1_Modify_SCVI</center></h1>
 <b><font size="+2">1. Introduction</font></b>
@@ -28,18 +27,14 @@ jupyter:
 <a href='#section7'><p style="margin-left: 60px"><b><font size="+1">2.2.1 step 1</font></b></p></a>
 <a href='#section8'><p style="margin-left: 60px"><b><font size="+1">2.2.2 step 2</font></b></p></a>
 <a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.3 Compare estimated mutual inforamtion with true mutual inforamtion</font></b></p></a>
-<a href='#section9'><p style="margin-left: 60px"><b><font size="+1">2.3.1 gaussian gaussian</font></b></p></a>
-<a href='#section10'><p style="margin-left: 60px"><b><font size="+1">2.3.2 gaussian categorical</font></b></p></a>
-<a href='#section11'><p style="margin-left: 60px"><b><font size="+1">2.3.3 gaussian lognormal</font></b></p></a>
 
+<a href='#section10'><b><font size="+2">3. To Does</font></b></a>
 
-<a href='#section12'><b><font size="+2">3. To Does</font></b></a>
-
-<a href='#section13'><b><font size="+2">4. Useful Tools and Information</font></b></a>
+<a href='#section11'><b><font size="+2">4. Useful Tools and Information</font></b></a>
 
 <br/><br/>
 <br/><br/>
-<!-- #endregion -->
+
 
 <a id='section2'></a>
 <b><font size="+1">1.1 Deep Learning Neural Network</font></b>
@@ -73,7 +68,26 @@ The mutual information neural estimation is only for continuous variables? The m
   Between two continuous variable: we can compare the neural network estimator with the true value of mutual inforamtion for multivariate gaussian random variables. How to produce a positive definitive covariance matrix for the joint distribution of two multivariate gaussian. Why the method used in the original paper works.
   
   Between one continuous and one discrete variable: compare the neural network estimator with the nearest neighbour estimator [Mutual information between discrete and continuous data sets](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0087357&type=printable).
+  
+  
+  [Different forms of the lognormal distribution](https://all-geo.org/volcan01010/2013/09/how-to-use-lognormal-distributions-in-python/)
+  
+  The lognormal probability distribution of a dataset, X, is commonly defined as:
 
+f(x | μ,σ)=1xσ2π−−√e−(lnx−μ)22σ2
+In this formulation, μ and σ are the mean and standard deviation of ln(X).
+In Python, the scipy.stats.lognorm module uses a more general, 3-parameter formulation:
+
+f(x | [shape],[location],[scale])=1(x−[location])[shape]2π−−√e−(ln(x−[location])−ln([scale]))22[shape]2
+For most uses (i.e. unless data contain negative values), the location parameter is fixed at 0. This can be done during curve fitting using floc=0. The expression then simplifies to:
+
+f(x | [shape],[scale])=1x[shape]2π−−√e−(lnx−ln[scale])22[shape]2
+Comparing the two forms shows that:
+
+ln([scale])=μ
+therefore: [scale]=eμ
+and: [shape]=σ
+Confusingly, these are different from the parameters controlling a normal distribution in the scipy.stats.norm module, where location corresponds to the mean and scale is the standard deviation. They are also different to the definitions of location and scale for lognormal distributions in Wikipedia.
 
 <!-- #endregion -->
 
@@ -269,7 +283,7 @@ regression, logistic regression etc can be also considered as a type of simple d
 
 <b><font size="3">2.2.2.1 Goal</font></b> 
 
-Compare SCVI and SCVI+MINE from 100 monte carlo samples for 20 hyperparameter configurations on pbmc dataset, and retina dataset 
+Compare SCVI and SCVI+MINE from 100 monte carlo samples for 20 hyperparameter configurations on pbmc dataset, retina dataset used in the paper [Deep Generative Modeling for single-cell transcriptomics](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/s41592-018-0229-2#Sec43), and the combined dataset of MarrowTM-10x, and MarrowTM-ss2 in the paper [Harmonization and Annotation of single-cell transcriptomics data with Deeo Generative Models](https://www.biorxiv.org/content/10.1101/532895v1) 
   
 The hyperparameters refers to: 
  - n_latent_z: number of nodes in each latent layer for the neural network of mutual information.
@@ -288,6 +302,8 @@ Each time, pbmc(retina) dataset is randomly splitted into training set and test 
 
 pbmc dataset is scVI built-in dataset. just use the function PbmcDataset() in scvi.dataset to load the dataset.
 retina dataset is also scVI built-in dataset, just use the function RetinaDataset() in scvi.dataset to load the dataset.
+
+In order to download MarrowTM-10x, and MarrowTM-ss2, and combine them, check the code in the MarrowMT.py file on the github page for [HarmonizationSCANVI](https://github.com/chenlingantelope/HarmonizationSCANVI/tree/V1.0). Pay attention, in order to download MarrowTM-10x, and MarrowTM-ss2, gene_len.txt is needed, which exists in the [scvi-data repository](https://github.com/YosefLab/scVI-data/blob/master/mouse_gene_len.txt)
 
 <b><font size="3">2.2.2.4 Code</font></b>
 
@@ -363,184 +379,233 @@ According to Fig4, no matter what the configuration is, batch mixing entropy for
 <a id='section9'></a>
 <b><font size="+1">2.3 Compare estimated mutual information with true mutual inforamtion</font></b>
 
-<b><font size="+1">2.3.1 gaussian and gaussian </font></b>
+<b><font size="+1">2.3.1 Goal </font></b>
 
-<b><font size="3">2.3.1.1 Goal</font></b> 
+Compare estimated mutual information with true mutual information for three cases, namely, mutual information between a gaussian random variable and a gaussian random variable, between a lognorm random variable and a gaussian random variable, between a categorical random variable and a gaussian random variable
 
-Try to reproduce the result in Figure 1 in the papar [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf), which compares the MineNet mutual inforamtion estimator with the true mutual information between two multivariate gaussian random variables.
+<b><font size="3">2.3.2 Design</font></b>
 
-<b><font size="3">2.3.1.2 Design</font></b>
+<b><font size="3">a. between a gaussian random variable and a gaussian random variable</font></b>
 
-Try four MineNet architectures which are Mine_Net, Mine_Net2, Mine_Net3, Mine_Net4, coded in ./scvi/models/modules.py, and compare estimator from each MineNet architecture with true mutual information. 
+Estimated mutual information is compared with true mutual information when the dimension of the two gaussian random variables  is 2 and 20. Take dimension 2 for example, suppose the two gaussian random variables are $X$ and $Y$. According to the paper [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf), set both $X$ and $Y$ to be standard normal gaussian distribution with dimension 2. Then set $P\left(X,Y\right)$ to be a gaussian distribution of dimension 4, with the componentwise correlation $corr(X_{i},Y_{j})=\delta_{ij}\rho$, where $\rho\in\left(-1,1\right)$ and $\delta_{ij}$ is Kronecker’s delta. 
 
-The main difference between Mine_Net3, Mine_Net4 and Mine_Net, Mine_Net2 is that MineNet, MineNet2 first transforms two random variables into two real number, and do linear combination and activation for the two real numbers. While, MineNet3, MineNet4 transforms two random variables into two vectors, then do linear combination and activation for the two vectors, finally convert the combined vector into a real number. The main difference between Mine_Net3 and Mine_Net4 is that Mine_Net3 transforms the two random variables into two vectors separately, while Mine_Net4 transforms the matrix containing the two random variables together to a combined vector.
+To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(X) + H(Y) - H(X,Y)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(X)$ and $H(Y)$ are the marginal differential entropy for $X$ and $Y$ repectively, $H(X,Y)$ is the joint differential entropy for $X$ and $Y$. $H(X)$, $H(Y)$ and $H(X,Y)$ are calculated by built-in function in python.
 
-The hyperparameter for Mine_Net:
+To estimate the mutual information between $X$ and $Y$, four neural network architectures, which are Mine_Net, Mine_Net2, Mine_Net3, Mine_Net4 are tried. All the 4 network architectures uses the algorithm 1 in the paper [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf) as the fundamental guidline. However, the main difference between Mine_Net3, Mine_Net4 and Mine_Net, Mine_Net2 is that MineNet, MineNet2 first transforms two random variables into two real numbers, and then linearly transform and activate the two real numbers. While, MineNet3, MineNet4 transforms two random variables into two vectors, then linearly transform and activate the two vectors, finally convert the combined vector into a real number. The main difference between Mine_Net3 and Mine_Net4 is that Mine_Net3 transforms the two random variables into two vectors separately, while Mine_Net4 transforms the matrix containing the two random variables together to a combined vector. The following shows the hyperparameter for the four network architectures.
 
-    -n_hidden_z: [10],
+The hyperparameters for Mine_Net:
 
-    -n_layers_z: [10, 30, 50],
+    -n_hidden_z: [10], (the node number of each hidden layer)
 
-    -Gaussian_Dimension: [2, 20],
-
-    -sample_size: [14388],
-
-    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
-
-
-The hyperparameter for Mine_Net2:
-
-    -n_hidden_z: [10],
-
-    -n_layers_z: [10,
+    -n_layers_z: [10, 30, 50], (the number of layers)
 
     -Gaussian_Dimension: [2, 20],
 
     -sample_size: [14388],
+    
+    -train_size: [0.5]
 
     -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
 
 
-The hyperparameter for Mine_Net3:
+The hyperparameters for Mine_Net2:
+
+    -n_hidden_z: [10],
+
+    -n_layers_z: [10],
+
+    -Gaussian_Dimension: [2, 20],
+
+    -sample_size: [14388],
+    
+    -train_size: [0.5]
+
+    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+
+The hyperparameters for Mine_Net3:
 
     -H : [10] (H means the dimension of the vectors)
 
     -Gaussian_Dimension: [2, 20],
 
     -sample_size: [14388],
+    
+    -train_size: [0.5]
 
     -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
 
 
-The hyperparameter for Mine_Net4:
+The hyperparameters for Mine_Net4:
 
-    -layers = [32, 16] (the node number of the two hidden layers which converts the random variables matrix into a vector)
+    -layers = [32, 16] (the node number of the two hidden layers which converts the concatenated matrix of the two random variables into a vector)
 
     -Gaussian_Dimension: [2, 20],
 
     -sample_size: [14388],
+    
+    -train_size: [0.5]
+
+    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+    
+<b><font size="3">b. between a lognormal random variable and a gaussian random variable</font></b>
+
+The dimension for lognormal random variable is 1, and 2 dimensions for the gaussian random variable. Suppose $X$ is the lognormal random variable and $Y$ is the gaussian random variable. Set $P(lnX) \sim N(0,1)$ and set the gaussian variable to be standarded normal with dimension 2. Similar as the gaussian and gaussian case, set $P\left(ln(X),Y\right)$ to be a gaussian distribution of dimension 3, with the componentwise correlation $corr(Z_{i},Y_{j})=\delta_{ij}\rho$, where $Z=ln(X)$, $\rho\in\left(-1,1\right)$, and $\delta_{ij}$ is Kronecker’s delta. Then by simple derivation, the joint distribution $P(X,Y) = P(X|Y)P(Y) = P(Z|Y)*|\frac{d_{Z}}{d_{X}}|*P(Y) = \frac{1}{X}P(Z,Y) = \frac{1}{X}P(ln(X),Y)$.
+
+To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(X) + H(Y) - H(X,Y)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(X)$ and $H(Y)$ are the marginal differential entropy for $X$ and $Y$ repectively, $H(X,Y)$ is the joint differential entropy for $X$ and $Y$. $H(X)$ and $H(Y)$ are calculated by built-in function in python, $H(X,Y)$ is calculated from the integration of $-P(X,Y)logP(X,Y)$.
+
+To estimate the mutual information between $X$ and $Y$, Mine_Net4 is tried. The hyperparameters for MineNet4 architecture are:
+
+    -layers = [32, 16] (the node number of the two hidden layers which converts the concatenated matrix of the two random variables into a vector)
+
+    -Gaussian_Dimension: [2, 20],
+
+    -sample_size: [14388],
+    
+    -train_size: [0.5]
 
     -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
 
+<b><font size="3">c. between a categorical random variable and a gaussian mixture random variable</font></b>
 
-<b><font size="3">2.3.1.3 Code</font></b>
+The dimension for the categorical random variable is 1, 10 categories, and 2 dimensions for the gaussian mixture random variable. Suppose $X$ is the categorical random variable, $Y$ is the gaussian mixture random variable. Set $P(Y|X=x) = N(\mu_{x}, \sigma^2_{x})$. Mutual information between $X$ and $Y$ is introduced by correlating $\mu_{x}$ with $X$, like $\mu_{x}$ tends to be larger for a certain category than other categories. Then by simple derivation, the marginal distribution $P(Y) =\sum_{x=1}^{10}P(Y|X=x)P(X=x)$.
 
-code/compare_gaussian_gaussian_estimatedMI_with_trueMI.py produces result to compare estimator from Mine_Net with true mutual inforamtion. code/compare_gaussian_gaussian_estimatedMI_with_trueMI2.py produces result to compare estimator from Mine_Net2, Mine_Net3, Mine_Net4 with true mutual inforamtion. code/SummarizeResult.py to summarize the final result.
+To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(Y) - H(Y|X)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(Y)$ is the marginal differential entropy for $Y$, and $H(Y|X)$ is the conditional differential entropy $Y$ given $X$. $H(X)$ and $H(Y)$ are calculated from the integration of $-P(Y)logP(Y)$, $H(Y|X)$ is calculated by built-in function in python.
 
-<b><font size="3">2.3.1.4 Result and Lab Meeting Discussion</font></b>
+To estimate the mutual information between $X$ and $Y$, Mine_Net and [nearest neighbor method](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0087357&type=printable) are tried. Note: the categorical variable is transformed into dummy variable in Mine_Net method. The hyperparameters for the two methods are:
 
-The raw result is stored in ./result/compare_estimatedMI_with_trueMI/gaussian_gaussian/, and the corresponding summarized result is shown here. Figure5 is for Mine_Net, Figure6 is for Mine_Net2, Figure7 is for Mine_Net3, Figure8 is for Mine_Net4. For Mine_Net4, when Gaussian_Dimension=20, rho = -0.99, -0.9, 0.9, 0.99, the estimated mutual inforamtion returned by Mine_Net4 is NaN. Why?: it is because the learning rate is too large for the situation when Gaussian_Dimension=20, rho= -0.99, -0.9, 0.9, 0.99, the loss for mini batches becomes NaN. when learning rate is decreased from 0.0005 to 0.00005, no NaN value is returned. torch.optim.lr_scheduler provides several methods to adjust the learning rate based on the number of epochs. torch.optim.lr_scheduler.ReduceLROnPlateau allows dynamic learning rate reducing based on some validation measurements.
+The hyperparameters for Mine_Net:
+
+    -n_hidden_z: [10],
+
+    -n_layers_z: [10],
+
+    -Gaussian_Dimension: [2],
+
+    -sample_size: [14388],
+    
+    -train_size: [0.5]
+
+The parameters for nearest neighbors:
+
+    - repos: 100 (the estimator from the nearest neighbor is the mean of 100 estimators, each of which is for a data set of sample size 128)
+    
+    - sample_size: 128 (because the minibatch size in scvi training is 128)
+    
+    - k: 3 (the number of neighbors)
+    
+    - base: 2 (a parameter with default value 2 in the nearest neighbor method)
+
+<b><font size="3">2.3.3 Code</font></b>
+
+code/compare_estimatedMI_with_trueMI_gaussian_continuous.py produces estimatedMI_with_trueMI.csv in ./result/compare_estimatedMI_with_trueMI/continuous_gaussian/, use this csv file as read-in dataset for the Summarize_EstimatedMI_with_TrueMI() function in code/SummarizeResult.py file to produce plots in Fig5 and Fig6.
+
+code/compare_estimatedMI_with_trueMI_gaussian_categorical.py produces estimatedMI_with_trueMI.csv in ./result/compare_estimatedMI_with_trueMI/gaussian_categorical/, use this csv file as read-in dataset for the Summarize_EstimatedMI_with_TrueMI() function in code/SummarizeResult.py file to produce plots in Fig7.
+
+<b><font size="3">2.3.4 Result</font></b>
+
+<b><font size="3">a. between a gaussian random variable and a gaussian random variable</font></b>
+
+MineNet works bad for both dimension 2 and dimension 20 with all hyperparameter combinations which have been tried, whenever apply the trained network to the training dataset and testing dataset. The estimator is always near zero even though the true mutual information is large, like 30. Refer to Fig5 in the jupyternotebook in last committ ahead of current on the github repo.
+
+MineNet2 works bad for both dimension 2 and dimension 20 with the hyperparameter combination which has been tried, whenever apply the trained network to the training dataset and testing dataset. The estimator is always near zero even though the true mutual information is large, like 30. Refer to Fig6 in the jupyternotebook in last committ ahead of current on the github repo.
+
+MineNet3 works well for dimension 2 with the hyperparameter combination which has been tried when apply the trained network to the training dataset, but bad when apply to the testing dataset. And MineNet3 works bad for dimension 20 with the hyperparameter combination for both training and testing dataset. Refer to Fig7 in the jupyternotebook in last committ ahead of current on the github repo.
+
+MineNet4 works well for dimension 2 with the hyperparameter combination which has been tried when applied to both training dataset and testing dataset, but works bad for dimension 20 with the hyperparameter combination when applied to both training and testing dataset. Please refer to Fig5.
+
+<b><font size="3">b. between a lognormal random variable and a gaussian random variable</font></b>
+
+MineNet4 works well when gaussian dimension is 2 using the hyperparameter combination for both training and testing datasets. Please refer to Fig6.
+
+<b><font size="3">c. between a categorical random variable and a gaussian mixture random variable</font></b>
+
+MineNet works bad for gaussian mixture dimension 2 with the hyperparameter combination tried, while nearest neighbor estimator works better for gaussian mixture dimension 2. Please refer to Fig7. Nearest neighbor estimator could be negative values when true mutual information is very small.
 
 ```python
 import os
+import math
+import itertools
 %matplotlib inline
 exec(open('code\\SummarizeResult.py').read())
-Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/compare_estimatedMI_with_trueMI/gaussian_gaussian/', MineNet_Info = {'model':['Mine_Net'], 'Hyperparameter':{'n_hidden_z': [10], 'n_layers_z':[10,30,50], 'Gaussian_Dimension': [2, 20], 'sample_size': [14388], 'train_size': [0.5]}})
-Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/compare_estimatedMI_with_trueMI/gaussian_gaussian/', MineNet_Info = {'model':['Mine_Net2'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388], 'train_size': [0.5]}})
-Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/compare_estimatedMI_with_trueMI/gaussian_gaussian/', MineNet_Info = {'model':['Mine_Net3'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388], 'train_size': [0.5]}})
-Summarize_Compare_NNEstimator_TrueMI(results_dict='./result/compare_estimatedMI_with_trueMI/gaussian_gaussian/', MineNet_Info = {'model':['Mine_Net4'], 'Hyperparameter':{'Gaussian_Dimension': [2, 20], 'sample_size': [14388], 'train_size': [0.5]}})
-
 ```
 
 ```python
-import math
+Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian\\estimatedMI_with_trueMI.csv', method='Mine_Net4', distribution='gaussian', gaussian_dimensions=[2,20])
 hyperparameter_config = {
-        'n_hidden_z': [10],
-        'n_layers_z': [10, 30, 50],
-        'Gaussian_Dimension': [2, 20],
-        'sample_size': [14388],
-        'train_size': [0.5]
+        'method': ['Mine_Net4'],
+        'distribution': ['gaussian'],
+        'gaussian_dimension': [2, 20],
+        'type': ['training','testing']
     }
 keys, values = zip(*hyperparameter_config.items())
 hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 file_paths = []
-    
+
+image_dict = '.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian'
 for i in range(len(hyperparameter_experiments)):
     key, value = zip(*hyperparameter_experiments[i].items())
-    n_hidden_z = value[0]
-    n_layers_z = value[1]
-    Gaussian_Dimension = value[2]
-    sample_size = value[3]
-    train_size = value[4]
-    file_paths = file_paths + ['result\\compare_estimatedMI_with_trueMI\\gaussian_gaussian\\Mine_Net_n_hidden_z%s_n_layers_z%s_variable_dimension%s_sample_size%s_training.png'%(n_hidden_z,n_layers_z, Gaussian_Dimension, math.floor(sample_size*train_size))]
-    file_paths = file_paths + ['result\\compare_estimatedMI_with_trueMI\\gaussian_gaussian\\Mine_Net_n_hidden_z%s_n_layers_z%s_variable_dimension%s_sample_size%s_testing.png'%(n_hidden_z,n_layers_z, Gaussian_Dimension, math.floor(sample_size*(1-train_size)))]
-
-SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig5: Compare Mine_Net estimator with true MI")
+    method = value[0]
+    distribution = value[1]
+    gaussian_dimension = value[2]
+    type = value[3]
+    file_paths = file_paths + [image_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method,distribution, gaussian_dimension,type)]
+    
+SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig5: Compare estimated and true MI between gaussian and gaussian")
 ```
 
 ```python
+Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian\\estimatedMI_with_trueMI.csv', method='Mine_Net4', distribution='lognormal', gaussian_dimensions=[2])
 hyperparameter_config = {
-        'Net_Name' : ['Mine_Net2', 'Mine_Net3', 'Mine_Net4'],
-        'Gaussian_Dimension' : [2, 20],
-        'sample_size' : [14388],
-        'train_size': [0.5]
+        'method': ['Mine_Net4'],
+        'distribution': ['lognormal'],
+        'gaussian_dimension': [2],
+        'type': ['training','testing']
     }
 keys, values = zip(*hyperparameter_config.items())
 hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
 file_paths = []
-    
+image_dict = '.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian'
 for i in range(len(hyperparameter_experiments)):
     key, value = zip(*hyperparameter_experiments[i].items())
-    Net_Name = value[0]
-    Gaussian_Dimension = value[1]
-    sample_size = value[2]
-    train_size = value[3]
-    file_paths = file_paths + ['result\\compare_estimatedMI_with_trueMI\\gaussian_gaussian\\%s_variable_dimension%s_sample_size%s_training.png'%(Net_Name, Gaussian_Dimension, math.floor(sample_size*train_size))]
-    file_paths = file_paths + ['result\\compare_estimatedMI_with_trueMI\\gaussian_gaussian\\%s_variable_dimension%s_sample_size%s_testing.png'%(Net_Name, Gaussian_Dimension, math.floor(sample_size*(1-train_size)))]
+    method = value[0]
+    distribution = value[1]
+    gaussian_dimension = value[2]
+    type = value[3]
+    file_paths = file_paths + [image_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method,distribution, gaussian_dimension,type)]
+    
+SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig6: Compare estimated and true MI between lognormal and gaussian")
+```
 
-SummarizeResult(result_type='image', file_paths=file_paths[0:4], figtitle="Fig6: Compare Mine_Net2 estimated MI with true MI for gaussian and gaussian")
-SummarizeResult(result_type='image', file_paths=file_paths[4:8], figtitle="Fig7: Compare Mine_Net3 estimated MI with true MI for gaussian and gaussian")
-SummarizeResult(result_type='image', file_paths=file_paths[8:], figtitle="Fig8: Compare Mine_Net4 estimated MI with true MI for gaussian and gaussian")
+```python
+Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\estimatedMI_with_trueMI.csv', method='Mine_Net', distribution='categorical', gaussian_dimensions=[2])
+Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\estimatedMI_with_trueMI.csv', method='nearest_neighbor', distribution='categorical', gaussian_dimensions=[2])
+hyperparameter_config = {
+        'method': ['Mine_Net'],
+        'distribution': ['categorical'],
+        'gaussian_dimension': [2],
+        'type': ['training','testing']
+    }
+keys, values = zip(*hyperparameter_config.items())
+hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+file_paths = []
+image_dict = '.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical'
+for i in range(len(hyperparameter_experiments)):
+    key, value = zip(*hyperparameter_experiments[i].items())
+    method = value[0]
+    distribution = value[1]
+    gaussian_dimension = value[2]
+    type = value[3]
+    file_paths = file_paths + [image_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method,distribution, gaussian_dimension,type)]
+
+file_paths += [image_dict + '\\nearest_neighbor_categorical_gaussian_dim2.png']
+    
+SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig7: Compare estimated and true MI between categorical and gaussian mixture")
 ```
 
 <a id='section10'></a>
-<b><font size="+1">2.3.2 gaussian and categorical </font></b>
-
-<b><font size="3">2.3.2.1 Goal</font></b> 
-
-Use the nearest neighbor method in the papar [Mutual Information between Discrete and Continuous
-Data Sets](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0087357&type=printable) to estimate mutual inforamtion between continuous gaussian variable and categorical variable. 
-
-<b><font size="3">2.3.2.2 Design</font></b>
-
-One dimension categorical variable with 3 categories, and one dimension gaussian variables.
-
-One dimension categorical variable with 3 categories, and 4 dimension gaussian variables. (The reason to choose dimension 4 for gaussian variable is because the multivariate dimension integration in matlab is time-demanding when dimension is larger than 4)
-
-For both cases above, choose 13 different combinations of categorical variable and gaussian variable by determining the probability distribution for the categorical variable, and the gaussian distribution conditional on the categorical variable. For each combination, calculate the true mutual information according to the definition of mutual information. Then get the estimated mutual information. In order to get estimated mutual information for each combination, get 10000 samples from the joint distribution of the categorical and gaussian variable, use nearest neighbor method to estimate mutual information, repeat this process 100 times, get the average of the 100 estimated mutual information as the final estimated mutual inforamtion for this combination, and compare it with its true mutual information. Repeat the whole process for the left 12 combinations, and plot the true mutual information, averaged estimated mutual information and standard deviation of the estimated mutual information.
-
-<b><font size="3">2.3.2.3 Code</font></b>
-
-code/compare_gaussian_categorical_estimatedMI_with_trueMI.m, code/discrete_continuous_info.m, code/discrete_continuous_info_fast.m, code/integralN.m, produce the results. code/SummarizeResult.py displays the results.
-
-<b><font size="3">2.3.2.4 Result and Lab Meeting Discussion</font></b>
-
-The result is stored in ./result/compare_estimatedMI_with_trueMI/gaussian_categorical/.
-
-```python
-exec(open('code\\SummarizeResult.py').read())
-hyperparameter_config = {
-        'iterations' : [100],
-        'samples' : [10000],
-        'discrete_dim' : [1],
-        'gaussian_dim': [1,4]
-    }
-keys, values = zip(*hyperparameter_config.items())
-hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
-file_paths = []
-    
-for i in range(len(hyperparameter_experiments)):
-    key, value = zip(*hyperparameter_experiments[i].items())
-    iteration = value[0]
-    sample_size = value[1]
-    discrete_dim = value[2]
-    gaussian_dimension = value[3]
-    file_paths = file_paths + ['result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\%siterations_%ssamples_discrete%s_gaussian%s.png'%(iteration, sample_size, discrete_dim, gaussian_dimension)]
-    
-SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig9: Compare estimated MI with true MI for gaussian and categorical")
-```
-
-<a id='section12'></a>
 <b><font size="+2">3. To Does</font></b>
 
 <b><font size="+1">3.1 Tune Hyperparameter For MineNet</font></b>
@@ -560,7 +625,7 @@ Also check how the mutual inforamtion network estimator works between a categori
 Find real data set with obvious batch effect. Because the pbmc dataset used now do not have obvious batch effect. The dataset  ,harmonizing datasets with different composition of cell types,used in the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1) could be a resource. And another thing is to simulate data set with obvious batch effect from ZINB model.
 
 
-<a id='section13'></a>
+<a id='section11'></a>
 <b><font size="+2">4. Useful Tools and Information</font></b>
 
 <b><font size="+1">4.1 Version control for jupyter notebook</font></b>
