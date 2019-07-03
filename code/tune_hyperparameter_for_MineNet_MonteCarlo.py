@@ -14,9 +14,9 @@ import itertools
 
 def main(taskid):
     if not os.path.exists('data/tune_hyperparameter_for_MineNet/muris_tabula'):
-        os.makedirs('data/tune_hyperparameter_for_Minenet/muris_tabula')
-    if not os.path.exists('result/tune_hyperparameter_for_Minenet/muris_tabula'):
-        os.makedirs('result/tune_hyperparameter_for_Minenet/muris_tabula')
+        os.makedirs('data/tune_hyperparameter_for_MineNet/muris_tabula')
+    if not os.path.exists('result/tune_hyperparameter_for_MineNet/muris_tabula'):
+        os.makedirs('result/tune_hyperparameter_for_MineNet/muris_tabula')
 
     hyperparameter_config = {
         'dataset_name': ['Marrow'],
@@ -26,7 +26,7 @@ def main(taskid):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    save_path = './data/tune_hyperparameter_for_Minenet/muris_tabula'
+    save_path = './data/tune_hyperparameter_for_MineNet/muris_tabula'
 
     #gene_dataset = PbmcDataset(save_path=save_path)
     #gene_dataset = RetinaDataset(save_path=save_path)
@@ -79,12 +79,12 @@ def main(taskid):
             plt.ylim(1150, 1600)
             plt.title("Blue for training error and orange for testing error")
 
-            fig1_path = 'result/tune_hyperparameter_for_Minenet/muris_tabula/training_testing_error_SCVI+MINE_{}_{}_sample{}_MineLossScale{}.png'.format(dataset_name,nuisance_variable,taskid,MineLoss_Scale)
+            fig1_path = 'result/tune_hyperparameter_for_MineNet/muris_tabula/training_testing_error_SCVI+MINE_{}_{}_sample{}_MineLossScale{}.png'.format(dataset_name,nuisance_variable,taskid,MineLoss_Scale)
             fig.savefig(fig1_path)
             plt.close(fig)
 
-        trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='result/tune_hyperparameter_for_Minenet/muris_tabula/trainset_tsne_SCVI+MINE_{}_{}_sample{}_MineLossScale{}'.format(dataset_name,nuisance_variable, taskid, MineLoss_Scale))
-        trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/tune_hyperparameter_for_Minenet/muris_tabula/testset_tsne_SCVI+MINE_{}_{}_sample{}_MineLossScale{}'.format(dataset_name,nuisance_variable, taskid, MineLoss_Scale))
+        trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='result/tune_hyperparameter_for_MineNet/muris_tabula/trainset_tsne_SCVI+MINE_{}_{}_sample{}_MineLossScale{}'.format(dataset_name,nuisance_variable, taskid, MineLoss_Scale))
+        trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/tune_hyperparameter_for_MineNet/muris_tabula/testset_tsne_SCVI+MINE_{}_{}_sample{}_MineLossScale{}'.format(dataset_name,nuisance_variable, taskid, MineLoss_Scale))
 
         asw, nmi, ari, uca = trainer_vae_mine.train_set.clustering_scores()
         be = trainer_vae_mine.train_set.entropy_batch_mixing()
@@ -119,12 +119,12 @@ def main(taskid):
     plt.ylim(1150, 1600)
     plt.title("Blue for training error and orange for testing error")
 
-    fig2_path = 'result/tune_hyperparameter_for_Minenet/muris_tabula/training_testing_error_SCVI_{}_{}_sample{}.png'.format(dataset_name, nuisance_variable, taskid)
+    fig2_path = 'result/tune_hyperparameter_for_MineNet/muris_tabula/training_testing_error_SCVI_{}_{}_sample{}.png'.format(dataset_name, nuisance_variable, taskid)
     fig.savefig(fig2_path)
     plt.close(fig)
 
-    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/tune_hyperparameter_for_Minenet/muris_tabula/trainset_tsne_SCVI_{}_{}_sample{}'.format(dataset_name,nuisance_variable,taskid))
-    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/tune_hyperparameter_for_Minenet/muris_tabula/testset_tsne_SCVI_{}_{}_sample{}'.format(dataset_name,nuisance_variable,taskid))
+    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/tune_hyperparameter_for_MineNet/muris_tabula/trainset_tsne_SCVI_{}_{}_sample{}'.format(dataset_name,nuisance_variable,taskid))
+    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/tune_hyperparameter_for_MineNet/muris_tabula/testset_tsne_SCVI_{}_{}_sample{}'.format(dataset_name,nuisance_variable,taskid))
 
     # clustering_scores() -- these metrics measure clustering performance
     #   silhouette width (asw, higher is better),
@@ -147,7 +147,7 @@ def main(taskid):
     intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
     clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
 
-    clustering_metric.to_csv('result/tune_hyperparameter_for_Minenet/muris_tabula/%s_%s_sample%s_ClusterMetric.csv'%(dataset_name, nuisance_variable, taskid), index=None, header=True)
+    clustering_metric.to_csv('result/tune_hyperparameter_for_MineNet/muris_tabula/%s_%s_sample%s_ClusterMetric.csv'%(dataset_name, nuisance_variable, taskid), index=None, header=True)
 
 # Run the actual program
 if __name__ == "__main__":
