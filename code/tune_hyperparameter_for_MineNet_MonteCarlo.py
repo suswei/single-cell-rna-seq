@@ -48,7 +48,7 @@ def main(taskid):
     lr = 0.001
     use_batches = True
     use_cuda = False
-    train_size = 1.0
+    train_size = 0.8
 
     n_samples_tsne = 1000
     clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be'])
@@ -60,7 +60,7 @@ def main(taskid):
             nuisance_variable = value[1]
             MineLoss_Scale = value[2]
 
-            vae_mine = VAE_MINE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_layers=n_layer, MineLoss_Scale=MineLoss_Scale)
+            vae_mine = VAE_MINE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_layers=n_layer, MineLoss_Scale=MineLoss_Scale)
             trainer_vae_mine = UnsupervisedTrainer(vae_mine, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda,frequency=5, kl=1)
             vae_mine_file_path = '%s/%s_%s_n_layers%s_MineLossScale%s_sample%s_VaeMine.pk1'%(save_path, dataset_name, nuisance_variable, n_layer, MineLoss_Scale, taskid)
 
@@ -71,21 +71,21 @@ def main(taskid):
                 trainer_vae_mine.train(n_epochs=n_epochs, lr=lr)
                 torch.save(trainer_vae_mine.model.state_dict(), vae_mine_file_path)
                 ll_train_set = trainer_vae_mine.history["ll_train_set"]
-                #ll_test_set = trainer_vae_mine.history["ll_test_set"]
+                ll_test_set = trainer_vae_mine.history["ll_test_set"]
                 x = np.linspace(0, 500, (len(ll_train_set)))
 
                 fig = plt.figure(figsize=(14, 7))
                 plt.plot(x, ll_train_set)
-                #plt.plot(x, ll_test_set)
+                plt.plot(x, ll_test_set)
                 plt.ylim(10000, 40000)
-                #plt.title("Blue for training error and orange for testing error")
+                plt.title("Blue for training error and orange for testing error")
 
                 fig1_path = 'result/tune_hyperparameter_for_MineNet/muris_tabula/training_testing_error_SCVI+MINE_{}_{}_n_layers{}_sample{}_MineLossScale{}.png'.format(dataset_name,nuisance_variable, n_layer, taskid, MineLoss_Scale)
                 fig.savefig(fig1_path)
                 plt.close(fig)
 
             trainer_vae_mine.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='result/tune_hyperparameter_for_MineNet/muris_tabula/trainset_tsne_SCVI+MINE_{}_{}_n_layers{}_sample{}_MineLossScale{}'.format(dataset_name,nuisance_variable, n_layer, taskid, MineLoss_Scale))
-            #trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/tune_hyperparameter_for_MineNet/muris_tabula/testset_tsne_SCVI+MINE_{}_{}_n_layers{}_sample{}_MineLossScale{}'.format(dataset_name,nuisance_variable, n_layer, taskid, MineLoss_Scale))
+            trainer_vae_mine.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/tune_hyperparameter_for_MineNet/muris_tabula/testset_tsne_SCVI+MINE_{}_{}_n_layers{}_sample{}_MineLossScale{}'.format(dataset_name,nuisance_variable, n_layer, taskid, MineLoss_Scale))
 
             asw, nmi, ari, uca = trainer_vae_mine.train_set.clustering_scores()
             be = trainer_vae_mine.train_set.entropy_batch_mixing()
@@ -93,14 +93,14 @@ def main(taskid):
             intermediate_dataframe1 = pd.DataFrame.from_dict({'Label':[label],'asw':[asw],'nmi':[nmi],'ari':[ari],'uca':[uca],'be':[be]})
             clustering_metric = pd.concat([clustering_metric, intermediate_dataframe1], axis=0)
 
-            #asw, nmi, ari, uca = trainer_vae_mine.test_set.clustering_scores()
-            #be = trainer_vae_mine.test_set.entropy_batch_mixing()
-            #label = '%s_%s_n_layers%s_sample%s_MineLossScale%s_VaeMine_testset'%(dataset_name, nuisance_variable, n_layer, taskid, MineLoss_Scale)
-            #intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
-            #clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
+            asw, nmi, ari, uca = trainer_vae_mine.test_set.clustering_scores()
+            be = trainer_vae_mine.test_set.entropy_batch_mixing()
+            label = '%s_%s_n_layers%s_sample%s_MineLossScale%s_VaeMine_testset'%(dataset_name, nuisance_variable, n_layer, taskid, MineLoss_Scale)
+            intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
+            clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
             clustering_metric.to_csv('result/tune_hyperparameter_for_MineNet/muris_tabula/%s_%s_n_layers%s_sample%s_ClusterMetric.csv' % (dataset_name, nuisance_variable, n_layer, taskid), index=None, header=True)
 
-        vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_layers=n_layer)
+        vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_layers=n_layer)
         trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5)
         vae_file_path = '%s/%s_%s_n_layers%s_sample%s_Vae.pk1'%(save_path,dataset_name, nuisance_variable, n_layer, taskid)
 
@@ -112,23 +112,23 @@ def main(taskid):
             torch.save(trainer_vae.model.state_dict(), vae_file_path)
 
         ll_train_set = trainer_vae.history["ll_train_set"]
-        #ll_test_set = trainer_vae.history["ll_test_set"]
+        ll_test_set = trainer_vae.history["ll_test_set"]
         x = np.linspace(0, 500, (len(ll_train_set)))
 
         fig = plt.figure(figsize=(14, 7))
         plt.plot(x, ll_train_set)
-        #plt.plot(x, ll_test_set)
+        plt.plot(x, ll_test_set)
         plt.ylim(10000, 40000)
-        #plt.title("Blue for training error and orange for testing error")
+        plt.title("Blue for training error and orange for testing error")
 
         fig2_path = 'result/tune_hyperparameter_for_MineNet/muris_tabula/training_testing_error_SCVI_{}_{}_n_layers{}_sample{}.png'.format(dataset_name, nuisance_variable, n_layer, taskid)
         fig.savefig(fig2_path)
         plt.close(fig)
 
         trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/tune_hyperparameter_for_MineNet/muris_tabula/trainset_tsne_SCVI_{}_{}_n_layers{}_sample{}'.format(dataset_name,nuisance_variable, n_layer, taskid))
-        #trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/tune_hyperparameter_for_MineNet/muris_tabula/testset_tsne_SCVI_{}_{}_n_layers{}_sample{}'.format(dataset_name,nuisance_variable, n_layer, taskid))
+        trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='result/tune_hyperparameter_for_MineNet/muris_tabula/testset_tsne_SCVI_{}_{}_n_layers{}_sample{}'.format(dataset_name,nuisance_variable, n_layer, taskid))
 
-        # clustering_scores() -- these metrics measure clustering performance
+        #   clustering_scores() -- these metrics measure clustering performance
         #   silhouette width (asw, higher is better),
         #   normalised mutual information (nmi, higher is better),
         #   adjusted rand index (ari, higher is better),
@@ -143,11 +143,11 @@ def main(taskid):
         intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
         clustering_metric = pd.concat([clustering_metric, intermediate_dataframe1], axis=0)
 
-        #asw, nmi, ari, uca = trainer_vae.test_set.clustering_scores()
-        #be = trainer_vae.test_set.entropy_batch_mixing()
-        #label = '%s_%s_n_layers%s_sample%s_Vae_testset' % (dataset_name, nuisance_variable,n_layer, taskid)
-        #intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
-        #clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
+        asw, nmi, ari, uca = trainer_vae.test_set.clustering_scores()
+        be = trainer_vae.test_set.entropy_batch_mixing()
+        label = '%s_%s_n_layers%s_sample%s_Vae_testset' % (dataset_name, nuisance_variable,n_layer, taskid)
+        intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
+        clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
 
         clustering_metric.to_csv('result/tune_hyperparameter_for_MineNet/muris_tabula/%s_%s_n_layers%s_sample%s_ClusterMetric.csv'%(dataset_name, nuisance_variable, n_layer, taskid), index=None, header=True)
 
