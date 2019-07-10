@@ -8,9 +8,10 @@ if not os.path.isdir('result/compare_estimatedMI_with_trueMI/gaussian_categorica
 import numpy as np
 import pandas as pd
 import torch
-from scvi.models.modules import MINE_Net, discrete_continuous_info
+from scvi.models.modules import MINE_Net, discrete_continuous_info, MINE_Net4
 import itertools
 from scipy.integrate import nquad
+from scipy.stats import multivariate_normal
 import math
 import statistics
 from sklearn.model_selection._split import _validate_shuffle_split
@@ -19,8 +20,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 
 hyperparameter_config = {
-        'method': ['Mine_Net','nearest_neighbor'],
-        'gaussian_dimension': [2,4],
+        'method': ['Mine_Net','nearest_neighbor','Mine_Net4'],
+        'gaussian_dimension': [2],
         'repos': [100]
     }
 keys, values = zip(*hyperparameter_config.items())
@@ -39,16 +40,6 @@ def y_pdf_entropy_2(y1, y2):
     y_pdf = 0
     for i in range(len(p_list)):
         y_center = np.array([[y1, y2]]) - np.array([[mu_list[i]] * gaussian_dim])
-        cov_mat = ((sigma_list[i]) ** 2) * np.identity(gaussian_dim)
-        y_pdf += p_list[i] * ((1 / (math.sqrt((2 * math.pi) ** gaussian_dim) * math.sqrt(np.linalg.det(cov_mat))) * math.exp(
-            np.matmul(np.matmul(y_center, np.linalg.inv(cov_mat)), np.transpose(y_center)) * (-0.5))))
-    return -y_pdf * math.log(y_pdf)
-
-def y_pdf_entropy_4(y1, y2, y3,y4):
-    gaussian_dim = 4
-    y_pdf = 0
-    for i in range(len(p_list)):
-        y_center = np.array([[y1, y2, y3, y4]]) - np.array([[mu_list[i]] * gaussian_dim])
         cov_mat = ((sigma_list[i]) ** 2) * np.identity(gaussian_dim)
         y_pdf += p_list[i] * ((1 / (math.sqrt((2 * math.pi) ** gaussian_dim) * math.sqrt(np.linalg.det(cov_mat))) * math.exp(
             np.matmul(np.matmul(y_center, np.linalg.inv(cov_mat)), np.transpose(y_center)) * (-0.5))))
@@ -78,9 +69,8 @@ sigma_array = np.array([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1,
                         [1, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                         [1, 2, 3, 4, 5, 5, 8, 8, 10, 10], [1, 2, 3, 4, 5, 5, 8, 8, 10, 10]])
 true_MI2 = []
-true_MI4 = []
 for iteration in range(p_array.shape[0]):
-    for gaussian_dimension in [4]:
+    for gaussian_dimension in [2]:
         p_list = p_array[iteration, :]
         cum_p = np.cumsum(p_list)
         mu_list = mu_array[iteration, :]
@@ -91,20 +81,15 @@ for iteration in range(p_array.shape[0]):
 
         if gaussian_dimension == 2:
             y_entropy, y_entropy_err = nquad(y_pdf_entropy_2, [[y_min, y_max], [y_min, y_max]])
-        else:
-            y_entropy, y_entropy_err = nquad(y_pdf_entropy_4, [[y_min, y_max], [y_min, y_max], [y_min, y_max], [y_min, y_max]])
 
-        intermediate_entropy = 0
+        y_given_x_entropy = 0
         for i in range(len(p_list)):
             cov_mat = ((sigma_list[i]) ** 2) * np.identity(gaussian_dimension)
-            intermediate_entropy += p_list[i] * math.log(np.linalg.det(cov_mat))
+            y_given_x_entropy += p_list[i]*multivariate_normal.entropy(gaussian_dimension * [mu_list[i]], cov_mat)
 
-        y_given_x_entropy = gaussian_dimension / 2 + gaussian_dimension / 2 * math.log(2 * math.pi) + 1 / 2 * intermediate_entropy
         true_MI = y_entropy - y_given_x_entropy
         if gaussian_dimension==2:
             true_MI2 += [true_MI]
-        else:
-            true_MI4 += [true_MI]
 
 for taskid in range(len(hyperparameter_experiments)):
     key, value = zip(*hyperparameter_experiments[taskid].items())
@@ -118,7 +103,7 @@ for taskid in range(len(hyperparameter_experiments)):
         mu_list = mu_array[iteration, :]
         sigma_list = sigma_array[iteration, :]
 
-        if gaussian_dimension==2 and method == 'Mine_Net':
+        if method in ['Mine_Net','Mine_Net4']:
             sample_size = 14388
             train_size = 0.5
             x_array = np.empty((1, sample_size), int)
@@ -148,7 +133,10 @@ for taskid in range(len(hyperparameter_experiments)):
 
             training_tensor = Variable(torch.from_numpy(dataset2[indices_train, :]).type(torch.FloatTensor))
             testing_tensor = Variable(torch.from_numpy(dataset2[indices_test, :]).type(torch.FloatTensor))
-            minenet = MINE_Net(n_input_nuisance=x_dim, n_input_z=y_dim, n_hidden_z=n_hidden_z, n_layers_z=n_hidden_z)
+            if method=='Mine_Net':
+                minenet = MINE_Net(n_input_nuisance=x_dim, n_input_z=y_dim, n_hidden_z=n_hidden_z, n_layers_z=n_hidden_z)
+            elif method=='Mine_Net4':
+                minenet = MINE_Net4(xy_dim=x_dim+y_dim, n_latents=[64,32,16,8,4])
 
             params = filter(lambda p: p.requires_grad, minenet.parameters())
             optimizer = torch.optim.Adam(params, lr=lr, eps=0.01)
@@ -171,9 +159,12 @@ for taskid in range(len(hyperparameter_experiments)):
                     batch_y_shuffle = np.random.permutation(batch_y.detach().numpy())
                     batch_y_shuffle = Variable(torch.from_numpy(batch_y_shuffle).type(torch.FloatTensor),requires_grad=True)
 
-                    pred_xy = minenet(batch_x, batch_y)
-                    pred_x_y = minenet(batch_x, batch_y_shuffle)
-
+                    if method=='Mine_Net':
+                        pred_xy = minenet(batch_x, batch_y)
+                        pred_x_y = minenet(batch_x, batch_y_shuffle)
+                    elif method=='Mine_Net4':
+                        y_x = torch.cat([batch_y,batch_x],dim=1)
+                        pred_xy, pred_x_y = minenet(xy=y_x, x_shuffle=batch_y_shuffle, x_n_dim=y_dim) #keep consistent with Mine_Net in which the continuous variable is shuffled
                     mine_loss = torch.mean(pred_xy) - torch.log(torch.mean(torch.exp(pred_x_y)))
                     loss = -1 * mine_loss
                     plot_loss.append(loss.data.numpy())
@@ -190,8 +181,12 @@ for taskid in range(len(hyperparameter_experiments)):
                 data_x = Variable(data_x.type(torch.FloatTensor), requires_grad=True)
                 data_y_shuffle = np.random.permutation(data_y.detach().numpy())
                 data_y_shuffle = Variable(torch.from_numpy(data_y_shuffle).type(torch.FloatTensor), requires_grad=True)
-                pred_xy = minenet(data_x, data_y)
-                pred_x_y = minenet(data_x, data_y_shuffle)
+                if method=='Mine_Net':
+                    pred_xy = minenet(data_x, data_y)
+                    pred_x_y = minenet(data_x, data_y_shuffle)
+                elif method=='Mine_Net4':
+                    data_y_x = torch.cat([data_y, data_x], dim=1)
+                    pred_xz, pred_x_z = minenet(xy=data_y_x, x_shuffle=data_y_shuffle, x_n_dim=y_dim)
                 estimated_MI = torch.mean(pred_xy) - torch.log(torch.mean(torch.exp(pred_x_y)))
                 estimated_MI = torch.Tensor.cpu(estimated_MI).detach().numpy().item()
                 dict = {'method': [method], 'distribution': ['categorical'], 'distribution_dimension': [1],
@@ -200,13 +195,6 @@ for taskid in range(len(hyperparameter_experiments)):
                         'estimated_MI': [estimated_MI],'final_loss': [None], 'standard_deviation': [None]}
                 intermediate_dataframe = pd.DataFrame.from_dict(dict)
                 final_dataframe = pd.concat([final_dataframe, intermediate_dataframe])
-        elif gaussian_dimension == 4 and method == 'Mine_Net':
-            dict = {'method': [method], 'distribution': ['categorical'], 'distribution_dimension': [1],
-                    'gaussian_dimension': [gaussian_dimension], 'sample_size': [None],
-                    'train_size': [None], 'rho': [None], 'true_MI': [true_MI4[iteration]], 'training_or_testing': [None],
-                    'estimated_MI': [None], 'final_loss': [None], 'standard_deviation': [None]}
-            intermediate_dataframe = pd.DataFrame.from_dict(dict)
-            final_dataframe = pd.concat([final_dataframe, intermediate_dataframe])
 
         elif method == 'nearest_neighbor':
             estimatedMI_NN_list = [] #nn means nearest neighbor method
@@ -227,8 +215,6 @@ for taskid in range(len(hyperparameter_experiments)):
             std_estimatedMI_NN = statistics.stdev(estimatedMI_NN_list)
             if gaussian_dimension==2:
                 true_MI_selected = true_MI2[iteration]
-            else:
-                true_MI_selected = true_MI4[iteration]
             dict = {'method': [method], 'distribution': ['categorical'], 'distribution_dimension': [1],
                 'gaussian_dimension': [gaussian_dimension], 'sample_size': [sample_size], 'train_size': [None],
                 'rho': [None], 'true_MI': [true_MI_selected], 'training_or_testing': [None], 'estimated_MI': [mean_estimatedMI_NN],
