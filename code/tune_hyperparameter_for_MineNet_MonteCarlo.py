@@ -71,14 +71,14 @@ def main(taskid):
                 trainer_vae_mine.train(n_epochs=n_epochs, lr=lr)
                 torch.save(trainer_vae_mine.model.state_dict(), vae_mine_file_path)
                 ll_train_set = trainer_vae_mine.history["ll_train_set"]
-                ll_test_set = trainer_vae_mine.history["ll_test_set"]
+                #ll_test_set = trainer_vae_mine.history["ll_test_set"]
                 x = np.linspace(0, 500, (len(ll_train_set)))
 
                 fig = plt.figure(figsize=(14, 7))
                 plt.plot(x, ll_train_set)
-                plt.plot(x, ll_test_set)
+                #plt.plot(x, ll_test_set)
                 plt.ylim(10000, 40000)
-                plt.title("Blue for training error and orange for testing error")
+                #plt.title("Blue for training error and orange for testing error")
 
                 fig1_path = 'result/tune_hyperparameter_for_MineNet/muris_tabula/training_testing_error_SCVI+MINE_{}_{}_n_layers{}_sample{}_MineLossScale{}.png'.format(dataset_name,nuisance_variable, n_layer, taskid, MineLoss_Scale)
                 fig.savefig(fig1_path)
@@ -112,14 +112,14 @@ def main(taskid):
             torch.save(trainer_vae.model.state_dict(), vae_file_path)
 
         ll_train_set = trainer_vae.history["ll_train_set"]
-        ll_test_set = trainer_vae.history["ll_test_set"]
+        #ll_test_set = trainer_vae.history["ll_test_set"]
         x = np.linspace(0, 500, (len(ll_train_set)))
 
         fig = plt.figure(figsize=(14, 7))
         plt.plot(x, ll_train_set)
-        plt.plot(x, ll_test_set)
+        #plt.plot(x, ll_test_set)
         plt.ylim(10000, 40000)
-        plt.title("Blue for training error and orange for testing error")
+        #plt.title("Blue for training error and orange for testing error")
 
         fig2_path = 'result/tune_hyperparameter_for_MineNet/muris_tabula/training_testing_error_SCVI_{}_{}_n_layers{}_sample{}.png'.format(dataset_name, nuisance_variable, n_layer, taskid)
         fig.savefig(fig2_path)
