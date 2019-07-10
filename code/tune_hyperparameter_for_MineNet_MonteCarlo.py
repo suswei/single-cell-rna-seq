@@ -77,7 +77,7 @@ def main(taskid):
                 fig = plt.figure(figsize=(14, 7))
                 plt.plot(x, ll_train_set)
                 plt.plot(x, ll_test_set)
-                plt.ylim(10000, 30000)
+                plt.ylim(10000, 40000)
                 plt.title("Blue for training error and orange for testing error")
 
                 fig1_path = 'result/tune_hyperparameter_for_MineNet/muris_tabula/training_testing_error_SCVI+MINE_{}_{}_n_layers{}_sample{}_MineLossScale{}.png'.format(dataset_name,nuisance_variable, n_layer, taskid, MineLoss_Scale)
@@ -118,7 +118,7 @@ def main(taskid):
         fig = plt.figure(figsize=(14, 7))
         plt.plot(x, ll_train_set)
         plt.plot(x, ll_test_set)
-        plt.ylim(1150, 1600)
+        plt.ylim(10000, 40000)
         plt.title("Blue for training error and orange for testing error")
 
         fig2_path = 'result/tune_hyperparameter_for_MineNet/muris_tabula/training_testing_error_SCVI_{}_{}_n_layers{}_sample{}.png'.format(dataset_name, nuisance_variable, n_layer, taskid)
