@@ -18,6 +18,10 @@ import itertools
 
 def main(taskid, dataset_name, nuisance_variable, MI_estimator):
 
+    # dataset_name could be 'muris_tabula', 'pbmc'
+    # nuisance_variable could be 'batch'
+    # MI_estimator could be 'Mine_Net4', 'NN' (NN stands for nearest neighbor)
+
     if not os.path.exists('data/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name)):
         os.makedirs('data/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name))
     if not os.path.exists('result/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name)):
