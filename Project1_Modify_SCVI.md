@@ -38,24 +38,25 @@ jupyter:
 <a id='section2'></a>
 <b><font size="+1">1.1 Invariance of Deep Learning</font></b>
 
-Deep learning has been widely used in many pattern recognition tasks, like image classification, object detection, and segmentation. Invariance of deep learning means a pattern can still be correctly recognized when there are many confounding properties. For example, a cat in an image can still be classified correctly as a cat even when the image is rotated, enlarged or brightened.
+Deep learning has been widely used in many pattern recognition tasks, like image classification, object detection, and segmentation. Invariance of deep learning means a pattern can still be correctly recognized when there are many confounding properties. For example, a cat in an image can still be classified correctly as a cat even when the image is rotated, enlarged or brightened. There are many researches, especially in computer vision field, about how to make deep learning network selects the complex, high level invariant features of the input, yet robust to irrelevant input transformations, which can be summarized in two aspects. 
 
-There are many researches about how to make deep learning network selects the complex, high level invariant features of the input, yet robust to irrelevant input transformations, which can be summarized in two aspects. One aspect is using enormous data and computing power to train large deep networks with billions of parameters. The other aspect is modeling prior invariance information into deep learning network before data is fed in.
+One aspect to achieve invariability is to increase the amount of training data. Le et al.([2013](http://static.googleusercontent.com/media/research.google.com/en//archive/unsupervised_icml2012.pdf)) devoted enormous unlabeled image data and computation power to train a large neuron network with billions of parameters. The face feature detector learnt from the neuron network without labeling images as containing a face or not is robust not only to translation but also to scaling and out-of-plane rotation. Small training dataset can be expanded by generating new samples in the way of applying small random deformations to the original training examples, using deformations like rotations, scaling, translation or shearing, which are known not to change the target variables of interest. Ciresan et al. ([2010](https://arxiv.org/pdf/1003.0358.pdf)) applied large deep neural network on deformed MNIST digits and reached 0.35% classification error rate. Simard et al. ([2003](http://cognitivemedium.com/assets/rmnist/Simard.pdf)) trained convolutional neural network on MNIST English digit images with both affine and elastic deformations, and reached a record of 0.32% classification error rate.
 
-
-
-
+The other aspect to achieve invariability is to model prior information into deep learning network in the form of network structures or probability distributions before any data is fed in. The most prevalent strategy is to use basic domain knowledge (e.g. the topological 2D structure of image data in computer vision) to hand-design better features. Inspired by the organization of the visual cortex where individual neurons respond to stimuli only in a restricted region of the visual field known as the receptive field. A collection of such fields overlap to cover the entire visual area.
 
 
+Goodfellow et al.([2009](https://ai.stanford.edu/~ang/papers/nips09-MeasuringInvariancesDeepNetworks.pdf)) showed that both stacked autoencoder networks and convolutional deep belief networks (CDBNs) enjoy increasing invariance with depth even to complex 3-D out-of-plane rotation of natural images and natural video sequences, although the effects of depth in the two cases are different. Their observations supports the common view that invariances to minor shifts, rotations and deformations are learned in the lower layers, and combined in the higher layers to form progressively more invariant features. 
 
 
+And the two aspects can be combined to achieve the best result.
 
 
-For many pattern recognition tasks, the ideal input feature would be invariant to
-multiple confounding properties (such as illumination and viewing angle, in computer vision applications). Recently, deep architectures trained in an unsupervised
-manner have been proposed as an automatic method for extracting useful features.
+can we learn batch effect from house keeping genes?
 
-keywords for searching: deep learning, deep neural network, deep network
+<!-- #endregion -->
+
+<!-- #region -->
+keywords for searching: invari* + deep learning/deep neural network/deep network, high-level feature + learning, representation learning/learning representation, 
 No review paper about invariance of deep learning ???
 
 [Measuring Invariances in Deep Networks](https://ai.stanford.edu/~ang/papers/nips09-MeasuringInvariancesDeepNetworks.pdf)
@@ -112,8 +113,6 @@ of non-trivial transformations. With concrete recognition experiments, we show t
 learned from natural videos not only apply to still images, but also give competitive results on a
 number of object recognition benchmarks. Since our features can be extracted using a feed-forward
 neural network, they are also easy to use and efficient to compute.
-
-
 <!-- #endregion -->
 
 <a id='section3'></a>
@@ -254,11 +253,23 @@ Calculate a similarity matrix for the cells and make U be a uniform random varia
 
 Mouse Marrow dataset is generated as the following steps: 1. git clone from the github webpage https://github.com/YosefLab/scVI-data.git to get the mouse_gene_len.txt file. Store mouse_gene_len.txt to the directory where MouseTM-10x and MouseTM-ss2 will be downloaded into. 2. Download both MouseTM-10x and MouseTM-ss2 using TabulaMuris() in ./scvi/dataset/muris_tabula.py file. Then subsample MouseTM-10x and MouseTM-ss2, and concatenate them by row to form the Mouse Marrow dataset. The specific code is in ./code/tune_hyperparameter_for_MineNet_MonteCarlo.py. Note: mouse_gene_len.txt should exist in the directory first before line33 to line37 in ./code/tune_hyperparameter_for_MineNet_MonteCarlo.py can generate Mouse Marrow dataset. We choose this dataset because the batch effect in this combined dataset is expected to be relatively large according to the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1).
 
-When the nuisance factor is batch, for each iteration, apply SCVI once to MouseMarrow Dataset. Then apply SCVI+MI_penalty 6 times to MouseMarrow Dataset, each time of which will have a different scale multiplied to the MI estimator. The hyperparameters for SCVI+MI_penalty is as follows:
+When the nuisance factor is batch, for each iteration, apply SCVI once to MouseMarrow Dataset. Then apply SCVI+MI_penalty 6 times to MouseMarrow Dataset, each time of which will have a different scale multiplied to the MI estimator. The hyperparameters for SCVI and SCVI+MI_penalty is as follows:
    
     -n_layers: [2] (the number of hidden layers in both encoder and decoder in SCVI, and SCVI+MI_penalty)
     
     -n_hidden: [128] (the number of nodes in each hidden layer in both encoder and decoder in SCVI, and SCVI+MI_penalty)
+    
+    -n_latent: [10] (the dimension of the latent vector Z)
+    
+    -dropout_rate: [0.1]
+    
+    -lr: [0.001](learning rate)
+    
+    -n_epochs: [250] 
+    
+    -reconstruction_loss: ['zinb']
+    
+    -train_size: [0.8] (the ratio to split the dataset into training and testing dataset)
     
     -dataset_name: ['Marrow'],
    
@@ -268,12 +279,40 @@ When the nuisance factor is batch, for each iteration, apply SCVI once to MouseM
    
 Repeat the iteration 100 times as SCVI will produce different results on the same dataset multiple times. The reason could be the initialization of the weights in the scvi deep network, different initialization values could result in different optimization result. Or the minibatch of the training process, Or could be the reparametrization of z in the scVI method, according to the [tutorial_of_scVI](https://arxiv.org/abs/1606.05908). The paper titled [Deep_generative_modeling_for_single-cell_transcriptomics](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/s41592-018-0229-2#Sec43) investigates the variability of scVI due to different initialization of weights in supplementary figure 1.d.
 
+The values for the following hyperparameters: n_layers, n_hidden, n_latent, dropout_rate, lr, n_epochs, reconstruction_loss are directly borrowed from the code of the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1).
+
 
 When the nuisance factor is library size, .......
 
 <b><font size="3">b. Pbmc</font></b>
 
 pbmc dataset is built-in scVI dataset. just use the function PbmcDataset() in scvi/dataset/pbmc.py to load the dataset
+
+When the nuisance factor is batch, for each iteration, apply SCVI once to Pbmc Dataset. Then apply SCVI+MI_penalty 7 times to Pbmc Dataset, each time of which will have a different scale multiplied to the MI estimator. Repeat the iteration 100 times. The hyperparameters for SCVI and SCVI+MI_penalty for Pbmc is as follows:
+   
+    -n_layers: [1] (the number of hidden layers in both encoder and decoder in SCVI, and SCVI+MI_penalty)
+    
+    -n_hidden: [256] (the number of nodes in each hidden layer in both encoder and decoder in SCVI, and SCVI+MI_penalty)
+    
+    -n_latent: [14] (the dimension of the latent vector Z)
+    
+    -dropout_rate: [0.5]
+    
+    -lr: [0.01](learning rate)
+    
+    -n_epochs: [170] (used in the Harmonization and Annotation of single-cell)
+    
+    -reconstruction_loss: ['zinb']
+    
+    -train_size: [0.8] (the ratio to split the dataset into training and testing dataset)
+    
+    -dataset_name: ['Pbmc'],
+   
+    -nuisance_factor: ['batch'],
+   
+    -Scale: [200, 500, 800, 1000, 2000, 5000, 10000,1000000] (the scale multiplied to MI estimator)
+    
+The values for the following hyperparameters: n_layers, n_hidden, n_latent, dropout_rate, lr, n_epochs, reconstruction_loss are directly borrowed from Table3 on the website [hyperparameter search for SCVI](https://yoseflab.github.io/2019/07/05/Hyperoptimization/)
 
 <b><font size="3">c. Retina</font></b>
 
@@ -309,8 +348,8 @@ scvi_n_layers = 2
 for i,MineLoss_Scale in enumerate(MineLoss_Scales):
     file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\trainset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
     file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\testset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
-    subfile_titles = subfile_titles + ['trainset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 1)]
-    subfile_titles = subfile_titles + ['testset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 1)]
+    subfile_titles = subfile_titles + ['trainset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
+    subfile_titles = subfile_titles + ['testset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
 file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'training')]
 file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'testing')]
 subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Marrow', 'batch','training')]
@@ -350,13 +389,54 @@ scvi_n_layers = 2
 for i,MineLoss_Scale in enumerate(MineLoss_Scales):
     file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\trainset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
     file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\testset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
-    subfile_titles = subfile_titles + ['trainset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 1)]
-    subfile_titles = subfile_titles + ['testset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 1)]
+    subfile_titles = subfile_titles + ['trainset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
+    subfile_titles = subfile_titles + ['testset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
 file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'training')]
 file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'testing')]
 subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Marrow', 'batch','training')]
 subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Marrow', 'batch','testing')]
 SummarizeResult('image',file_paths,subfile_titles,'Fig6: Clustering metrics comparison between scVI and scVI+MI_Penalty on Marrow Dataset, batch nuisance factor')
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+exec(open('code\\SummarizeResult.py').read())
+Average_ClusteringMetric_Barplot(dataset_name = "Pbmc",nuisance_variable='batch',results_dict = "result/tune_hyperparameter_for_MineNet/pbmc/", n_sample = 100, scvi_n_layers=1, hyperparameter_config = {'MineLoss_Scale':[200, 500, 800, 1000, 2000, 5000, 10000,100000]})
+
+file_paths = []
+subfile_titles = []
+MineLoss_Scales = [200,500,800, 1000, 2000,5000,10000,100000]
+scvi_n_layers = 1 
+
+for i,MineLoss_Scale in enumerate(MineLoss_Scales):
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\pbmc\\trainset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Pbmc', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\pbmc\\testset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Pbmc', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
+    subfile_titles = subfile_titles + ['trainset_%s_%s_MineLossScale%s_%ssamples.png'%('Pbmc', 'batch', MineLoss_Scale, 100)]
+    subfile_titles = subfile_titles + ['testset_%s_%s_MineLossScale%s_%ssamples.png'%('Pbmc', 'batch', MineLoss_Scale, 100)]
+file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Pbmc', 'batch',scvi_n_layers,'training')]
+file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Pbmc', 'batch',scvi_n_layers,'testing')]
+subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Pbmc', 'batch','training')]
+subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Pbmc', 'batch','testing')]
+SummarizeResult('image',file_paths,subfile_titles,'Fig7: Clustering metrics comparison between scVI and scVI+MI_Penalty on Pbmc Dataset, batch nuisance factor')
+```
+
+```python
+scvi_n_layers = 1
+file_paths = ['result\\tune_hyperparameter_for_MineNet\\pbmc\\trainset_tsne_SCVI_%s_%s_n_layers%s_sample%s.png'%('Pbmc', 'batch', scvi_n_layers, 0)]
+file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\testset_tsne_SCVI_%s_%s_n_layers%s_sample%s.png'%('Pbmc', 'batch', scvi_n_layers, 0)]
+
+subfile_titles = ['scVI_%s_%s_trainset'%('Pbmc', 'batch')]
+subfile_titles += ['scVI_%s_%s_testset'%('Pbmc', 'batch')]
+MineLoss_Scales = [800, 2000]
+
+for i,MineLoss_Scale in enumerate(MineLoss_Scales):
+        file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\trainset_tsne_SCVI+MINE_%s_%s_n_layers%s_sample%s_MineLossScale%s.png'%('Pbmc', 'batch',scvi_n_layers, 0, MineLoss_Scale)]
+        file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\testset_tsne_SCVI+MINE_%s_%s_n_layers%s_sample%s_MineLossScale%s.png'%('Pbmc', 'batch',scvi_n_layers, 0, MineLoss_Scale)]
+        subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s trainset'%('Pbmc', 'batch', MineLoss_Scale)]
+        subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s testset'%('Pbmc', 'batch', MineLoss_Scale)] 
+SummarizeResult('image',file_paths,subfile_titles,'Fig8: tsne plot of scVI and scVI+MI_penalty for pbmc dataset, batch nuisance factor')
 ```
 
 <b><font size="3">2.2.5 Questions</font></b> 
