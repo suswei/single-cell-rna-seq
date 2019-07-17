@@ -307,6 +307,15 @@ class GeneExpressionDataset(Dataset):
         labels = labels[to_keep].reshape(-1, 1) if labels is not None else np.zeros_like(batch_indices)
         return X, local_mean, local_var, batch_indices, labels
 
+    def get_attributes_from_matrix_muris_tabula(X, batch_indices=0, labels=None):
+        to_keep = np.array((X.sum(axis=1) > 0)).ravel()
+        X = X[to_keep]
+        local_mean, local_var = GeneExpressionDataset.library_size(X)
+        batch_indices = batch_indices * np.ones((X.shape[0], 1)) if type(batch_indices) is int \
+            else batch_indices[to_keep]
+        labels = labels[to_keep].reshape(-1, 1) if labels is not None else np.zeros_like(batch_indices)
+        return X, local_mean, local_var, batch_indices, labels
+
     @staticmethod
     def get_attributes_from_list(Xs, list_batches=None, list_labels=None):
         nb_genes = Xs[0].shape[1]

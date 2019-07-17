@@ -12,7 +12,7 @@ import torch.nn.functional as F
 
 
 from scvi.models.log_likelihood import log_zinb_positive, log_nb_positive
-from scvi.models.modules import Encoder, DecoderSCVI, MINE_Net
+from scvi.models.modules import Encoder, DecoderSCVI, MINE_Net4, discrete_continuous_info
 from scvi.models.utils import one_hot
 
 torch.backends.cudnn.benchmark = True
@@ -201,15 +201,26 @@ class VAE_MINE(nn.Module):
         z_shuffle = np.random.permutation(z.detach().numpy())
         z_shuffle = Variable(torch.from_numpy(z_shuffle).type(torch.FloatTensor), requires_grad=True)
         batch_index = Variable(batch_index.type(torch.FloatTensor), requires_grad=True)
-        n_input_nuisance = batch_index.shape[1]
-        n_input_z = z.shape[1]
-        minenet = MINE_Net(n_input_nuisance,n_input_z,self.n_hidden_z,self.n_layers_z)
-        pred_xz = minenet(batch_index, z) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
-        pred_x_z = minenet(batch_index, z_shuffle) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
+        #n_input_nuisance = batch_index.shape[1]
+        #n_input_z = z.shape[1]
+        #minenet = MINE_Net(n_input_nuisance,n_input_z,self.n_hidden_z,self.n_layers_z)
+        #pred_xz = minenet(batch_index, z) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
+        #pred_x_z = minenet(batch_index, z_shuffle) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
+
+        #z_batch = torch.cat([z,batch_index],dim=1)
+        #layers = [32, 16]
+        #minenet = MINE_Net4(z_batch.shape[-1], layers)
+        #pred_xz, pred_x_z = minenet(xy=z_batch, x_shuffle=z_shuffle, x_n_dim=z.shape[-1])
+
+        batch_index_array = np.array(batch_index.detach().numpy().transpose())
+        z_array = z.detach().numpy().transpose()
+        predicted_mutual_info = discrete_continuous_info(d=batch_index_array, c=z_array)
 
         #TODO: have another MINE net for library depth
 
-        return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z
+        #return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z
+
+        return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, predicted_mutual_info
 
     def forward(self, x, local_l_mean, local_l_var, batch_index=None, y=None):
         r""" Returns the reconstruction loss and the Kullback divergences
@@ -226,7 +237,8 @@ class VAE_MINE(nn.Module):
         """
         # Parameters for z latent distribution
 
-        px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z = self.inference(x, batch_index, y)
+        #px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z = self.inference(x, batch_index, y)
+        px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, predicted_mutual_info = self.inference(x, batch_index, y)
 
         # KL Divergence
         mean = torch.zeros_like(qz_m)
@@ -241,7 +253,8 @@ class VAE_MINE(nn.Module):
         print('reconst_loss: {}'.format(reconst_loss.mean()))
 
         # calculate MINE loss, expression for V(\theta) in Algorithm 1 MINE
-        mine_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z))) #mine_loss: dimension: [1]
+        #mine_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z))) #mine_loss: dimension: [1]
+        mine_loss = predicted_mutual_info  # mine_loss: dimension: [1]
         print('mine loss: {}'.format(mine_loss))
         print('scaled mine loss: {}'.format(self.MineLoss_Scale*mine_loss))
 

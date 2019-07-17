@@ -16,40 +16,119 @@ jupyter:
 <a id='section1'></a>
 <h1><center>Project1_Modify_SCVI</center></h1>
 <b><font size="+2">1. Introduction</font></b>
-<a href='#section2'><p style="margin-left: 40px"><b><font size="+1">1.1 Deep Learning Network</font></b></p></a>
-<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 Invariance of Deep Learning</font></b></p></a>
-<a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 SCVI</font></b></p></a>
-<a href='#section5'><p style="margin-left: 40px"><b><font size="+1">1.4 Modified SCVI</font></b></p></a>
+<a href='#section2'><p style="margin-left: 40px"><b><font size="+1">1.1 Deep Learning and the Invariance Problem</font></b></p></a>
+<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 Invariance Problem in Single-Cell-RNA seq analysis</font></b></p></a>
+<a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 SCVI </font></b></p></a>
 
 <b><font size="+2">2. Have Done and Discussion</font></b>
 <a href='#section6'><p style="margin-left: 40px"><b><font size="+1">2.1 Break SCVI</font></b></p></a>
-<p style="margin-left: 40px"><b><font size="+1">2.2 Tune Hyperparameter For MineNet</font></b></p>
-<a href='#section7'><p style="margin-left: 60px"><b><font size="+1">2.2.1 step 1</font></b></p></a>
-<a href='#section8'><p style="margin-left: 60px"><b><font size="+1">2.2.2 step 2</font></b></p></a>
-<a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.3 Compare estimated mutual inforamtion with true mutual inforamtion</font></b></p></a>
+<a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.2 Compare estimated mutual inforamtion with true mutual inforamtion</font></b></p></a>
+<a href='#section7'><p style="margin-left: 40px"><b><font size="+1">2.3 Compare SCVI and SCVI+MI_Penalty</font></b></p></a>
 
 <a href='#section10'><b><font size="+2">3. To Does</font></b></a>
 
-<a href='#section11'><b><font size="+2">4. Useful Tools and Information</font></b></a>
+<b><font size="+2">4. Useful Tools, Information, and Knowledge</font></b>
+<a href='#section11'><p style="margin-left: 40px"><b><font size="+1">4.1 How to version control jupyter notebook</font></b></p></a>
+<a href='#section11'><p style="margin-left: 40px"><b><font size="+1">4.2 Deep Learning</font></b></p></a>
 
 <br/><br/>
 <br/><br/>
-
-
-<a id='section2'></a>
-<b><font size="+1">1.1 Deep Learning Neural Network</font></b>
-
-Tensor is a generalization of matrix with one obvious difference: a tensor is a mathematical entity that lives in a structure and interacts with other mathematical entities. If one transforms the other entities in the structure in a regular way, then the tensor must obey a related transformation rule.
-Tensorflow vs Pytorch (which one is better for deep learning?)
-
-Generally, to tune deep learning network:To find the best deep learning network, factors to consider are number of nodes in latent layer (width), number of hidden layers (depth), learning rate, optimizer, regularization, activation function according to [the book](https://www.deeplearningbook.org/) and the [deep learning specification](https://www.coursera.org/specializations/deep-learning?) on coursera. Write down more details here. Do we need to consider all the factors to tune the MINE deep learning network? Yes, eventually, we need to consider all the factors, with some clever strategy illustrated in [this paper](https://deepmind.com/blog/population-based-training-neural-networks/) 
 
 <!-- #region -->
-<a id='section3'></a>
-<b><font size="+1">1.2 Invariance of Deep Learning</font></b>
+<a id='section2'></a>
+<b><font size="+1">1.1 Invariance of Deep Learning</font></b>
 
+Deep learning has been widely used in many pattern recognition tasks, like image classification, object detection, and segmentation. Invariance of deep learning means a pattern can still be correctly recognized when there are many confounding properties. For example, a cat in an image can still be classified correctly as a cat even when the image is rotated, enlarged or brightened. There are many researches, especially in computer vision field, about how to make deep learning network selects the complex, high level invariant features of the input, yet robust to irrelevant input transformations, which can be summarized in two aspects. 
+
+One aspect to achieve invariability is to increase the amount of training data. Le et al.([2013](http://static.googleusercontent.com/media/research.google.com/en//archive/unsupervised_icml2012.pdf)) devoted enormous unlabeled image data and computation power to train a large neuron network with billions of parameters. The face feature detector learnt from the neuron network without labeling images as containing a face or not is robust not only to translation but also to scaling and out-of-plane rotation. Small training dataset can be expanded by generating new samples in the way of applying small random deformations to the original training examples, using deformations like rotations, scaling, translation or shearing, which are known not to change the target variables of interest. Ciresan et al. ([2010](https://arxiv.org/pdf/1003.0358.pdf)) applied large deep neural network on deformed MNIST digits and reached 0.35% classification error rate. Simard et al. ([2003](http://cognitivemedium.com/assets/rmnist/Simard.pdf)) trained convolutional neural network on MNIST English digit images with both affine and elastic deformations, and reached a record of 0.32% classification error rate.
+
+The other aspect to achieve invariability is to model prior information into deep learning network in the form of network structures or probability distributions before any data is fed in. The most prevalent strategy is to use basic domain knowledge (e.g. the topological 2D structure of image data in computer vision) to hand-design better features. Inspired by the organization of the visual cortex where individual neurons respond to stimuli only in a restricted region of the visual field known as the receptive field. A collection of such fields overlap to cover the entire visual area.
+
+
+Goodfellow et al.([2009](https://ai.stanford.edu/~ang/papers/nips09-MeasuringInvariancesDeepNetworks.pdf)) showed that both stacked autoencoder networks and convolutional deep belief networks (CDBNs) enjoy increasing invariance with depth even to complex 3-D out-of-plane rotation of natural images and natural video sequences, although the effects of depth in the two cases are different. Their observations supports the common view that invariances to minor shifts, rotations and deformations are learned in the lower layers, and combined in the higher layers to form progressively more invariant features. 
+
+
+And the two aspects can be combined to achieve the best result.
+
+
+can we learn batch effect from house keeping genes?
+
+<!-- #endregion -->
+
+<!-- #region -->
+keywords for searching: invari* + deep learning/deep neural network/deep network, high-level feature + learning, representation learning/learning representation, 
+No review paper about invariance of deep learning ???
 
 [Measuring Invariances in Deep Networks](https://ai.stanford.edu/~ang/papers/nips09-MeasuringInvariancesDeepNetworks.pdf)
+
+Our proposed invariance measure is broadly applicable to evaluating many deep learning algorithms
+for many tasks, but the present paper will focus on two different algorithms applied to computer
+vision. First, we examine the invariances of <b>stacked autoencoder networks</b> [2]. These networks
+were shown by Larochelle et al. [3] to learn useful features for a range of vision tasks; this suggests
+that their learned features are significantly invariant to the transformations present in those tasks.
+Unlike the artificial data used in [3], however, our work uses natural images and natural video
+sequences, and examines more complex variations such as out-of-plane changes in viewing angle.
+We find that when trained under these conditions, <b>stacked autoencoders</b> learn increasingly invariant
+features with depth, but the effect of depth is small compared to other factors such as <b>regularization</b>.
+Next, we show that convolutional deep belief networks (CDBNs) [5], which are hand-designed to be
+invariant to certain local image translations, do enjoy dramatically increasing invariance with depth.
+This suggests that there is a benefit to using deep architectures, but that mechanisms besides simple
+stacking of autoencoders are important for gaining increasing invariance.
+
+Another interesting finding is that by incorporating <b>sparsity</b>, networks can become more invariant. Refer to this paper about [induce sparsity to deep network](https://arxiv.org/pdf/1902.09574.pdf). Pay attention to section 2. How to understand? Difference between sparsity and drop out?
+
+We also document that explicit approaches to achieving invariance such as <b>max-pooling</b> and weightsharing in CDBNs are currently successful strategies for achieving invariance. Refer to [this website](https://towardsdatascience.com/a-comprehensive-guide-to-convolutional-neural-networks-the-eli5-way-3bd2b1164a53) for CNN introduction. In it, 
+For CNN, adding a Fully-Connected layer after the convolutional and pooling layers is a (usually) cheap way of learning non-linear combinations of the high-level features as represented by the output of the convolutional layer. The Fully-Connected layer is learning a possibly non-linear function in that space. Soft-Max activation is used. Why? Refer to [the link](https://towardsdatascience.com/activation-functions-and-its-types-which-is-better-a9a5310cc8f) to compare different activation functions in deep learning. How to understand the problems of each activation function.
+
+Our work also seeks to address the question: why are deep learning algorithms useful? Bengio and
+LeCun gave a theoretical answer to this question, in which they showed that a deep architecture is
+necessary to <b>represent many functions compactly</b> [1].
+
+<b>restricted Boltzmann machine</b> 
+
+<b>deep network vs deep belief network</b>
+
+
+
+[Deep Learning of Invariant Features via Simulated
+Fixations in Video](http://papers.nips.cc/paper/4730-deep-learning-of-invariant-features-via-simulated-fixations-in-video.pdf)
+
+As a learning principle, sparsity is essential to understanding the statistics of natural images [2].
+However, it remains unclear to what extent <b>sparsity and subspace pooling</b> [3, 4] could produce
+invariance exhibited in higher levels of visual systems. Another approach to learning invariance is
+temporal slowness [1, 5, 6, 7]. Experimental evidence suggests that high-level visual representations
+become slow-changing and tolerant towards non-trivial transformations, by associating low-level
+features which appear in a coherent sequence [5]
+
+By stacking learning modules, we are able to learn
+features that are increasingly invariant. Using <b>temporal slowness</b>, the first layer units become locally
+translational invariant, similar to subspace or spatial pooling; the second layer units can then encode
+more complex invariances such as out-of-plane transformations and non-linear warping
+
+We have described an unsupervised learning algorithm for learning invariant features from video
+using the temporal slowness principle. The system is improved by using simulated fixations and
+smooth pursuit to generate the video sequences provided to the learning algorithm. We illustrate
+by virtual of visualization and invariance tests, that the learned features are invariant to a collection
+of non-trivial transformations. With concrete recognition experiments, we show that the features
+learned from natural videos not only apply to still images, but also give competitive results on a
+number of object recognition benchmarks. Since our features can be extracted using a feed-forward
+neural network, they are also easy to use and efficient to compute.
+<!-- #endregion -->
+
+<a id='section3'></a>
+<b><font size="+1">1.2 Invariance Problem in Single-Cell-RNA seq analysis</font></b>
+
+
+
+<!-- #region -->
+<a id='section4'></a>
+<b><font size="+1">1.3 SCVI</font></b>
+
+Single Cell RNA Seq
+
+In single cell RNA seq, batch effect could come from when the sample is processed and when sequencing takes place, sequence platform, which individual the samples come from, how the sample is treated. Sometimes, biological difference can also be considered as batch effect based on different research aims. For example, if T cells from blood samples and T cells from other samples are combined together, and the research aim is to investigate the difference between norm T cells and abnormal T cells, we do not want the origin of the T cells to influence the result, here the origins of the T cells although are biological factors, it is considered as batch effect.
+
+For a given dataset, how can we know there is batch difference at the beginning. The most easiest way is to do some exploratory analysis, like draw the tsne plot using SCVI, if the batch difference is big like from two different sequencing platform, it will be very easy to see. Or we can 
 
 Mutual Information
 
@@ -90,16 +169,6 @@ and: [shape]=σ
 Confusingly, these are different from the parameters controlling a normal distribution in the scipy.stats.norm module, where location corresponds to the mean and scale is the standard deviation. They are also different to the definitions of location and scale for lognormal distributions in Wikipedia.
 
 <!-- #endregion -->
-
-<a id='section4'></a>
-<b><font size="+1">1.3 SCVI</font></b>
-
-Single Cell RNA Seq
-
-In single cell RNA seq, batch effect could come from when the sample is processed and when sequencing takes place, sequence platform, which individual the samples come from, how the sample is treated. Sometimes, biological difference can also be considered as batch effect based on different research aims. For example, if T cells from blood samples and T cells from other samples are combined together, and the research aim is to investigate the difference between norm T cells and abnormal T cells, we do not want the origin of the T cells to influence the result, here the origins of the T cells although are biological factors, it is considered as batch effect.
-
-For a given dataset, how can we know there is batch difference at the beginning. The most easiest way is to do some exploratory analysis, like draw the tsne plot using SCVI, if the batch difference is big like from two different sequencing platform, it will be very easy to see. Or we can 
-
 
 <a id='section5'></a>
 <b><font size="+1">1.4 Modified SCVI</font></b>
@@ -150,124 +219,229 @@ Why when the ratio is 5, batch mixing entropy is even higher than that when the 
 
 <!-- #region -->
 <a id='section7'></a>
-<b><font size="+1">2.2.1 Tune Hyperparameter For MineNet: step1</font></b>
+<b><font size="+1">2.2 Compare SCVI and SCVI+MI_Penalty</font></b>
 
-<b><font size="3">2.2.1.1 Goal</font></b> 
+<b><font size="3">2.2.1 Goal</font></b> 
 
-Try to find the best hyperparameters for the neural network of mutual information between latent vector z and batch vector s.
+Compare SCVI and SCVI with penalty of mutual information(MI) between nuisance factor and latent factor, using cluster metrics, and tsne plots as the comparison criteria.  
 
-The hyperparameters refers to:
+<b><font size="3">2.2.2 Design</font></b>
 
-    -n_latent_z: number of nodes in each latent layer for the neural network of mutual information.
+Apply SCVI, SCVI with penalty of mutual information to the datasets: MouseMarrow, pbmc, retina.
+For the nuisance factor 'batch', use nearest neighbor method to estimate the mutual information between batch and the latent factor, as batch is a categorical variable. For the nuisance factor 'library size', use Mine_Net4 to estimate the mutual information between library size and the latent factor, as library size is a lognormal variable.
 
-    -n_layers_z: number of layers for the neural network of mutual information.
+According to the paper [Deep Generative Modeling for Single-cell Transcriptomics](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf), the four clustering metrics are :
 
-    -MineLoss_Scale: the scale parameter for the mutual information.
+<b>ASW(Average Silhouette width)</b>:
 
-<b><font size="3">2.2.1.2 Design</font></b>
+Silhouette width for each sample i in a latent space or a similarity matrix is: $s(i)=\frac{b(i)-a(i)}{max\{a(i), b(i)\}}$, where $a(i)$ is the average distance of sample i to all other data points in the same cluster $c_{i}$, and $b(i)$ is the minimal average distance of sample i to all other data points in the same cluster $c_{j}$ among all clusters c. In this paper, the cells are clustered by pre-annotated cell type labels, then use latent space vectors to calculate the average silhouette distance. ASW is the average of silhouette width for all samples. Therefore, ASW, the higher the better, on the assumption that the preannoted cell type labels are largely correct. However, if the cells is pre-clustered by batches, the lower, the better
 
-Produce 20 combinations for the 3 hyperparameters:
+<b>ARI(Adjusted Rand Index)</b>:
 
-    n_latent_z: [10, 30].
+ARI is defined as $ARI=\frac{\Sigma_{ij}\binom{n_{ij}}{2} - [\Sigma_{i}\binom{a_{i}}{2}\Sigma_{j}\binom{{bj}}{2}]/2}{\frac{1}{2}[\Sigma_{i}\binom{a_{i}}{2} + \Sigma_{j}\binom{{bj}}{2}]-[\Sigma_{i}\binom{a_{i}}{2} + \Sigma_{j}\binom{{bj}}{2}]/\binom{{n}}{2}}$, where $n_{ij}$, $a_{i}$, $b_{j}$ are values from a contigency table. In this study, the contigency table is generated by comparing the clustering similarity between K-means clustering to the latent vector of cells, and the clustering by preannotated cell type labels. $n_{ij}$ is the number of same cells in cluster i by K-means and cluster j by preannoted cell type labels. For ARI, the higher the better on the assumption that the preannoted cell type labels are largely correct.
 
-    n_layers_z: [3, 10].
+<b>NMI(Normalized Mutual Information)</b>:
 
-    MineLoss_Scale: [1000, 5000, 10000, 50000, 100000].
+NMI is defined as $NMI=\frac{I(P;T)}{\sqrt{H(P)H(T)}}$, where $P$, $T$ are the empirical categorical distributions for the predicted and real clustering. $I$ is the mutual entropy and $H$ is the Shannon entropy. In this study, the predicted clustering is the K-means clustering applied to latent vectors. The real clustering is the clustering by preannoted cell type labels. For NMI, the higher the better on the assumption that the preannoted cell type labels are largely correct.
 
-The reason to choose 10, and 30 for n_latent_z is that the default value for n_latent_z in the VAE_MINE.py is 5, it is found that n_latent_z=5 has no difference from n_latent_z=1. Therefore, tuning value for n_latent_z starts from 10. For MineLoss_Scale, 1000, 5000, 10000, 50000, 100000 are chosen because reconstruction loss could be several thousands, while mutual information is smaller than 1. For each combination of the three hyperparameter, run scVI, and scVI+MINE on built-in pbmc dataset. The split ratio for training and testing set is 6:4.
+<b>BE</b>:
+
+Calculate a similarity matrix for the cells and make U be a uniform random variable on the population of cells. Take $B_{U}$ as the empirical frequencies for the 50 nearest neighbors of cell $U$ being a in batch b. Get the entropy of this categorical variable and average over $T=100$ values of $U$. In this study, for BE, the higher the better.
 
 
-<b><font size="3">2.2.1.3 Get Data</font></b>
+<b><font size="3">a. MouseMarrow</font></b>
 
-pbmc dataset is built-in scVI dataset. just use the function PbmcDataset() in scvi.dataset to load the dataset
+Mouse Marrow dataset is generated as the following steps: 1. git clone from the github webpage https://github.com/YosefLab/scVI-data.git to get the mouse_gene_len.txt file. Store mouse_gene_len.txt to the directory where MouseTM-10x and MouseTM-ss2 will be downloaded into. 2. Download both MouseTM-10x and MouseTM-ss2 using TabulaMuris() in ./scvi/dataset/muris_tabula.py file. Then subsample MouseTM-10x and MouseTM-ss2, and concatenate them by row to form the Mouse Marrow dataset. The specific code is in ./code/tune_hyperparameter_for_MineNet_MonteCarlo.py. Note: mouse_gene_len.txt should exist in the directory first before line33 to line37 in ./code/tune_hyperparameter_for_MineNet_MonteCarlo.py can generate Mouse Marrow dataset. We choose this dataset because the batch effect in this combined dataset is expected to be relatively large according to the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1).
 
-<b><font size="3">2.2.1.4 Code</font></b>
+When the nuisance factor is batch, for each iteration, apply SCVI once to MouseMarrow Dataset. Then apply SCVI+MI_penalty 6 times to MouseMarrow Dataset, each time of which will have a different scale multiplied to the MI estimator. The hyperparameters for SCVI and SCVI+MI_penalty is as follows:
+   
+    -n_layers: [2] (the number of hidden layers in both encoder and decoder in SCVI, and SCVI+MI_penalty)
+    
+    -n_hidden: [128] (the number of nodes in each hidden layer in both encoder and decoder in SCVI, and SCVI+MI_penalty)
+    
+    -n_latent: [10] (the dimension of the latent vector Z)
+    
+    -dropout_rate: [0.1]
+    
+    -lr: [0.001](learning rate)
+    
+    -n_epochs: [250] 
+    
+    -reconstruction_loss: ['zinb']
+    
+    -train_size: [0.8] (the ratio to split the dataset into training and testing dataset)
+    
+    -dataset_name: ['Marrow'],
+   
+    -nuisance_factor: ['batch'],
+   
+    -Scale: [200, 500, 800, 1000, 2000, 5000, 10000] (the scale multiplied to MI estimator)
+   
+Repeat the iteration 100 times as SCVI will produce different results on the same dataset multiple times. The reason could be the initialization of the weights in the scvi deep network, different initialization values could result in different optimization result. Or the minibatch of the training process, Or could be the reparametrization of z in the scVI method, according to the [tutorial_of_scVI](https://arxiv.org/abs/1606.05908). The paper titled [Deep_generative_modeling_for_single-cell_transcriptomics](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/s41592-018-0229-2#Sec43) investigates the variability of scVI due to different initialization of weights in supplementary figure 1.d.
 
-The code is in code/Tune_Hyperparameter_For_MineNet.py
+The values for the following hyperparameters: n_layers, n_hidden, n_latent, dropout_rate, lr, n_epochs, reconstruction_loss are directly borrowed from the code of the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1).
 
-<b><font size="3">2.2.1.5 Result and Lab Meeting Discussion</font></b>
 
-The raw result of Tuning Hyperparameters for MineNet using 20 combinations is stored in ./result/Tune_Hyperparameter_For_MineNet/2019-05-01/, and the corresponding summaried result is shown here. Only n_latent_z=30, n_layers_z=3, MineLoss_Scale=[1000, 5000, 10000, 50000, 100000] is demonstrated in the summarized result because n_latent_z=30, n_layers_z=3 seems produce most typical result after reviewing all the results of 20 combinations.
+When the nuisance factor is library size, .......
 
-<b><font size="3">2.2.1.5.1 Clustering metric result</font></b>
+<b><font size="3">b. Pbmc</font></b>
+
+pbmc dataset is built-in scVI dataset. just use the function PbmcDataset() in scvi/dataset/pbmc.py to load the dataset
+
+When the nuisance factor is batch, for each iteration, apply SCVI once to Pbmc Dataset. Then apply SCVI+MI_penalty 7 times to Pbmc Dataset, each time of which will have a different scale multiplied to the MI estimator. Repeat the iteration 100 times. The hyperparameters for SCVI and SCVI+MI_penalty for Pbmc is as follows:
+   
+    -n_layers: [1] (the number of hidden layers in both encoder and decoder in SCVI, and SCVI+MI_penalty)
+    
+    -n_hidden: [256] (the number of nodes in each hidden layer in both encoder and decoder in SCVI, and SCVI+MI_penalty)
+    
+    -n_latent: [14] (the dimension of the latent vector Z)
+    
+    -dropout_rate: [0.5]
+    
+    -lr: [0.01](learning rate)
+    
+    -n_epochs: [170] (used in the Harmonization and Annotation of single-cell)
+    
+    -reconstruction_loss: ['zinb']
+    
+    -train_size: [0.8] (the ratio to split the dataset into training and testing dataset)
+    
+    -dataset_name: ['Pbmc'],
+   
+    -nuisance_factor: ['batch'],
+   
+    -Scale: [200, 500, 800, 1000, 2000, 5000, 10000,1000000] (the scale multiplied to MI estimator)
+    
+The values for the following hyperparameters: n_layers, n_hidden, n_latent, dropout_rate, lr, n_epochs, reconstruction_loss are directly borrowed from Table3 on the website [hyperparameter search for SCVI](https://yoseflab.github.io/2019/07/05/Hyperoptimization/)
+
+<b><font size="3">c. Retina</font></b>
+
+
+
+<b><font size="3">2.2.3 Code</font></b>
+
+In the shell,  git clone the Hui_Li branch of the github page https://github.com/susanwe/single-cell-rna-seq.git. Then in the working directory, create a virtual environment named venv, activate venv, and install all required packages with specific versions listed in Project1_Modify_SCVI-requirements.txt in the venv environment. Use command: cp code/tune_hyperparameter_for_MineNet4_MonteCarlo.sh tune_hyperparameter_for_MineNet4_MonteCarlo.sh to copy the tune_hyperparameter_for_MineNet4_MonteCarlo.sh file to the working directory. Use command: cp code/tune_hyperparameter_for_MineNet4_MonteCarlo.py tune_hyperparameter_for_MineNet4_MonteCarlo.py to copy the tune_hyperparameter_for_MineNet4_MonteCarlo.py to the working directory. Then in the working directory use command: sh tune_hyperparameter_for_MineNet4_MonteCarlo.sh to run tune_hyperparameter_for_MineNet4_MonteCarlo.py 100 times.
+
+After all jobs finish on spartan, git clone the Hui_Li branch of the github page https://github.com/susanwe/single-cell-rna-seq.git to local computer. Use the command: scp myusername@spartan.hpc.unimelb.edu.au:/data/projects/myproject/remote.dat local.dat to copy the results on spartan to local computer.
+
+<b><font size="3">2.2.4 Result</font></b>
+
+<b><font size="3">a MouseMarrow</font></b>
+
+The result for MouseMarrow is stored in ./result/tune_hyperparameter_for_MineNet/muris_tabula/, and is summarized in Fig4.
+The tsne plot is shown in Fig5. As the result in Fig4 is not promising, in order to see whether it is because the scale is not large enough based on the fact that the reconstruction loss is several thousands thousand, while the mutual information is less than 1, run the experiment again, but scale=100000, 1000000, result shown in Fig6.
+
 <!-- #endregion -->
 
 ```python slideshow={"slide_type": "-"}
+import os
+%matplotlib inline
+import itertools
+exec(open('code\\SummarizeResult.py').read())
+Average_ClusteringMetric_Barplot(dataset_name = "Marrow",nuisance_variable='batch',results_dict = "result/tune_hyperparameter_for_MineNet/muris_tabula/", n_sample = 100, scvi_n_layers=2, hyperparameter_config = {'MineLoss_Scale':[200, 500, 800, 1000, 2000, 5000, 10000]})
+
 file_paths = []
 subfile_titles = []
-MineLoss_Scales = [1000,5000,10000,50000,100000]
+MineLoss_Scales = [200,500,800, 1000, 2000,5000,10000]
+scvi_n_layers = 2 
 
 for i,MineLoss_Scale in enumerate(MineLoss_Scales):
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-01\\trainset_clustering_metrics_pbmc_Hidden30_layers3_MineLossScale%s.png'%(MineLoss_Scale)]
-    subfile_titles = subfile_titles + ['Trainset n_latent_z:30 n_layers_z:3 MineLoss_Scale:%s'%(MineLoss_Scales[i])]
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\trainset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\testset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
+    subfile_titles = subfile_titles + ['trainset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
+    subfile_titles = subfile_titles + ['testset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
+file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'training')]
+file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'testing')]
+subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Marrow', 'batch','training')]
+subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Marrow', 'batch','testing')]
+SummarizeResult('image',file_paths,subfile_titles,'Fig4: Clustering metrics comparison between scVI and scVI+MI_Penalty on Marrow Dataset, batch nuisance factor')
+```
 
-SummarizeResult('image',file_paths,subfile_titles,'Fig1: Clustering metrics of train set between scVI and scVI+MINE')
+```python
+scvi_n_layers = 2
+file_paths = ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\trainset_tsne_SCVI_%s_%s_n_layers%s_sample%s.png'%('Marrow', 'batch', scvi_n_layers, 0)]
+file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\testset_tsne_SCVI_%s_%s_n_layers%s_sample%s.png'%('Marrow', 'batch', scvi_n_layers, 0)]
+
+subfile_titles = ['scVI_%s_%s_trainset'%('Marrow', 'batch')]
+subfile_titles += ['scVI_%s_%s_testset'%('Marrow', 'batch')]
+MineLoss_Scales = [500, 1000, 5000, 10000]
+
+for i,MineLoss_Scale in enumerate(MineLoss_Scales):
+        file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\trainset_tsne_SCVI+MINE_%s_%s_n_layers%s_sample%s_MineLossScale%s.png'%('Marrow', 'batch',scvi_n_layers, 0, MineLoss_Scale)]
+        file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\testset_tsne_SCVI+MINE_%s_%s_n_layers%s_sample%s_MineLossScale%s.png'%('Marrow', 'batch',scvi_n_layers, 0, MineLoss_Scale)]
+        subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s trainset'%('Marrow', 'batch', MineLoss_Scale)]
+        subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s testset'%('Marrow', 'batch', MineLoss_Scale)] 
+SummarizeResult('image',file_paths,subfile_titles,'Fig5: tsne plot of scVI and scVI+MI_penalty for marrow dataset, batch nuisance factor')
 ```
 
 ```python slideshow={"slide_type": "-"}
-file_paths = []
-subfile_titles = []
-
-for i,MineLoss_Scale in enumerate(MineLoss_Scales):
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-01\\testset_clustering_metrics_pbmc_Hidden30_layers3_MineLossScale%s.png'%(MineLoss_Scale)]
-    subfile_titles = subfile_titles + ['Testset n_latent_z:30 n_layers_z:3 MineLoss_Scale:%s'%(MineLoss_Scales[i])]
-
-SummarizeResult('image',file_paths,subfile_titles,'Fig2: Clustering metrics of test set between scVI and scVI+MINE')
-```
-
-From Fig1 and Fig2, it seems that for n_latent_z=30, n_layers_z=3, when MineLoss_Scale=1000, scVI+MINE is better than scVI with higher clustering metrics. However, the problem is that when all the scVI in the five subplots in Fig1 are compared, UCA and ARI in the subplot with MineLoss_Scale to be 5000 are much larger than those in other subplots. However, MineLoss_Scale difference should not influence the clustering results of scVI. 
-
-One of the reasons for the discrepancy could be the training sample for scVI in each subplot is different. However, this reason is ruled out after the original code in scVI is checked out. Check the code file: D:/UMelb/PhD_Projects/Project1_Modify_SCVI/code/2019-05-01_Tune_Hyperparameter_For_MineNet.py, 
-training and testing dataset is splitted by the UnsupervisedTrainer() function, which is defined in: D:/UMelb/PhD_Projects/Project1_Modify_SCVI/scvi/inference/inference.py.
-The train_test() function in inference.py does the splitting, which takes in a seed with default value to be zero. UnsupervisedTrainer inherits trainer class. train_test() function is defined in D:/UMelb/PhD_Projects/Project1_Modify_SCVI/scvi/inference/trainer.py.  Check train_test() function. As the seed remains 0 every time, the training sample and testing sample for scVI each time are the same.
-
-Another explanation is that scVI is not stable even when the training sample is the same. The reason could be the initialization of the weights in the networks, different initialization values could result in different optimization result. Or the minibatch of the training process, Or could be the reparametrization of z in the scVI method, according to the [tutorial_of_scVI](https://arxiv.org/abs/1606.05908). The paper titled [Deep_generative_modeling_for_single-cell_transcriptomics](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/s41592-018-0229-2#Sec43) investigates the variability of scVI due to different initialization of weights in supplementary figure 1.d.
-
-Now that scVI is not stable, scVI+MINE is also not stable, it is not safe to say that scVI+MINE is better than scVI for n_latent_z=30, n_layers_z=3 and MineLoss_Scale=1000 when only one training sample is run. Therefore, 100 monte carlo samples are necessary to get a more convincing conclusion. 
-
-
-<b><font size="3">2.2.1.5.2 Batch and Cell Labels result of train set between scVI and scVI+MINE</font></b> 
-
-For each row, left is scVI, right is scVI+MINE.
-
-```python
-file_paths = []
-subfile_titles = []
-
-for i,MineLoss_Scale in enumerate(MineLoss_Scales):
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-01\\trainset_tsne_SCVI_pbmc_Hidden30_layers3_MineLossScale%s.png'%(MineLoss_Scale)]
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-01\\trainset_tsne_SCVI+MINE_pbmc_Hidden30_layers3_MineLossScale%s.png'%(MineLoss_Scale)]
-
-    subfile_titles = subfile_titles + ['scVI n_latent_z:30 n_layers_z:3 MineLoss_Scale:%s'%(MineLoss_Scales[i])]
-    subfile_titles = subfile_titles + ['scVI+MINE n_latent_z:30 n_layers_z:3 MineLoss_Scale:%s'%(MineLoss_Scales[i])]
-
-SummarizeResult('image',file_paths,subfile_titles,'Fig4: Trainset tsne plot')
-```
-
-<b><font size="3">2.2.1.5.3 Batch and Cell Labels result of test set between scVI and scVI+MINE</font></b> 
-
-For each row, left is scVI, right is scVI+MINE.
-
-```python
-file_paths = []
-subfile_titles = []
-
-for i,MineLoss_Scale in enumerate(MineLoss_Scales):
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-01\\testset_tsne_SCVI_pbmc_Hidden30_layers3_MineLossScale%s.png'%(MineLoss_Scale)]
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-01\\testset_tsne_SCVI+MINE_pbmc_Hidden30_layers3_MineLossScale%s.png'%(MineLoss_Scale)]
-
-    subfile_titles = subfile_titles + ['scVI n_latent_z:30 n_layers_z:3 MineLoss_Scale:%s'%(MineLoss_Scales[i])]
-    subfile_titles = subfile_titles + ['scVI+MINE n_latent_z:30 n_layers_z:3 MineLoss_Scale:%s'%(MineLoss_Scales[i])]
-
+import os
+%matplotlib inline
+import itertools
 exec(open('code\\SummarizeResult.py').read())
-SummarizeResult('image',file_paths,subfile_titles,'Fig5: Testset tsne plot')
+Average_ClusteringMetric_Barplot(dataset_name = "Marrow",nuisance_variable='batch',results_dict = "result/tune_hyperparameter_for_MineNet/muris_tabula_highscale/", n_sample = 100, scvi_n_layers=2, hyperparameter_config = {'MineLoss_Scale':[100000,1000000]})
+
+file_paths = []
+subfile_titles = []
+MineLoss_Scales = [100000,1000000]
+scvi_n_layers = 2 
+
+for i,MineLoss_Scale in enumerate(MineLoss_Scales):
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\trainset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\testset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
+    subfile_titles = subfile_titles + ['trainset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
+    subfile_titles = subfile_titles + ['testset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
+file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'training')]
+file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'testing')]
+subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Marrow', 'batch','training')]
+subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Marrow', 'batch','testing')]
+SummarizeResult('image',file_paths,subfile_titles,'Fig6: Clustering metrics comparison between scVI and scVI+MI_Penalty on Marrow Dataset, batch nuisance factor')
 ```
 
-From Fig1 and Fig2, when n_latent_z=30, n_layers_z=3, MineLoss_Scale=1000, no matter train set or test set, at least for this run, scVI+MINE is better than scVI according to the clustering metrics. However, scVI+MINE seems worse than scVI according to the tsne plots both in Fig4 for train set and Fig5 for test set. One reason could be tsne plots are not very accurate, after all it only shows two components of latent vector z's variation (check tsne's paper, and say this sentence in a professional way). The other reason could be that the clustering metrics used here are not appropriate. 
-<font color=red>Which one is correct or is there other explanation???????? Maybe know about manifold learning clustering metrics could help?? Not using euclidean distance</font>
+```python
+import os
+%matplotlib inline
+import itertools
+exec(open('code\\SummarizeResult.py').read())
+Average_ClusteringMetric_Barplot(dataset_name = "Pbmc",nuisance_variable='batch',results_dict = "result/tune_hyperparameter_for_MineNet/pbmc/", n_sample = 100, scvi_n_layers=1, hyperparameter_config = {'MineLoss_Scale':[200, 500, 800, 1000, 2000, 5000, 10000,100000]})
 
+file_paths = []
+subfile_titles = []
+MineLoss_Scales = [200,500,800, 1000, 2000,5000,10000,100000]
+scvi_n_layers = 1 
 
-<b><font size="3">2.2.1.6 other topics discussed</font></b> 
+for i,MineLoss_Scale in enumerate(MineLoss_Scales):
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\pbmc\\trainset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Pbmc', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\pbmc\\testset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Pbmc', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
+    subfile_titles = subfile_titles + ['trainset_%s_%s_MineLossScale%s_%ssamples.png'%('Pbmc', 'batch', MineLoss_Scale, 100)]
+    subfile_titles = subfile_titles + ['testset_%s_%s_MineLossScale%s_%ssamples.png'%('Pbmc', 'batch', MineLoss_Scale, 100)]
+file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Pbmc', 'batch',scvi_n_layers,'training')]
+file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Pbmc', 'batch',scvi_n_layers,'testing')]
+subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Pbmc', 'batch','training')]
+subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Pbmc', 'batch','testing')]
+SummarizeResult('image',file_paths,subfile_titles,'Fig7: Clustering metrics comparison between scVI and scVI+MI_Penalty on Pbmc Dataset, batch nuisance factor')
+```
+
+```python
+scvi_n_layers = 1
+file_paths = ['result\\tune_hyperparameter_for_MineNet\\pbmc\\trainset_tsne_SCVI_%s_%s_n_layers%s_sample%s.png'%('Pbmc', 'batch', scvi_n_layers, 0)]
+file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\testset_tsne_SCVI_%s_%s_n_layers%s_sample%s.png'%('Pbmc', 'batch', scvi_n_layers, 0)]
+
+subfile_titles = ['scVI_%s_%s_trainset'%('Pbmc', 'batch')]
+subfile_titles += ['scVI_%s_%s_testset'%('Pbmc', 'batch')]
+MineLoss_Scales = [800, 2000]
+
+for i,MineLoss_Scale in enumerate(MineLoss_Scales):
+        file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\trainset_tsne_SCVI+MINE_%s_%s_n_layers%s_sample%s_MineLossScale%s.png'%('Pbmc', 'batch',scvi_n_layers, 0, MineLoss_Scale)]
+        file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\testset_tsne_SCVI+MINE_%s_%s_n_layers%s_sample%s_MineLossScale%s.png'%('Pbmc', 'batch',scvi_n_layers, 0, MineLoss_Scale)]
+        subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s trainset'%('Pbmc', 'batch', MineLoss_Scale)]
+        subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s testset'%('Pbmc', 'batch', MineLoss_Scale)] 
+SummarizeResult('image',file_paths,subfile_titles,'Fig8: tsne plot of scVI and scVI+MI_penalty for pbmc dataset, batch nuisance factor')
+```
+
+<b><font size="3">2.2.5 Questions</font></b> 
+
+When clustering metrics demonstrate that SCVI+MINE works better than SCVI, however, tsne plot of scVI+MINE seems worse than that of scVI. One reason could be tsne plots are not very accurate, after all it only shows two components of latent vector z's variation (check tsne's paper, and say this sentence in a professional way). The other reason could be that the clustering metrics used here are not appropriate. <font color=red>Which one is correct or is there other explanation???????? Maybe know about manifold learning clustering metrics could help?? Not using euclidean distance</font>
 
 tsne is applied mainly in computer vision, and is introduced into computation biology due to single cell RNA seq research. <font color=red>susan talked something more here, what is it?</font>
 
@@ -276,104 +450,6 @@ In reality, usually the batch effect in the dataset is unknown. The independence
 Is deep learning only appropriate when dimension of input is at least 70? The answer from susan is no. Actually linear
 regression, logistic regression etc can be also considered as a type of simple deep learning neural network. 
 <font color=red>But how to consider linear regresion or logistic regression as deep learning neural network?Be clear about the details</font>
-
-
-<a id='section8'></a>
-<b><font size="+1">2.2.2 Tune Hyperparameter For MineNet: step2</font></b>
-
-<b><font size="3">2.2.2.1 Goal</font></b> 
-
-Compare SCVI and SCVI+MINE from 100 monte carlo samples for 20 hyperparameter configurations on pbmc dataset, retina dataset used in the paper [Deep Generative Modeling for single-cell transcriptomics](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/s41592-018-0229-2#Sec43), and the combined dataset of MarrowTM-10x, and MarrowTM-ss2 in the paper [Harmonization and Annotation of single-cell transcriptomics data with Deeo Generative Models](https://www.biorxiv.org/content/10.1101/532895v1) 
-  
-The hyperparameters refers to: 
- - n_latent_z: number of nodes in each latent layer for the neural network of mutual information.
- - n_layers_z: number of layers for the neural network of mutual information.
- - MineLoss_Scale: the scale parameter for the mutual information.
-
-<b><font size="3">2.2.2.3 Design</font></b>
- 
- - n_latent_z: [10, 30].
- - n_layers_z: [3, 10].
- - MineLoss_Scale: [1000, 5000, 10000, 50000, 100000]. 
-     
-Each time, pbmc(retina) dataset is randomly splitted into training set and test set at 6:4 ratio. For every random training set, apply SCVI once and SCVI+MINE with the 20 different hyperparameter configurations. Repeat the process 100 times. Get the averaged clustering metrics from the 100 iterations for SCVI and SCVI+MINE with the 20 different hyperparameter configurations, and compare which is better based on the averaged clustering metrics.
-
-<b><font size="3">2.2.2.3 Get Data</font></b>
-
-pbmc dataset is scVI built-in dataset. just use the function PbmcDataset() in scvi.dataset to load the dataset.
-retina dataset is also scVI built-in dataset, just use the function RetinaDataset() in scvi.dataset to load the dataset.
-
-In order to download MarrowTM-10x, and MarrowTM-ss2, and combine them, check the code in the MarrowMT.py file on the github page for [HarmonizationSCANVI](https://github.com/chenlingantelope/HarmonizationSCANVI/tree/V1.0). Pay attention, in order to download MarrowTM-10x, and MarrowTM-ss2, gene_len.txt is needed, which exists in the [scvi-data repository](https://github.com/YosefLab/scVI-data/blob/master/mouse_gene_len.txt)
-
-<b><font size="3">2.2.2.4 Code</font></b>
-
-The code is code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.sh. code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.py. code/SummarizeResult.py The .sh file is for job submission in spartan system with the command: sh Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.sh.
-
-<b><font size="3">2.2.2.5 Result and Lab Meeting Discussion</font></b>
-
-The raw result is stored in ./result/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo/2019-05-26/ for pbmc, and in ./result/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo/2019-05-28/ for retina, and the corresponding summaried result is shown here.
-
-```python
-import itertools
-Average_ClusteringMetric_Barplot(dataset_name = "Pbmc",results_dict = "result/Tune_Hyperparameter_For_MineNet/2019-05-26/", n_sample = 100, hyperparameter_config = {'n_hidden_z':[10,30],'n_layers_z':[3,10],'MineLoss_Scale':[1000,5000,10000,50000,100000]})
-
-```
-
-```python
-hyperparameter_config = {
-        'n_hidden_z': [10,30],
-        'n_layers_z': [3,10],
-        'MineLoss_Scale': [1000,5000,10000,50000,100000]
-    }
-keys, values = zip(*hyperparameter_config.items())
-hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
-file_paths = []
-    
-for i in range(len(hyperparameter_experiments)):
-    key, value = zip(*hyperparameter_experiments[i].items())
-    n_hidden_z = value[0]
-    n_layers_z = value[1]
-    MineLoss_Scale = value[2]
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-26\\trainset_mean_clustering_metrics_Pbmc_Hidden%s_layers%s_MineLossScale%s_100samples.png'%(n_hidden_z,n_layers_z, MineLoss_Scale)]
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-26\\testset_mean_clustering_metrics_Pbmc_Hidden%s_layers%s_MineLossScale%s_100samples.png'%(n_hidden_z,n_layers_z, MineLoss_Scale)]
-
-SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig3: Pbmc Mean Clustering metrics from 100 samples")
-```
-
-Among the 20 hyperparameter configurations, n_hidden_z = 10, n_layers_z = 10, MineLoss_Scale = 1000 seems work best with smaller standard deviation.
-
-ASW here is no longer lower than asw result in step 1 for Tune Hyperparameter For MineNet. In the last version of the step 2 result, only one configuration was run. Among the 100 samples for that configuration, there is running error for task id = 31, 39, 46, 47, 49, 55, 59,63,67,70,74,75. However, the main() function in the code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.py file runs successfully on my own computer when I tried for taskid = [31], and taskid=[39]. At first, we guess it is because of the randomness from the stochastic gradient decent process which is due to the initialization of the network parameter, or the minibatch of the training process etc. Moreover, when I check the asw for taskid=[31] and [39] which are run on my own computer, it is much higher than the other 88 tasks run on the server. If I check the slurm*.out file for the 88 tasks, there is a warning message: DeprecationWarning: The linear_assignment function is deprecated in 0.21 and will be removed from 0.23. Use scipy.optimize.linear_sum_assignment instead. (linear_assignment is used in posterior.py) Maybe it could be the reason to produce errors for the 12 task ids not run, and lower asw for the left 88 taskids. 
-
-To  solve the problem of inconsistency of versions of packages on my own computer and on the server, I create a virtualenv in the working directory on the server and installed the required packages of the same version on my computer listed in Project1_Modify_SCVI-requirements.txt file. Everytime when a task is run, the virtualenv will be activated. Check the code/Tune_Hyperparameter_For_MineNet_SCVI_Not_Stable_MonteCarlo.sh file. As for how to create a virtualenv, ref to the links [virtualenv](https://docs.python-guide.org/dev/virtualenvs/), [requirements](https://pip.readthedocs.io/en/1.1/requirements.html).
-
-```python
-import itertools
-Average_ClusteringMetric_Barplot(dataset_name = "Retina",results_dict = "result/Tune_Hyperparameter_For_MineNet/2019-05-28/", n_sample = 100, hyperparameter_config = {'n_hidden_z':[10,30],'n_layers_z':[3,10],'MineLoss_Scale':[1000,5000,10000,50000,100000]})
-
-```
-
-```python
-hyperparameter_config = {
-        'n_hidden_z': [10,30],
-        'n_layers_z': [3,10],
-        'MineLoss_Scale': [1000,5000,10000,50000,100000]
-    }
-keys, values = zip(*hyperparameter_config.items())
-hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
-file_paths = []
-    
-for i in range(len(hyperparameter_experiments)):
-    key, value = zip(*hyperparameter_experiments[i].items())
-    n_hidden_z = value[0]
-    n_layers_z = value[1]
-    MineLoss_Scale = value[2]
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-28\\trainset_mean_clustering_metrics_Retina_Hidden%s_layers%s_MineLossScale%s_100samples.png'%(n_hidden_z,n_layers_z, MineLoss_Scale)]
-    file_paths = file_paths + ['result\\Tune_Hyperparameter_For_MineNet\\2019-05-28\\testset_mean_clustering_metrics_Retina_Hidden%s_layers%s_MineLossScale%s_100samples.png'%(n_hidden_z,n_layers_z, MineLoss_Scale)]
-
-SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig4: Retina Mean Clustering metrics from 100 samples")
-```
-
-According to Fig4, no matter what the configuration is, batch mixing entropy for SCVI+MINE is slightly lower than batch mixing entropy for SCVI, about 0.01-0.05 smaller. What does 0.01-0.05 smaller mean for batch mixing entropy. In order to answer this question, I need to check the range (from minimum to maximum value) of batch mixing entropy.
 
 
 <a id='section9'></a>
@@ -387,9 +463,9 @@ Compare estimated mutual information with true mutual information for three case
 
 <b><font size="3">a. between a gaussian random variable and a gaussian random variable</font></b>
 
-Estimated mutual information is compared with true mutual information when the dimension of the two gaussian random variables  is 2 and 20. Take dimension 2 for example, suppose the two gaussian random variables are $X$ and $Y$. According to the paper [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf), set both $X$ and $Y$ to be standard normal gaussian distribution with dimension 2. Then set $P\left(X,Y\right)$ to be a gaussian distribution of dimension 4, with the componentwise correlation $corr(X_{i},Y_{j})=\delta_{ij}\rho$, where $\rho\in\left(-1,1\right)$ and $\delta_{ij}$ is Kronecker’s delta. 
+Estimated mutual information is compared with true mutual information when the dimension of the two gaussian random variables  is 2 and 20. Take dimension 2 for example, suppose the two gaussian random variables are $X$ and $Y$. According to the paper [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf), set $P\left(X,Y\right)$ to be a gaussian distribution of dimension 4, with the componentwise correlation $corr(X_{i},Y_{j})=\delta_{ij}\rho$, where $\rho\in\left(-1,1\right)$ and $\delta_{ij}$ is Kronecker’s delta. And both $X$ and $Y$ have the standard normal gaussian distribution with dimension 2. 
 
-To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(X) + H(Y) - H(X,Y)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(X)$ and $H(Y)$ are the marginal differential entropy for $X$ and $Y$ repectively, $H(X,Y)$ is the joint differential entropy for $X$ and $Y$. $H(X)$, $H(Y)$ and $H(X,Y)$ are calculated by built-in function in python.
+To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(X) + H(Y) - H(X,Y)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(X)$ and $H(Y)$ are the marginal differential entropy for $X$ and $Y$ repectively, $H(X,Y)$ is the joint differential entropy for $X$ and $Y$. $H(X)$, $H(Y)$ and $H(X,Y)$ are calculated by built-in function in python, which is scipy.stats.multivariate_normal.entropy().
 
 To estimate the mutual information between $X$ and $Y$, four neural network architectures, which are Mine_Net, Mine_Net2, Mine_Net3, Mine_Net4 are tried. All the 4 network architectures uses the algorithm 1 in the paper [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf) as the fundamental guidline. However, the main difference between Mine_Net3, Mine_Net4 and Mine_Net, Mine_Net2 is that MineNet, MineNet2 first transforms two random variables into two real numbers, and then linearly transform and activate the two real numbers. While, MineNet3, MineNet4 transforms two random variables into two vectors, then linearly transform and activate the two vectors, finally convert the combined vector into a real number. The main difference between Mine_Net3 and Mine_Net4 is that Mine_Net3 transforms the two random variables into two vectors separately, while Mine_Net4 transforms the matrix containing the two random variables together to a combined vector. The following shows the hyperparameter for the four network architectures.
 
@@ -438,7 +514,7 @@ The hyperparameters for Mine_Net3:
 
 The hyperparameters for Mine_Net4:
 
-    -layers = [32, 16] (the node number of the two hidden layers which converts the concatenated matrix of the two random variables into a vector)
+    -n_latents = [32, 16] (the node number of the two hidden layers which converts the concatenated matrix of the two random variables into a vector)
 
     -Gaussian_Dimension: [2, 20],
 
@@ -450,13 +526,13 @@ The hyperparameters for Mine_Net4:
     
 <b><font size="3">b. between a lognormal random variable and a gaussian random variable</font></b>
 
-The dimension for lognormal random variable is 1, and 2 dimensions for the gaussian random variable. Suppose $X$ is the lognormal random variable and $Y$ is the gaussian random variable. Set $P(lnX) \sim N(0,1)$ and set the gaussian variable to be standarded normal with dimension 2. Similar as the gaussian and gaussian case, set $P\left(ln(X),Y\right)$ to be a gaussian distribution of dimension 3, with the componentwise correlation $corr(Z_{i},Y_{j})=\delta_{ij}\rho$, where $Z=ln(X)$, $\rho\in\left(-1,1\right)$, and $\delta_{ij}$ is Kronecker’s delta. Then by simple derivation, the joint distribution $P(X,Y) = P(X|Y)P(Y) = P(Z|Y)*|\frac{d_{Z}}{d_{X}}|*P(Y) = \frac{1}{X}P(Z,Y) = \frac{1}{X}P(ln(X),Y)$.
+The dimension for lognormal random variable is 1, and 2 dimensions for the gaussian random variable. Suppose $X$ is the lognormal random variable and $Y$ is the gaussian random variable. Let $Z=ln(X)$. Similar as the gaussian and gaussian case, set $P\left(Z,Y\right)$ to be a gaussian distribution of dimension 3, with the componentwise correlation $corr(Z_{i},Y_{j})=\delta_{ij}\rho$, , $\rho\in\left(-1,1\right)$, and $\delta_{ij}$ is Kronecker’s delta. In this case, the covariance matrix for $P(Z,Y)$ will be \begin{pmatrix}1 & \rho & 0 \\ \rho & 1 & 0 \\ 0 & 0 & 1\end{pmatrix}. Then by simple derivation, the joint distribution $P(X,Y) = P(X|Y)P(Y) = P(Z|Y)*|\frac{d_{Z}}{d_{X}}|*P(Y) = \frac{1}{X}P(Z,Y) = \frac{1}{X}P(ln(X),Y)$. $P(ln(X)) \sim N(0,1)$ and Y is a standard gaussian variable with dimension 2. 
 
-To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(X) + H(Y) - H(X,Y)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(X)$ and $H(Y)$ are the marginal differential entropy for $X$ and $Y$ repectively, $H(X,Y)$ is the joint differential entropy for $X$ and $Y$. $H(X)$ and $H(Y)$ are calculated by built-in function in python, $H(X,Y)$ is calculated from the integration of $-P(X,Y)logP(X,Y)$.
+To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(X) + H(Y) - H(X,Y)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(X)$ and $H(Y)$ are the marginal differential entropy for $X$ and $Y$ repectively, $H(X,Y)$ is the joint differential entropy for $X$ and $Y$. $H(X)$ and $H(Y)$ are calculated by built-in function in python, which are scipy.stats.lognorm.entropy(), scipy.stats.multivariate_normal.entropy(). $H(X,Y)$ is calculated from the integration of $-P(X,Y)logP(X,Y)$.
 
 To estimate the mutual information between $X$ and $Y$, Mine_Net4 is tried. The hyperparameters for MineNet4 architecture are:
 
-    -layers = [32, 16] (the node number of the two hidden layers which converts the concatenated matrix of the two random variables into a vector)
+    -n_latents = [32, 16] (the node number of the two hidden layers which converts the concatenated matrix of the two random variables into a vector)
 
     -Gaussian_Dimension: [2, 20],
 
@@ -468,9 +544,9 @@ To estimate the mutual information between $X$ and $Y$, Mine_Net4 is tried. The 
 
 <b><font size="3">c. between a categorical random variable and a gaussian mixture random variable</font></b>
 
-The dimension for the categorical random variable is 1, 10 categories, and 2 dimensions for the gaussian mixture random variable. Suppose $X$ is the categorical random variable, $Y$ is the gaussian mixture random variable. Set $P(Y|X=x) = N(\mu_{x}, \sigma^2_{x})$. Mutual information between $X$ and $Y$ is introduced by correlating $\mu_{x}$ with $X$, like $\mu_{x}$ tends to be larger for a certain category than other categories. Then by simple derivation, the marginal distribution $P(Y) =\sum_{x=1}^{10}P(Y|X=x)P(X=x)$.
+The dimension for the categorical random variable is 1, 10 categories, and 2 dimensions for the gaussian mixture random variable. Suppose $X$ is the categorical random variable, $Y$ is the gaussian mixture random variable. Set $P(Y|X=x) = N(\mu_{x}, \sigma^2_{x})$. Mutual information between $X$ and $Y$ is introduced by correlating $\mu_{x}$ with $X$. The first case is when all the 10 categories of $X$ have the same probability, and $P(Y|X) are all standard normal with dimension 2$. The true mutual information between $X$ and $Y$ are 0. Case 2 is when all the 10 categories of $X$ have the same probability, and $P(Y|X)$ are normal with dimension 2, with mean of each dimension increasing 2 from 0 when category index increase, however, covariance matrix is as the same as in case 1. The way to change mean of $P(Y|X)$ could also be increasing 20, or be increasing and then decreasing as category index increases. And the probability of each category could be different. In total, 7 cases have been designed, each of which has a different mutual information. For each case, by simple derivation, the marginal distribution $P(Y) =\sum_{x=1}^{10}P(Y|X=x)P(X=x)$.
 
-To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(Y) - H(Y|X)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(Y)$ is the marginal differential entropy for $Y$, and $H(Y|X)$ is the conditional differential entropy $Y$ given $X$. $H(X)$ and $H(Y)$ are calculated from the integration of $-P(Y)logP(Y)$, $H(Y|X)$ is calculated by built-in function in python.
+To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(Y) - H(Y|X)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(Y)$ is the marginal differential entropy for $Y$, and $H(Y|X)$ is the conditional differential entropy $Y$ given $X$. $H(Y)$ is calculated from the integration of $-P(Y)logP(Y)$, $H(Y|X)$ is calculated by built-in function in python, which is scipy.stats.multivariate_normal.entropy().
 
 To estimate the mutual information between $X$ and $Y$, Mine_Net and [nearest neighbor method](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0087357&type=printable) are tried. Note: the categorical variable is transformed into dummy variable in Mine_Net method. The hyperparameters for the two methods are:
 
@@ -633,6 +709,23 @@ Find real data set with obvious batch effect. Because the pbmc dataset used now 
 [how-to-version-control-jupyter](https://nextjournal.com/schmudde/how-to-version-control-jupyter)
 
 [jupytext](https://github.com/mwouts/jupytext/blob/master/README.md)
+
+<b><font size="+1">4.2 Deep Learning</font></b>
+
+Tensor is a generalization of matrix with one obvious difference: a tensor is a mathematical entity that lives in a structure and interacts with other mathematical entities. If one transforms the other entities in the structure in a regular way, then the tensor must obey a related transformation rule.
+Tensorflow vs Pytorch (which one is better for deep learning?)
+
+Generally, to tune deep learning network:To find the best deep learning network, factors to consider are number of nodes in latent layer (width), number of hidden layers (depth), learning rate, optimizer, regularization, activation function according to [the book](https://www.deeplearningbook.org/) and the [deep learning specification](https://www.coursera.org/specializations/deep-learning?) on coursera. Write down more details here. Do we need to consider all the factors to tune the MINE deep learning network? Yes, eventually, we need to consider all the factors, with some clever strategy illustrated in [this paper](https://deepmind.com/blog/population-based-training-neural-networks/) 
+
+<b><font size="+1">4.3 Courses on Deep Learning</font></b>
+
+[Stanford University CS231n, Spring 2017](https://www.youtube.com/playlist?list=PLC1qU-LWwrF64f4QKQT-Vg5Wr4qEE1Zxk)
+
+<b><font size="+1">4.4 Peak into the black box of deep learning </font></b>
+
+[deep learning in biomedical image processing](http://biomedicalcomputationreview.org/content/deep-learning-and-future-%E2%80%A8biomedical-image-analysis)
+
+Researchers are working on ways of peeking inside the models to understand how they select discriminant features. For example, a group of Stanford graduate students led by Avanti Shrikumar, a PhD candidate in computer science, recently developed an algorithm called DeepLIFT that attempts to determine which features are important by analyzing the activity of a model’s neurons when they are exposed to data. A team of engineers at the Israel-Technion Institute of Technology have devised a method of visualizing the neural activity of a network that resembles what one sees in fMRI of the human brain. And Rubin recently published a paper in which he and his colleagues trained a CNN to distinguish between benign and malignant breast tumors, and then used a visualization algorithm, called Directed Dream, to heighten and exaggerate specific details in order to maximize the images’ scores as either benign or malignant. The resulting “CNN-based hallucinations” effectively show how the CNN 
 
 ```python
 

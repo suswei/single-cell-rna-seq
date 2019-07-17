@@ -287,14 +287,14 @@ class MINE_Net3(nn.Module):
 
 
 class MINE_Net4(nn.Module):
-    def __init__(self, xy_dim, layers):
+    def __init__(self, xy_dim, n_latents):
         super(MINE_Net4, self).__init__()
         self.xy_dim = xy_dim
 
-        modules = [nn.Linear(xy_dim, layers[0]), nn.ReLU()]
+        modules = [nn.Linear(xy_dim, n_latents[0]), nn.ReLU()]
 
-        prev_layer = layers[0]
-        for layer in layers[1:]:
+        prev_layer = n_latents[0]
+        for layer in n_latents[1:]:
             modules.append(nn.Linear(prev_layer, layer))
             modules.append(nn.ReLU())
             prev_layer = layer
