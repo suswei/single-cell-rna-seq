@@ -20,7 +20,7 @@ torch.backends.cudnn.benchmark = True
 
 
 # VAE model
-class VAE_MINE(nn.Module):
+class VAE_MI(nn.Module):
     r"""Variational auto-encoder model.
 
     :param n_input: Number of input genes
@@ -56,7 +56,8 @@ class VAE_MINE(nn.Module):
                  n_hidden: int = 128, n_latent: int = 10, n_layers: int = 1,
                  dropout_rate: float = 0.1, dispersion: str = "gene",
                  log_variational: bool = True, reconstruction_loss: str = "zinb",
-                 n_hidden_z: int = 5, n_layers_z: int = 10, MineLoss_Scale: int=1):
+                 n_hidden_z: int = 5, n_layers_z: int = 10,
+                 MI_estimator: str = 'NN', MineNet4_layers: list=[32,16], MIScale: int=1):
         super().__init__()
         self.dispersion = dispersion
         self.n_latent = n_latent
@@ -69,7 +70,9 @@ class VAE_MINE(nn.Module):
 
         self.n_hidden_z = n_hidden_z
         self.n_layers_z = n_layers_z
-        self.MineLoss_Scale = MineLoss_Scale
+        self.MI_estimator = MI_estimator
+        self.MineNet4_layers = MineNet4_layers
+        self.MIScale = MIScale
 
         if self.dispersion == "gene":
             self.px_r = torch.nn.Parameter(torch.randn(n_input, ))
@@ -197,7 +200,7 @@ class VAE_MINE(nn.Module):
             px_r = self.px_r
         px_r = torch.exp(px_r)
 
-        # calculate MINE, code from MasanoriYamada/Mine_pytorch
+        # calculate mutual information(MI) using MINE_Net, code from MasanoriYamada/Mine_pytorch
         z_shuffle = np.random.permutation(z.detach().numpy())
         z_shuffle = Variable(torch.from_numpy(z_shuffle).type(torch.FloatTensor), requires_grad=True)
         batch_index = Variable(batch_index.type(torch.FloatTensor), requires_grad=True)
@@ -207,20 +210,23 @@ class VAE_MINE(nn.Module):
         #pred_xz = minenet(batch_index, z) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
         #pred_x_z = minenet(batch_index, z_shuffle) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
 
-        #z_batch = torch.cat([z,batch_index],dim=1)
-        #layers = [32, 16]
-        #minenet = MINE_Net4(z_batch.shape[-1], layers)
-        #pred_xz, pred_x_z = minenet(xy=z_batch, x_shuffle=z_shuffle, x_n_dim=z.shape[-1])
-
-        batch_index_array = np.array(batch_index.detach().numpy().transpose())
-        z_array = z.detach().numpy().transpose()
-        predicted_mutual_info = discrete_continuous_info(d=batch_index_array, c=z_array)
+        # calculate mutual information(MI) using MINE_Net4
+        if self.MI_estimator=='Mine_Net4':
+            z_batch = torch.cat([z,batch_index],dim=1)
+            minenet = MINE_Net4(z_batch.shape[-1], self.MineNet4_layers)
+            pred_xz, pred_x_z = minenet(xy=z_batch, x_shuffle=z_shuffle, x_n_dim=z.shape[-1])
+        elif self.MI_estimator=='NN':
+        # calculate mutual information(MI) using nearest neighbor method
+            batch_index_array = np.array(batch_index.detach().numpy().transpose())
+            z_array = z.detach().numpy().transpose()
+            predicted_mutual_info = discrete_continuous_info(d=batch_index_array, c=z_array)
 
         #TODO: have another MINE net for library depth
 
-        #return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z
-
-        return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, predicted_mutual_info
+        if self.MI_estimator=='Mine_Net4':
+            return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z
+        elif self.MI_estimator=='NN':
+            return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, predicted_mutual_info
 
     def forward(self, x, local_l_mean, local_l_var, batch_index=None, y=None):
         r""" Returns the reconstruction loss and the Kullback divergences
@@ -252,11 +258,11 @@ class VAE_MINE(nn.Module):
         reconst_loss = self._reconstruction_loss(x, px_rate, px_r, px_dropout) # reconst_loss: dimension [128]
         print('reconst_loss: {}'.format(reconst_loss.mean()))
 
-        # calculate MINE loss, expression for V(\theta) in Algorithm 1 MINE
-        #mine_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z))) #mine_loss: dimension: [1]
-        mine_loss = predicted_mutual_info  # mine_loss: dimension: [1]
-        print('mine loss: {}'.format(mine_loss))
-        print('scaled mine loss: {}'.format(self.MineLoss_Scale*mine_loss))
+        # calculate Mutual information(MI) loss
+        #MIloss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z))) #MIloss: dimension: [1]
+        MIloss = predicted_mutual_info  # MIloss: dimension: [1]
+        print('MI loss: {}'.format(MIloss))
+        print('scaled MI loss: {}'.format(self.MIScale*MIloss))
 
-        # TODO: should return kl_divergence_z and mine_loss separately, in current state same penalty term is applied to them
-        return reconst_loss + kl_divergence_l+ kl_divergence_z, self.MineLoss_Scale*mine_loss
+        # TODO: should return kl_divergence_z and MIloss separately, in current state same penalty term is applied to them
+        return reconst_loss + kl_divergence_l+ kl_divergence_z, self.MIScale*MIloss
