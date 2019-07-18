@@ -95,7 +95,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         lr = value[9]
         n_epochs = value[10]
 
-        vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_hidden=n_hidden, n_latent=n_latent, n_layers = n_layers, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss, MIScale=MIScale)
+        vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_hidden=n_hidden, n_latent=n_latent, n_layers = n_layers, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss, MI_estimator=MI_estimator, MIScale=MIScale)
         trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda,frequency=5, kl=1)
         vae_MI_file_path = '%s/%s_%s_MIScale%s_sample%s_VaeMI.pk1'%(data_save_path, dataset_name, nuisance_variable, MIScale, taskid)
 
