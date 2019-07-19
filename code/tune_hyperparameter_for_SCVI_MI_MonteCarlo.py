@@ -75,7 +75,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, 100),dtype=np.uint32)
 
-    taskid = int(taskid[0])
+    taskid = int(taskid)
     desired_seed = int(desired_seeds[0,taskid])
 
     n_samples_tsne = 1000
@@ -258,7 +258,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
 
 # Run the actual program
 if __name__ == "__main__":
-  main(sys.argv[1:])
+  main(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])
 
 # In terminal type
 # python hypertuning.py taskid
