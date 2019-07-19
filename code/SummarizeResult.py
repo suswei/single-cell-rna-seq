@@ -93,7 +93,7 @@ def barplot_list(data, error_data, alg, title, save=None, interest=0, prog=False
 
 def Average_ClusteringMetric_Barplot(dataset_name: str = "muris_tabula",nuisance_variable: str = 'batch', results_dict: str = 'NA', n_sample: int = 100, hyperparameter_config = {'MIScale':[1000,5000,10000,50000,100000]}):
 
-    cluster_metric_dataframes = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be'])
+    cluster_metric_dataframes = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be','MILoss'])
     for i in range(n_sample):
         file_path = results_dict + '%s_%s_sample%s_ClusterMetric.csv'%(dataset_name, nuisance_variable, i)
         cluster_metric_dataframe = pd.read_csv(file_path)
@@ -136,27 +136,27 @@ def Average_ClusteringMetric_Barplot(dataset_name: str = "muris_tabula",nuisance
         vae_vae_MI_test_mean = np.vstack([vae_test_mean, vae_MI_test_mean])
         vae_vae_MI_test_std = np.vstack([vae_test_std, vae_MI_test_std])
 
-        vae_vae_MI_mean_dataframe = pd.DataFrame(np.vstack([vae_vae_MI_train_mean, vae_vae_MI_test_mean]), columns=['asw', 'nmi', 'ari', 'uca', 'be'])
+        vae_vae_MI_mean_dataframe = pd.DataFrame(np.vstack([vae_vae_MI_train_mean, vae_vae_MI_test_mean]), columns=['asw', 'nmi', 'ari', 'uca', 'be','MILoss'])
         vae_vae_MI_mean_dataframe = pd.concat([pd.DataFrame({'label':['vae_train_mean','vae+MI_train_mean','vae_test_mean','vae+MI_test_mean']}),vae_vae_MI_mean_dataframe],axis=1)
 
-        vae_vae_MI_std_dataframe = pd.DataFrame(np.vstack([vae_vae_MI_train_std, vae_vae_MI_test_std]),columns=['asw', 'nmi', 'ari', 'uca', 'be'])
+        vae_vae_MI_std_dataframe = pd.DataFrame(np.vstack([vae_vae_MI_train_std, vae_vae_MI_test_std]),columns=['asw', 'nmi', 'ari', 'uca', 'be', 'MILoss'])
         vae_vae_MI_std_dataframe = pd.concat([pd.DataFrame({'label': ['vae_train_std', 'vae+MI_train_std', 'vae_test_std', 'vae+MI_test_std']}), vae_vae_MI_std_dataframe], axis=1)
 
         vae_vae_MI_mean_dataframe.to_csv(results_dict+'mean_clustering_metrics_%s_%s_MIScale%s.csv'%(dataset_name, nuisance_variable, MIScale), index = None, header=True)
         vae_vae_MI_std_dataframe.to_csv(results_dict+'std_clustering_metrics_%s_%s_MIScale%s.csv'%(dataset_name, nuisance_variable, MIScale), index=None, header=True)
 
-        barplot_list(vae_vae_MI_train_mean, error_data=vae_vae_MI_train_std,alg = ["scVI", "scVI+MI"],
+        barplot_list(vae_vae_MI_train_mean[:,0:5], error_data=vae_vae_MI_train_std[:,0:5],alg = ["scVI", "scVI+MI"],
                      title = "Train Set Mean Clustering Metrics %s %s MIScale%s"%(dataset_name, nuisance_variable, MIScale),
                      save=results_dict+'trainset_mean_clustering_metrics_%s_%s_MIScale%s_%ssamples'%(dataset_name, nuisance_variable, MIScale,n_sample))
-        barplot_list(vae_vae_MI_test_mean, error_data=vae_vae_MI_test_std, alg=["scVI", "scVI+MI"],
+        barplot_list(vae_vae_MI_test_mean[:,0:5], error_data=vae_vae_MI_test_std[:,0:5], alg=["scVI", "scVI+MI"],
                      title="Test Set Mean Clustering Metrics %s %s MIScale%s"%(dataset_name, nuisance_variable, MIScale),
                      save=results_dict+'testset_mean_clustering_metrics_%s_%s_MIScale%s_%ssamples' %(dataset_name, nuisance_variable, MIScale, n_sample))
 
 
-        vae_vae_MI_train_mean_all = pd.DataFrame(np.vstack([vae_vae_MI_train_mean_all, vae_MI_train_mean]),columns=['asw', 'nmi', 'ari', 'uca', 'be'])
-        vae_vae_MI_train_std_all = pd.DataFrame(np.vstack([vae_vae_MI_train_std_all, vae_MI_train_std]),columns=['asw', 'nmi', 'ari', 'uca', 'be'])
-        vae_vae_MI_test_mean_all = pd.DataFrame(np.vstack([vae_vae_MI_test_mean_all, vae_MI_test_mean]),columns=['asw', 'nmi', 'ari', 'uca', 'be'])
-        vae_vae_MI_test_std_all = pd.DataFrame(np.vstack([vae_vae_MI_test_std_all, vae_MI_test_std]),columns=['asw', 'nmi', 'ari', 'uca', 'be'])
+        vae_vae_MI_train_mean_all = pd.DataFrame(np.vstack([vae_vae_MI_train_mean_all, vae_MI_train_mean]),columns=['asw', 'nmi', 'ari', 'uca', 'be','MILoss'])
+        vae_vae_MI_train_std_all = pd.DataFrame(np.vstack([vae_vae_MI_train_std_all, vae_MI_train_std]),columns=['asw', 'nmi', 'ari', 'uca', 'be','MILoss'])
+        vae_vae_MI_test_mean_all = pd.DataFrame(np.vstack([vae_vae_MI_test_mean_all, vae_MI_test_mean]),columns=['asw', 'nmi', 'ari', 'uca', 'be','MILoss'])
+        vae_vae_MI_test_std_all = pd.DataFrame(np.vstack([vae_vae_MI_test_std_all, vae_MI_test_std]),columns=['asw', 'nmi', 'ari', 'uca', 'be','MILoss'])
 
     for type in ['training','testing']:
         if type == 'training':
@@ -170,15 +170,16 @@ def Average_ClusteringMetric_Barplot(dataset_name: str = "muris_tabula",nuisance
         xtick_labels = ['scvi'] + [str(n) for n in hyperparameter_config['MIScale']]
         fig = plt.figure(figsize=(10, 7))
         plt.plot(xaxis_index, mean_dataset.loc[:,['asw']].values, xaxis_index, mean_dataset.loc[:,['nmi']].values, xaxis_index, mean_dataset.loc[:,['ari']].values, xaxis_index, mean_dataset.loc[:,['uca']].values, xaxis_index, mean_dataset.loc[:,['be']].values)
-        plt.errorbar(xaxis_index, mean_dataset.loc[:,['asw']].values, yerr=std_dataset.loc[:,['asw']].values, fmt='o')
-        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['nmi']].values, yerr=std_dataset.loc[:, ['nmi']].values, fmt='o')
-        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['ari']].values, yerr=std_dataset.loc[:, ['ari']].values, fmt='o')
-        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['uca']].values, yerr=std_dataset.loc[:, ['uca']].values, fmt='o')
-        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['be']].values, yerr=std_dataset.loc[:, ['be']].values, fmt='o')
-        plt.legend(('asw', 'nmi', 'ari','uca','be'), loc='upper right', fontsize=16)
+        plt.errorbar(xaxis_index, mean_dataset.loc[:,['asw']].values, yerr=std_dataset.loc[:,['asw']].values, fmt='o',ecolor='black')
+        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['nmi']].values, yerr=std_dataset.loc[:, ['nmi']].values, fmt='o',ecolor='black')
+        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['ari']].values, yerr=std_dataset.loc[:, ['ari']].values, fmt='o',ecolor='black')
+        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['uca']].values, yerr=std_dataset.loc[:, ['uca']].values, fmt='o',ecolor='black')
+        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['be']].values, yerr=std_dataset.loc[:, ['be']].values, fmt='o',ecolor='black')
+        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['MILoss']].values, yerr=std_dataset.loc[:, ['MILoss']].values, fmt='o',ecolor='black')
+        plt.legend(('asw', 'nmi', 'ari','uca','be','MILoss'), loc='upper right', fontsize=16)
         plt.xticks(xaxis_index, xtick_labels, rotation='horizontal',fontsize=14)
         plt.xlabel('index', fontsize=16)
-        plt.yticks([k/10 for k in range(11)], [str(n) for n in [k/10 for k in range(11)]], rotation='horizontal', fontsize=14)
+        plt.yticks([k/10 for k in range(13)], [str(n) for n in [k/10 for k in range(13)]], rotation='horizontal', fontsize=14)
         plt.title('%s, %s, %s, clusteringmetrics' % (dataset_name, nuisance_variable,type), fontsize=18)
         fig.savefig(results_dict + '%s_%s_%s_clusteringmetrics.png' % (dataset_name, nuisance_variable,type))
         plt.close(fig)
