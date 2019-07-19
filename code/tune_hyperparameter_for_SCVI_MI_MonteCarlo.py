@@ -122,8 +122,8 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             fig.savefig(fig1_path)
             plt.close(fig)
 
-        trainer_vae_MI.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/trainset_tsne_SCVI+MI_%s_%s__MIScale%s_sample%s'%(result_save_path, dataset_name,nuisance_variable, MIScale, taskid))
-        trainer_vae_MI.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='%s/testset_tsne_SCVI+MI_%s_%s__MIScale%s_sample%s'%(result_save_path, dataset_name,nuisance_variable, MIScale, taskid))
+        trainer_vae_MI.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/trainset_tsne_SCVI+MI_%s_%s_MIScale%s_sample%s'%(result_save_path, dataset_name,nuisance_variable, MIScale, taskid))
+        trainer_vae_MI.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='%s/testset_tsne_SCVI+MI_%s_%s_MIScale%s_sample%s'%(result_save_path, dataset_name,nuisance_variable, MIScale, taskid))
 
         asw, nmi, ari, uca = trainer_vae_MI.train_set.clustering_scores()
         be = trainer_vae_MI.train_set.entropy_batch_mixing()
@@ -212,14 +212,46 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
 
     asw, nmi, ari, uca = trainer_vae.train_set.clustering_scores()
     be = trainer_vae.train_set.entropy_batch_mixing()
+
+    latent, batch_indices, labels = trainer_vae.train_set.get_latent(sample=False)
+    if MI_estimator == 'Mine_Net4':
+        latent_tensor = Variable(latent.type(torch.FloatTensor), requires_grad=True)
+        latent_shuffle = np.random.permutation(latent)
+        latent_shuffle = Variable(torch.from_numpy(latent_shuffle).type(torch.FloatTensor), requires_grad=True)
+        batch_tensor = Variable(batch_indices.type(torch.FloatTensor), requires_grad=True)
+        latent_batch = torch.cat([latent_tensor, batch_tensor], dim=1)
+        minenet = MINE_Net4(latent_batch.shape[-1], [32, 16])
+        pred_xz, pred_x_z = minenet(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
+        predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+    elif MI_estimator == 'NN':
+        batch_array = batch_indices.transpose()
+        latent_array = latent.transpose()
+        predicted_mutual_info = discrete_continuous_info(d=batch_array, c=latent_array)
+
     label = '%s_%s_sample%s_Vae_trainset' % (dataset_name, nuisance_variable, taskid)
-    intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'MILoss':[None]})
+    intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'MILoss':[predicted_mutual_info]})
     clustering_metric = pd.concat([clustering_metric, intermediate_dataframe1], axis=0)
 
     asw, nmi, ari, uca = trainer_vae.test_set.clustering_scores()
     be = trainer_vae.test_set.entropy_batch_mixing()
+
+    latent, batch_indices, labels = trainer_vae.test_set.get_latent(sample=False)
+    if MI_estimator == 'Mine_Net4':
+        latent_tensor = Variable(latent.type(torch.FloatTensor), requires_grad=True)
+        latent_shuffle = np.random.permutation(latent)
+        latent_shuffle = Variable(torch.from_numpy(latent_shuffle).type(torch.FloatTensor), requires_grad=True)
+        batch_tensor = Variable(batch_indices.type(torch.FloatTensor), requires_grad=True)
+        latent_batch = torch.cat([latent_tensor, batch_tensor], dim=1)
+        minenet = MINE_Net4(latent_batch.shape[-1], [32, 16])
+        pred_xz, pred_x_z = minenet(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
+        predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+    elif MI_estimator == 'NN':
+        batch_array = batch_indices.transpose()
+        latent_array = latent.transpose()
+        predicted_mutual_info = discrete_continuous_info(d=batch_array, c=latent_array)
+
     label = '%s_%s_sample%s_Vae_testset' % (dataset_name, nuisance_variable,taskid)
-    intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'MILoss':[None]})
+    intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'MILoss':[predicted_mutual_info]})
     clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
 
     clustering_metric.to_csv('%s/%s_%s_sample%s_ClusterMetric.csv'%(result_save_path, dataset_name, nuisance_variable, taskid), index=None, header=True)
