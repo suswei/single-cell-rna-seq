@@ -29,7 +29,8 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
 
     if dataset_name=='muris_tabula' and nuisance_variable=='batch':
         hyperparameter_config = {
-            'n_layers': [2],
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
             'n_hidden' : [128],
             'n_latent' : [10],
             'dropout_rate' : [0.1],
@@ -43,7 +44,8 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         }
     elif dataset_name=='pbmc' and nuisance_variable=='batch':
         hyperparameter_config = {
-            'n_layers': [1],
+            'n_layers_encoder': [1],
+            'n_layers_decoder': [1],
             'n_hidden': [256],
             'n_latent': [14],
             'dropout_rate': [0.5],
@@ -83,19 +85,20 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
 
     for i in range(len(hyperparameter_experiments)):
         key, value = zip(*hyperparameter_experiments[i].items())
-        n_layers = value[0]
-        n_hidden = value[1]
-        n_latent = value[2]
-        dropout_rate = value[3]
-        reconstruction_loss =  value[4]
-        use_batches = value[5]
-        use_cuda = value[6]
-        MIScale = value[7]
-        train_size = value[8]
-        lr = value[9]
-        n_epochs = value[10]
+        n_layers_encoder = value[0]
+        n_layers_decoder = value[1]
+        n_hidden = value[2]
+        n_latent = value[3]
+        dropout_rate = value[4]
+        reconstruction_loss =  value[5]
+        use_batches = value[6]
+        use_cuda = value[7]
+        MIScale = value[8]
+        train_size = value[9]
+        lr = value[10]
+        n_epochs = value[11]
 
-        vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_hidden=n_hidden, n_latent=n_latent, n_layers = n_layers, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss, MI_estimator=MI_estimator, MIScale=MIScale)
+        vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder = n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss, MI_estimator=MI_estimator, MIScale=MIScale)
         trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda,frequency=5, kl=1)
         vae_MI_file_path = '%s/%s_%s_MIScale%s_sample%s_VaeMI.pk1'%(data_save_path, dataset_name, nuisance_variable, MIScale, taskid)
 
@@ -171,7 +174,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
         clustering_metric.to_csv('%s/%s_%s_sample%s_ClusterMetric.csv' % (result_save_path, dataset_name, nuisance_variable, taskid), index=None, header=True)
 
-    vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_hidden=n_hidden, n_latent=n_latent, n_layers = n_layers, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss)
+    vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder = n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss)
     trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5)
     vae_file_path = '%s/%s_%s_sample%s_Vae.pk1'%(data_save_path,dataset_name, nuisance_variable, taskid)
 
