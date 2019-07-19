@@ -53,7 +53,8 @@ class VAE_MI(nn.Module):
     """
 
     def __init__(self, n_input: int, n_batch: int = 0, n_labels: int = 0,
-                 n_hidden: int = 128, n_latent: int = 10, n_layers: int = 1,
+                 n_hidden: int = 128, n_latent: int = 10, n_layers_encoder: int = 1,
+                 n_layers_decoder: int = 1,
                  dropout_rate: float = 0.1, dispersion: str = "gene",
                  log_variational: bool = True, reconstruction_loss: str = "zinb",
                  n_hidden_z: int = 5, n_layers_z: int = 10,
@@ -85,12 +86,12 @@ class VAE_MI(nn.Module):
 
         # z encoder goes from the n_input-dimensional data to an n_latent-d
         # latent space representation
-        self.z_encoder = Encoder(n_input, n_latent, n_layers=n_layers, n_hidden=n_hidden,
+        self.z_encoder = Encoder(n_input, n_latent, n_layers=n_layers_encoder, n_hidden=n_hidden,
                                  dropout_rate=dropout_rate)
         # l encoder goes from n_input-dimensional data to 1-d library size
-        self.l_encoder = Encoder(n_input, 1, n_layers=1, n_hidden=n_hidden, dropout_rate=dropout_rate)
+        self.l_encoder = Encoder(n_input, 1, n_layers=n_layers_encoder, n_hidden=n_hidden, dropout_rate=dropout_rate)
         # decoder goes from n_latent-dimensional space to n_input-d data
-        self.decoder = DecoderSCVI(n_latent, n_input, n_cat_list=[n_batch], n_layers=n_layers, n_hidden=n_hidden)
+        self.decoder = DecoderSCVI(n_latent, n_input, n_cat_list=[n_batch], n_layers=n_layers_decoder, n_hidden=n_hidden)
 
     def get_latents(self, x, y=None):
         r""" returns the result of ``sample_from_posterior_z`` inside a list
