@@ -170,13 +170,13 @@ def Average_ClusteringMetric_Barplot(dataset_name: str = "muris_tabula",nuisance
         xtick_labels = ['scvi'] + [str(n) for n in hyperparameter_config['MIScale']]
         fig = plt.figure(figsize=(10, 7))
         plt.plot(xaxis_index, mean_dataset.loc[:,['asw']].values, xaxis_index, mean_dataset.loc[:,['nmi']].values, xaxis_index, mean_dataset.loc[:,['ari']].values, xaxis_index, mean_dataset.loc[:,['uca']].values, xaxis_index, mean_dataset.loc[:,['be']].values)
-        plt.errorbar(xaxis_index, mean_dataset.loc[:,['asw']].values, yerr=std_dataset.loc[:,['asw']].values, fmt='o',ecolor='black')
-        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['nmi']].values, yerr=std_dataset.loc[:, ['nmi']].values, fmt='o',ecolor='black')
-        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['ari']].values, yerr=std_dataset.loc[:, ['ari']].values, fmt='o',ecolor='black')
-        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['uca']].values, yerr=std_dataset.loc[:, ['uca']].values, fmt='o',ecolor='black')
-        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['be']].values, yerr=std_dataset.loc[:, ['be']].values, fmt='o',ecolor='black')
-        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['MILoss']].values, yerr=std_dataset.loc[:, ['MILoss']].values, fmt='o',ecolor='black')
-        plt.legend(('asw', 'nmi', 'ari','uca','be','MILoss'), loc='upper right', fontsize=16)
+        plt.errorbar(xaxis_index, mean_dataset.loc[:,['asw']].values, yerr=std_dataset.loc[:,['asw']].values, label='asw')
+        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['nmi']].values, yerr=std_dataset.loc[:, ['nmi']].values, label='nmi')
+        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['ari']].values, yerr=std_dataset.loc[:, ['ari']].values, label='ari')
+        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['uca']].values, yerr=std_dataset.loc[:, ['uca']].values, label='uca')
+        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['be']].values, yerr=std_dataset.loc[:, ['be']].values,label='be')
+        plt.errorbar(xaxis_index, mean_dataset.loc[:, ['MILoss']].values, yerr=std_dataset.loc[:, ['MILoss']].values,label='MILoss')
+        plt.legend(loc='upper right', fontsize=16)
         plt.xticks(xaxis_index, xtick_labels, rotation='horizontal',fontsize=14)
         plt.xlabel('index', fontsize=16)
         plt.yticks([k/10 for k in range(13)], [str(n) for n in [k/10 for k in range(13)]], rotation='horizontal', fontsize=14)
@@ -223,22 +223,19 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
                 plt.title('%s, %s, gaussian_dim%s' % (method, distribution, gaussian_dimension),fontsize=18)
                 fig.savefig(result_dict + '\\%s_%s_gaussian_dim%s.png' % (method, distribution, gaussian_dimension))
                 plt.close(fig)
-            elif subset_dataframe.loc[:,['method']].iloc[0,0] == 'MI_Net':
+            elif subset_dataframe.loc[:,['method']].iloc[0,0] in ['Mine_Net','Mine_Net4'] and subset_dataframe.loc[:,['distribution']].iloc[0,0] =='categorical':
                 true_MI = subset_dataframe.loc[:, ['true_MI']].values
                 estimated_MI = subset_dataframe.loc[:, ['estimated_MI']].values
-                std = subset_dataframe.loc[:, ['standard_deviation']].values
                 type = subset_dataframe.loc[:, ['training_or_testing']].iloc[0, 0]
 
                 sorted_index = sorted(range(len(true_MI)), key=true_MI.__getitem__)
                 sorted_trueMI = [true_MI[i] for i in sorted_index]
                 sorted_estimatedMI = [estimated_MI[i] for i in sorted_index]
-                sorted_std = [std[i] for i in sorted_index]
 
                 xaxis_index = list(range(1, len(true_MI) + 1))
 
                 fig = plt.figure(figsize=(10, 7))
                 lines1 = plt.plot(xaxis_index, sorted_trueMI, xaxis_index, sorted_estimatedMI)
-                plt.errorbar(xaxis_index, sorted_estimatedMI, yerr=sorted_std, fmt='o')
                 plt.setp(lines1[0], linewidth=2)
                 plt.setp(lines1[1], linewidth=2)
                 plt.legend(('true MI', 'estimated MI'), loc='upper right', fontsize=16)
@@ -246,7 +243,7 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
                 plt.title('%s, %s, gaussian_dim%s, %s' % (method, distribution, gaussian_dimension, type), fontsize=18)
                 fig.savefig(result_dict + '\\%s_%s_gaussian_dim%s_%s.png' % (method, distribution, gaussian_dimension, type))
                 plt.close(fig)
-            else:
+            elif subset_dataframe.loc[:,['method']].iloc[0,0] =='Mine_Net4' and subset_dataframe.loc[:,['distribution']].iloc[0,0] in ['gaussian','lognormal']:
                 rho = subset_dataframe.loc[:,['rho']].values
                 true_MI = subset_dataframe.loc[:,['true_MI']].values
                 estimated_MI = subset_dataframe.loc[:,['estimated_MI']].values
