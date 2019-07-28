@@ -229,7 +229,7 @@ class VAE_MI(nn.Module):
             z_array = z.detach().numpy().transpose()
             predicted_mutual_info = discrete_continuous_info(d=batch_index_array, c=z_array)
         elif self.MI_estimator=='aggregated_posterior':
-            z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.nsamples_z, self.MineNet4_layers)
+            z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.nsamples_z)
             z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
             self.minenet = MINE_Net4_2(z_batch0_tensor.shape[-1], self.MineNet4_layers)
