@@ -17,8 +17,8 @@ jupyter:
 <h1><center>Project1_Modify_SCVI</center></h1>
 <b><font size="+2">1. Introduction</font></b>
 <a href='#section2'><p style="margin-left: 40px"><b><font size="+1">1.1 Deep Learning and the Invariance Problem</font></b></p></a>
-<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 Invariance Problem in Single-Cell-RNA seq analysis</font></b></p></a>
-<a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 SCVI </font></b></p></a>
+<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 SCVI</font></b></p></a>
+<a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 SCVI with mutual information penalty</font></b></p></a>
 
 <b><font size="+2">2. Have Done and Discussion</font></b>
 <a href='#section6'><p style="margin-left: 40px"><b><font size="+1">2.1 Break SCVI</font></b></p></a>
@@ -34,144 +34,92 @@ jupyter:
 <br/><br/>
 <br/><br/>
 
-<!-- #region -->
+
 <a id='section2'></a>
 <b><font size="+1">1.1 Invariance of Deep Learning</font></b>
 
 Deep learning has been widely used in many pattern recognition tasks, like image classification, object detection, and segmentation. Invariance of deep learning means a pattern can still be correctly recognized when there are many confounding properties. For example, a cat in an image can still be classified correctly as a cat even when the image is rotated, enlarged or brightened. There are many researches, especially in computer vision field, about how to make deep learning network selects the complex, high level invariant features of the input, yet robust to irrelevant input transformations, which can be summarized in two aspects. 
 
-One aspect to achieve invariability is to increase the amount of training data. Le et al.([2013](http://static.googleusercontent.com/media/research.google.com/en//archive/unsupervised_icml2012.pdf)) devoted enormous unlabeled image data and computation power to train a large neuron network with billions of parameters. The face feature detector learnt from the neuron network without labeling images as containing a face or not is robust not only to translation but also to scaling and out-of-plane rotation. Small training dataset can be expanded by generating new samples in the way of applying small random deformations to the original training examples, using deformations like rotations, scaling, translation or shearing, which are known not to change the target variables of interest. Ciresan et al. ([2010](https://arxiv.org/pdf/1003.0358.pdf)) applied large deep neural network on deformed MNIST digits and reached 0.35% classification error rate. Simard et al. ([2003](http://cognitivemedium.com/assets/rmnist/Simard.pdf)) trained convolutional neural network on MNIST English digit images with both affine and elastic deformations, and reached a record of 0.32% classification error rate.
+One aspect to achieve invariability is to increase the amount of training data. Le et al.([2013](http://static.googleusercontent.com/media/research.google.com/en//archive/unsupervised_icml2012.pdf)) devoted enormous unlabeled image data and computation power to train a large neuron network with billions of parameters. The face feature detector learnt from the neuron network without labeling images as containing a face or not is robust not only to translation but also to scaling and out-of-plane rotation. Small training dataset can be expanded by generating new samples in the way of applying small random deformations to the original training examples, using deformations like rotations, scaling, translation or shearing, which are known not to change the target variables of interest. Ciresan et al. ([2010](https://arxiv.org/pdf/1003.0358.pdf)) applied large deep neural network on deformed MNIST digits and reached 0.35% classification error rate. Simard et al. ([2003](http://cognitivemedium.com/assets/rmnist/Simard.pdf)) trained convolutional neural network on MNIST English digit images with both affine and elastic deformations, and reached a record of 0.32% classification error rate. The other aspect to achieve invariability is to model general (e.g. a hierarchical organization of explanatory factors as the depth of neural network grows) or domain-specific prior information (e.g. the topological 2D structure of image data in computer vision) into deep learning network in the form of network structures or probability distributions before any data is fed in ([Bengio, Courville, & Vincent, 2012](https://arxiv.org/pdf/1206.5538.pdf)). <font color=red>can we learn nuisance factor effect from house keeping genes, and delete these effects for other genes???</font>
 
-The other aspect to achieve invariability is to model prior information into deep learning network in the form of network structures or probability distributions before any data is fed in. The most prevalent strategy is to use basic domain knowledge (e.g. the topological 2D structure of image data in computer vision) to hand-design better features. Inspired by the organization of the visual cortex where individual neurons respond to stimuli only in a restricted region of the visual field known as the receptive field. A collection of such fields overlap to cover the entire visual area.
+Although the invariance of reprensentation learning is extremely investigated in engineering field, it is also a general, or even more important problem in biology research when data is relatively expensive to obtain and difficult to deform to generate new data. One major interest is to represent the single-cell RNA sequencing (scRNA-seq) data in a way invariant to diverse confounding factors including transcriptional noise (Wagner et al., [2016](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nbt.3711), capture efficiency and sequnencing depth (Vallejos et al., [2017](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nmeth.4292)), amplication bias, and batch effects (Shaham et al., [2017](https://academic-oup-com.ezp.lib.unimelb.edu.au/bioinformatics/article/33/16/2539/3611270)), such that only true biological variance is left for downstream analysises including imputation of missing data in the scRNA-seq datasets with highly abundant 'drop-out' events, visualization and clustering, differential gene expression analysis. Successful utilization of deep learning to solve this prolem in scRNA-seq research will contribute significantly to diverse research areas such as cancer(Patel et al., [2014](https://science-sciencemag-org.ezp.lib.unimelb.edu.au/content/344/6190/1396)), development (Semrau et al., [2017](https://www.nature.com/articles/s41467-017-01076-4)), autoimmunity (Gaublomme et al., [2015](https://www-sciencedirect-com.ezp.lib.unimelb.edu.au/science/article/pii/S0092867415014890)).
 
-
-Goodfellow et al.([2009](https://ai.stanford.edu/~ang/papers/nips09-MeasuringInvariancesDeepNetworks.pdf)) showed that both stacked autoencoder networks and convolutional deep belief networks (CDBNs) enjoy increasing invariance with depth even to complex 3-D out-of-plane rotation of natural images and natural video sequences, although the effects of depth in the two cases are different. Their observations supports the common view that invariances to minor shifts, rotations and deformations are learned in the lower layers, and combined in the higher layers to form progressively more invariant features. 
-
-
-And the two aspects can be combined to achieve the best result.
-
-
-can we learn batch effect from house keeping genes?
-
-<!-- #endregion -->
-
-<!-- #region -->
-keywords for searching: invari* + deep learning/deep neural network/deep network, high-level feature + learning, representation learning/learning representation, 
-No review paper about invariance of deep learning ???
-
-[Measuring Invariances in Deep Networks](https://ai.stanford.edu/~ang/papers/nips09-MeasuringInvariancesDeepNetworks.pdf)
-
-Our proposed invariance measure is broadly applicable to evaluating many deep learning algorithms
-for many tasks, but the present paper will focus on two different algorithms applied to computer
-vision. First, we examine the invariances of <b>stacked autoencoder networks</b> [2]. These networks
-were shown by Larochelle et al. [3] to learn useful features for a range of vision tasks; this suggests
-that their learned features are significantly invariant to the transformations present in those tasks.
-Unlike the artificial data used in [3], however, our work uses natural images and natural video
-sequences, and examines more complex variations such as out-of-plane changes in viewing angle.
-We find that when trained under these conditions, <b>stacked autoencoders</b> learn increasingly invariant
-features with depth, but the effect of depth is small compared to other factors such as <b>regularization</b>.
-Next, we show that convolutional deep belief networks (CDBNs) [5], which are hand-designed to be
-invariant to certain local image translations, do enjoy dramatically increasing invariance with depth.
-This suggests that there is a benefit to using deep architectures, but that mechanisms besides simple
-stacking of autoencoders are important for gaining increasing invariance.
-
-Another interesting finding is that by incorporating <b>sparsity</b>, networks can become more invariant. Refer to this paper about [induce sparsity to deep network](https://arxiv.org/pdf/1902.09574.pdf). Pay attention to section 2. How to understand? Difference between sparsity and drop out?
-
-We also document that explicit approaches to achieving invariance such as <b>max-pooling</b> and weightsharing in CDBNs are currently successful strategies for achieving invariance. Refer to [this website](https://towardsdatascience.com/a-comprehensive-guide-to-convolutional-neural-networks-the-eli5-way-3bd2b1164a53) for CNN introduction. In it, 
-For CNN, adding a Fully-Connected layer after the convolutional and pooling layers is a (usually) cheap way of learning non-linear combinations of the high-level features as represented by the output of the convolutional layer. The Fully-Connected layer is learning a possibly non-linear function in that space. Soft-Max activation is used. Why? Refer to [the link](https://towardsdatascience.com/activation-functions-and-its-types-which-is-better-a9a5310cc8f) to compare different activation functions in deep learning. How to understand the problems of each activation function.
-
-Our work also seeks to address the question: why are deep learning algorithms useful? Bengio and
-LeCun gave a theoretical answer to this question, in which they showed that a deep architecture is
-necessary to <b>represent many functions compactly</b> [1].
-
-<b>restricted Boltzmann machine</b> 
-
-<b>deep network vs deep belief network</b>
-
-
-
-[Deep Learning of Invariant Features via Simulated
-Fixations in Video](http://papers.nips.cc/paper/4730-deep-learning-of-invariant-features-via-simulated-fixations-in-video.pdf)
-
-As a learning principle, sparsity is essential to understanding the statistics of natural images [2].
-However, it remains unclear to what extent <b>sparsity and subspace pooling</b> [3, 4] could produce
-invariance exhibited in higher levels of visual systems. Another approach to learning invariance is
-temporal slowness [1, 5, 6, 7]. Experimental evidence suggests that high-level visual representations
-become slow-changing and tolerant towards non-trivial transformations, by associating low-level
-features which appear in a coherent sequence [5]
-
-By stacking learning modules, we are able to learn
-features that are increasingly invariant. Using <b>temporal slowness</b>, the first layer units become locally
-translational invariant, similar to subspace or spatial pooling; the second layer units can then encode
-more complex invariances such as out-of-plane transformations and non-linear warping
-
-We have described an unsupervised learning algorithm for learning invariant features from video
-using the temporal slowness principle. The system is improved by using simulated fixations and
-smooth pursuit to generate the video sequences provided to the learning algorithm. We illustrate
-by virtual of visualization and invariance tests, that the learned features are invariant to a collection
-of non-trivial transformations. With concrete recognition experiments, we show that the features
-learned from natural videos not only apply to still images, but also give competitive results on a
-number of object recognition benchmarks. Since our features can be extracted using a feed-forward
-neural network, they are also easy to use and efficient to compute.
-<!-- #endregion -->
-
-<a id='section3'></a>
-<b><font size="+1">1.2 Invariance Problem in Single-Cell-RNA seq analysis</font></b>
-
-
+Lopez et al. ([2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)) has already developed SCVI, a generative deep learning network, which first learn representation from the original scRNA-seq datasets through an encoder network, and then generate new scRNA-seq data based on the learned representations through an decoder network. The new generated scRNA-seq data is claimed to be similar to the original data as much as possible, as well as correct for confounding factors to an appropriate extent <font color=red>(make sure whether it is correct to say so)</font>. 
 
 <!-- #region -->
 <a id='section4'></a>
-<b><font size="+1">1.3 SCVI</font></b>
+<b><font size="+1">1.2 SCVI</font></b>
 
-Single Cell RNA Seq
+SCVI is essentially a variational autoencoder, one of the most popular approaches to unsupervised learning of complicated distributions (Doersch, [2016](https://arxiv.org/abs/1606.05908)). Therefore, variational autoencoder will be discussed first. Suppose $x$ is a data point in a dataset with an unknown possibility distribution $p(x)$, $z$ is the representation called latent vector for the data point $x$, defined over a high-, but lower-dimensional space $Z$ than the original datapoint $x$. For each $x$, $z$ is a random variable with probability density $p(z)$. Suppose we have a family of derministic functions $f(z;\theta)$, parameterized by a vector $\theta$ in some space $\Theta$, where $f: Z \times \Theta \rightarrow X$, the objective is to optimize $\theta$ such that the probability of each $x$ in the training dataset can be maximized, according to the definition: $p(x) = \int_{Z} p(x|z;\theta)p(z)dz$. In most cases, p(z) is set to be $N(0,I)$, where $I$ is the identity matrix. $p(x)$ can be approximated by sampling a large number of z values $\{z_{1},...,z_{n}\}$ and averaging $p(x|z_{i}), z\in \{1,...,n\}$. In practice, for most $z$ sampled from $p(z)$, $p(x|z)$ will be almost zero, contributing nothing to our estimator for $p(x)$. The solution to circumvent this problem is to narrow down the sampling space of $z$ such that $z$ are more likely to have produced $x$, thus giving a meaningful value of $p(x|z)$. The narrowed space of $z$ is determined by the posteror probability distribution $p(z|x)$, which, however, is usually difficult to compute analytically. Suppose $q(z|x)$ is a function approximator for $p(z|x)$, then:
 
-In single cell RNA seq, batch effect could come from when the sample is processed and when sequencing takes place, sequence platform, which individual the samples come from, how the sample is treated. Sometimes, biological difference can also be considered as batch effect based on different research aims. For example, if T cells from blood samples and T cells from other samples are combined together, and the research aim is to investigate the difference between norm T cells and abnormal T cells, we do not want the origin of the T cells to influence the result, here the origins of the T cells although are biological factors, it is considered as batch effect.
+\begin{equation}
+logp(x) - D[q(z|x)||p(z|x)] = E_{z \sim q(z|x)} [logp(x|z)] - D[q(z|x)||p(z)], 
+\end{equation}
 
-For a given dataset, how can we know there is batch difference at the beginning. The most easiest way is to do some exploratory analysis, like draw the tsne plot using SCVI, if the batch difference is big like from two different sequencing platform, it will be very easy to see. Or we can 
+where $D[q(z|x)||p(z|x)]$ is the Kullback-Leibler divergence (KL divergence or D) between $q(z|x)$ and $p(z|x)$, and $D[q(z|x)||p(z)]$ is KL divergence between $q(z|x)$ and $p(z)$. As $D[q(z|x)||p(z|x)]$ is non-negative, then naturally:
 
-Mutual Information
+\begin{equation}
+logp(x) \geqslant E_{z \sim q(z|x)} [logp(x|z)] - D[q(z|x)||p(z)].
+\end{equation}
 
-Rewrite the following, because it is copied from wikipedia:
-Mutual information (MI) of two random variables is a measure of the mutual dependence between the two variables. Let <b><i>X</i></b> be a pair of random variables with values over the space $\mathcal{X}$ X $\mathcal{Y}$. If their joint distribution is \textbf{\textit{P}}_{(\textbf{\textit{X,Y}})}} and the marginal distributions are {\displaystyle P_{X}} P_X and {\displaystyle P_{Y}} {\displaystyle P_{Y}}, the mutual information is defined as
-MI determines how similar the joint distribution of the pair <b>(<i>X,Y</i>)</b> is to the product of the marginal distributions of <b><i>X</i></b> and <b><i>Y</i></b>, and is more general than the correlation coefficient which only determines linear dependency. Mutual information contains information about all dependence—linear and nonlinear—and not just linear dependence as the correlation coefficient measures. 
+The better $q(z|x)$ approximates $p(z|x)$, the smaller $D[q(z|x)||p(z|x)]$ is, the closer $E_{z \sim q(z|x)} [logp(x|z)] - D[q(z|x)||p(z)]$ is to $logp(x)$. Therefore, maximization of $logp(x)$ can be achieved by maximizing the lower bound $E_{z \sim q(z|x)} [logp(x|z)] - D[q(z|x)||p(z)]$. 
 
-According to the paper [mutual information neural estimation](https://arxiv.org/pdf/1801.04062.pdf), both deep neural network architecture and the sample size of input dataset are important to shrink the difference between the estimator and true value of the mutual information.
+Most often, both $p(x|z)$ and q(z|x) are parameterized probability distributions, with the parameters estimated from determinstic functions specified by neural network. The neural network for $q(z|x)$ is called encoder, and the neural network for $p(x|z)$ is called decoder. While $p(x|z)$ is problem-specific, for $q(z|x)$, the usual choice is $N(z|\mu(x; \theta), \Sigma(x; \theta))$, where $\mu$ and $\Sigma$ are deterministic functions with parameters $\theta$ learned from data $x$ via neural networks, and $\Sigma$ is set to be diagnal matrix for computational convenience, as $D[q(z|x)||p(z)]$ can be computed easily:
 
-  Sample size: There is a method of calculating the required sample size recommended in the paper, understand the equation better.   
-  
-  To tune MINE, apart from the general factors for general deep learning network, in the paper, it is talked about that a naive application of stochastic gradient estimation leads to a biased estimate of the full batch gradient, the bias can be reduced by replacing the estimate in the demonimator by an exponential moving average, which will imporove all-around performance of MINE. Get more details about it.
+\begin{equation}
+D[N(\mu_{0},\Sigma_{0})||N(\mu_{1},\Sigma_{1})] =  \frac{1}{2}\Big( tr \big( \Sigma_{1}^{-1}\Sigma_{0} \big) + (\mu_{1}- \mu_{0})^{T}\Sigma_{1}{-1}(\mu_{1}-\mu_{0}) -K + log\big( \frac{det\Sigma_{1}}{\Sigma_{0}} \big) \Big)
+\end{equation}
 
-The mutual information neural estimation is only for continuous variables? The mutual information neural estimation is compared with the true value and k-NN-based non-parametric estimator in the paper for multivariate gaussian random variabls.
+When $p(z)=N(0,I)$, $\mu_{0}=\mu(x,\theta)$, and $\Sigma_{0}=\Sigma(x,\theta)$,
 
-  Between two continuous variable: we can compare the neural network estimator with the true value of mutual inforamtion for multivariate gaussian random variables. How to produce a positive definitive covariance matrix for the joint distribution of two multivariate gaussian. Why the method used in the original paper works.
-  
-  Between one continuous and one discrete variable: compare the neural network estimator with the nearest neighbour estimator [Mutual information between discrete and continuous data sets](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0087357&type=printable).
-  
-  
-  [Different forms of the lognormal distribution](https://all-geo.org/volcan01010/2013/09/how-to-use-lognormal-distributions-in-python/)
-  
-  The lognormal probability distribution of a dataset, X, is commonly defined as:
+\begin{equation}
+D[N(\mu(x,\theta),\Sigma(x,\theta))||N(0,I)] =  \frac{1}{2}\Big( tr \big( \Sigma(x,\theta) \big) + (\mu(x, \theta))^{T}(\mu(x, \theta)) - K + log det(\Sigma(x,\theta)) \Big)
+\end{equation}
 
-f(x | μ,σ)=1xσ2π−−√e−(lnx−μ)22σ2
-In this formulation, μ and σ are the mean and standard deviation of ln(X).
-In Python, the scipy.stats.lognorm module uses a more general, 3-parameter formulation:
+To get $E_{z \sim q(z|x)} [logp(x|z)]$, instead of sampling many $z$ from $q(z|x)$, which is computation-demanding, just take one sample of $z$, and treat $logp(x|z)$ for that $z$ as an approximation of $E_{z \sim q(z|x)} [logp(x|z)]$. This strategy is valid because stochastic gradient descent will be carried out over different values of x sampled from the training dataset. Therefore, the process to calculate the stochastic gradient for optimization is to sample a single value of $x$, then sample a single value of $z$ from $q(z|x)$, compute the gradient of $logp(x|z)-D[q(z|x)||p(z)]$, average the gradient over many samples of $x$ and $z$. However, there is a major problem to get the gradient of $logp(x|z)-D[q(z|x)||p(z)]$ because $z$ is randomly sampled from $q(z|x)$, and the backpropogation can not continue down to the encoder network parameters from $z$. The solution is called 'reparameterization trick'. Instead of sampling $z$ directly from $q(z|x)$, sample $\epsilon$ from $N(0,I)$, where $I$ is a identity matrix, then compute $z = \mu(x) + \Sigma_{1/2}(x)*\epsilon$, $\mu(x)$ and $\Sigma(x)$ are the mean and covariance of $q(z|x)$. Because $\epsilon$ has no relationship with parameters in the encoder network, the backprogation process can continue down to the parameters of the encoder network from decoder network through $\mu(x)$ and $\Sigma(x)$.
 
-f(x | [shape],[location],[scale])=1(x−[location])[shape]2π−−√e−(ln(x−[location])−ln([scale]))22[shape]2
-For most uses (i.e. unless data contain negative values), the location parameter is fixed at 0. This can be done during curve fitting using floc=0. The expression then simplifies to:
+SCVI, as a variational autoencoder, is applied to input datasets of $N \times G$-matrix with each element $x_{ng}$ being the number of transcripts for gene $g$ in cell $n$. Meanwhile, each cell may also have a batch annotation $s_{n}$. There are two latent random variables, the library size $l_{n}$ which represents nuisance variation due to capture efficiency and sequency depth, and $z_{n}$ which represents the remaining variability including biological difference between cells. The prior distribution of $z_{n}$ is standard gaussian, however, the prior distribution of $l_{n}$ is lognormal. Besides, scvi has the specialty in that the posterior distribution for the generated data from the decoder is a parametrised zero-inflated negative binomial (ZINB) distribution, which is shown below:
 
-f(x | [shape],[scale])=1x[shape]2π−−√e−(lnx−ln[scale])22[shape]2
-Comparing the two forms shows that:
+\begin{equation}
+\begin{aligned}
+& z_{n} \sim Normal(0,I) \\
+& l_{n} \sim LogNormal(l_{\mu}, l_{\sigma}^{2}) \\
+& \rho_{n} = f_{w}(z_{n}, s_{n}) \\
+& w_{ng} \sim Gamma(\rho_{n}^{g}, \theta) \\
+& y_{ng} \sim Poisson(l_{n}w_{ng}) \\
+& h_{ng} \sim Bernoulli(f_{h}^{g}(z_{n},s_{n})) \\
+& x_{ng} = \Bigg\{ \begin{matrix}
+    y_{ng} & if \hspace{0.1cm} h_{ng} = 0 \\ 0 & otherwise,
+  \end{matrix}
+\end{aligned}
+\end{equation}
 
-ln([scale])=μ
-therefore: [scale]=eμ
-and: [shape]=σ
-Confusingly, these are different from the parameters controlling a normal distribution in the scipy.stats.norm module, where location corresponds to the mean and scale is the standard deviation. They are also different to the definitions of location and scale for lognormal distributions in Wikipedia.
+where:
+
+if $B$ demotes the number of batches, calculate the empirical mean and variance of the log-library size per batch to get $l_{\mu}$, $l_{\sigma} \in \mathbb{R}_{+}^{B}$. Note that $l_{n}$ itself is not in the log scale,
+
+the function $f_{w}$ stands for the neural network that encodes the mean proportion of transcripts $\rho_{n}$ expressed across all genes in cell $n$, and the function $f_{h}$ stands for the neural network that encodes the probability $h_{n}$ across all genes in cell $n$ of dropping out due to technical effect. Both $f_{w}$ and $f_{h}$ map the latent space $z_{n}$ and batch annotation $s_{n}$ back to the full dimention of all genes: $\mathbb{R}^{d} \times \{0,1\}^{B} \rightarrow \mathbb{R}^{G}$. The last layer of $f_{w}$ uses a softmax activation function.<font color=red>(check the whole network structure for $f_{w}$ and $f_{h}$ here?)</font> The annotations $g$ and $n$ (e.g., $f_{h}^{g}(z_{n}, s_{n})$) stand for a specific gene $g$ in a specific cell $n$. For each cell $n$, the sum of $f_{w}^{g}(z_{n}, s_{n})$ is 1. 
+
+the parameter $\theta \in \mathbb{R}_{+}^{G}$ denotes a gene-specific inverse dispersion and it is estimated via variational Bayesian inference. <font color=red>(check how to estimate $\theta$ here?)</font>
+
+
+
+
+
+<font color=red>(how to calculate logp(x|z,l,s) and backpropogate?)</font>
+
+SCVI is claimed to be superior than other existing methods inferring the biological variation in single-cell data with nuisance factors in three aspects (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)). First, although both SCVI and other existing methods use a parametric statistical model with a 'expressiion' component (e.g., ZINB-WaVE uses a negative binomial as the expression componnet (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5)), BISCUIT uses a log normal distribution as the expression component (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))) and a zero compnent (usually a bernoulli distribution <font color=red>(is it true?)</font>) to fit the distribution of the random variable which is the count of the transcripts for each gene in each cell, and although both SCVI and other methods are first trying to learn a low-dimensional manifold from the single-cell RNA count data as well additional covariates provided as metadata (e.g., batch (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5) (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf))), cell quality (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5))) and map the low-dimensional representation to the parameter of the model, the neural network in scvi frees the mapping function from the constraint of the generalized linear assumption in other methods, which is difficult to justify. <font color=red>(check at least one method e.g. ZINB-WaVE to check what is the generalized linear assumption in this method?)</font>). Second, scvi can be used to analyze the single-cell RNA seq data for all the various downstream tasks to ensure consistency, compared with other methods usually designed specially only for different subsets of all tasks (e.g., imputation and clustering, but not differential expression (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))). Third, scvi provides a higher computational scalability, desirable for the ever-growing size of recent datasets consisting of hundreads of thousands of cells (commercial 10x genomics, [2017](https://support.10xgenomics.com/single-cell-gene-expression/datasets/), or envisioned by consortia like the Human Cell Atlas (Regev, et al., [2017](https://elifesciences.org/articles/27041))), compared with other methods applicable only to tens of thousands of cells <font color=red>(why scvi has higher computational scalability?)</font>). 
+
+However, 
+
+
+
+
 
 <!-- #endregion -->
 
 <a id='section5'></a>
-<b><font size="+1">1.4 Modified SCVI</font></b>
+<b><font size="+1">1.3 SCVI with mutual information penalty</font></b>
 
 
 
@@ -255,7 +203,9 @@ Mouse Marrow dataset is generated as the following steps: 1. git clone from the 
 
 When the nuisance factor is batch, for each iteration, apply SCVI once to MouseMarrow Dataset. Then apply SCVI+MI_penalty 6 times to MouseMarrow Dataset, each time of which will have a different scale multiplied to the MI estimator. The hyperparameters for SCVI and SCVI+MI_penalty is as follows:
    
-    -n_layers: [2] (the number of hidden layers in both encoder and decoder in SCVI, and SCVI+MI_penalty)
+    -n_layers_encoder: [2] (the number of hidden layers for encoder network in SCVI, and SCVI+MI_penalty)
+    
+    -n_layers_decoder: [2] (the number of hidden layers for decoder network in SCVI, and SCVI+MI_penalty)
     
     -n_hidden: [128] (the number of nodes in each hidden layer in both encoder and decoder in SCVI, and SCVI+MI_penalty)
     
@@ -263,23 +213,50 @@ When the nuisance factor is batch, for each iteration, apply SCVI once to MouseM
     
     -dropout_rate: [0.1]
     
+    -reconstruction_loss: ['zinb']
+    
+    -use_batches: [True]
+    
+    -use_cuda: [False]
+    
+    -Scale: [200, 500, 800, 1000, 2000, 5000, 10000, 100000, 1000000] (the scale multiplied to MI estimator)
+    
+    -train_size: [0.8] (the ratio to split the dataset into training and testing dataset)
+    
     -lr: [0.001](learning rate)
     
     -n_epochs: [250] 
     
-    -reconstruction_loss: ['zinb']
-    
-    -train_size: [0.8] (the ratio to split the dataset into training and testing dataset)
-    
-    -dataset_name: ['Marrow'],
-   
-    -nuisance_factor: ['batch'],
-   
-    -Scale: [200, 500, 800, 1000, 2000, 5000, 10000] (the scale multiplied to MI estimator)
-   
+ 
 Repeat the iteration 100 times as SCVI will produce different results on the same dataset multiple times. The reason could be the initialization of the weights in the scvi deep network, different initialization values could result in different optimization result. Or the minibatch of the training process, Or could be the reparametrization of z in the scVI method, according to the [tutorial_of_scVI](https://arxiv.org/abs/1606.05908). The paper titled [Deep_generative_modeling_for_single-cell_transcriptomics](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/s41592-018-0229-2#Sec43) investigates the variability of scVI due to different initialization of weights in supplementary figure 1.d.
 
 The values for the following hyperparameters: n_layers, n_hidden, n_latent, dropout_rate, lr, n_epochs, reconstruction_loss are directly borrowed from the code of the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1).
+
+As the invariance increases as network becomes deeper, I also tried n_layers_encoder = 10, while all other parameters remain the same:
+ 
+    -n_layers_encoder: [10] (the number of hidden layers for encoder network in SCVI, and SCVI+MI_penalty)
+    
+    -n_layers_decoder: [2] (the number of hidden layers for decoder network in SCVI, and SCVI+MI_penalty)
+    
+    -n_hidden: [128] (the number of nodes in each hidden layer in both encoder and decoder in SCVI, and SCVI+MI_penalty)
+    
+    -n_latent: [10] (the dimension of the latent vector Z)
+    
+    -dropout_rate: [0.1]
+    
+    -reconstruction_loss: ['zinb']
+    
+    -use_batches: [True]
+    
+    -use_cuda: [False]
+    
+    -Scale: [200, 500, 800, 1000, 2000, 5000, 10000, 100000, 1000000] (the scale multiplied to MI estimator)
+    
+    -train_size: [0.8] (the ratio to split the dataset into training and testing dataset)
+    
+    -lr: [0.001](learning rate)
+    
+    -n_epochs: [250] 
 
 
 When the nuisance factor is library size, .......
@@ -296,21 +273,22 @@ When the nuisance factor is batch, for each iteration, apply SCVI once to Pbmc D
     
     -n_latent: [14] (the dimension of the latent vector Z)
     
-    -dropout_rate: [0.5]
-    
-    -lr: [0.01](learning rate)
-    
-    -n_epochs: [170] (used in the Harmonization and Annotation of single-cell)
+    -dropout_rate: [0.5]   
     
     -reconstruction_loss: ['zinb']
     
+    -use_batches: [True]
+    
+    -use_cuda: [False]
+    
+    -Scale: [200, 500, 800, 1000, 2000, 5000, 10000,1000000] (the scale multiplied to MI estimator)
+    
     -train_size: [0.8] (the ratio to split the dataset into training and testing dataset)
     
-    -dataset_name: ['Pbmc'],
-   
-    -nuisance_factor: ['batch'],
-   
-    -Scale: [200, 500, 800, 1000, 2000, 5000, 10000,1000000] (the scale multiplied to MI estimator)
+    -lr: [0.01]
+    
+    -n_epochs: [170] (used in the Harmonization and Annotation of single-cell)
+    
     
 The values for the following hyperparameters: n_layers, n_hidden, n_latent, dropout_rate, lr, n_epochs, reconstruction_loss are directly borrowed from Table3 on the website [hyperparameter search for SCVI](https://yoseflab.github.io/2019/07/05/Hyperoptimization/)
 
@@ -328,8 +306,10 @@ After all jobs finish on spartan, git clone the Hui_Li branch of the github page
 
 <b><font size="3">a MouseMarrow</font></b>
 
-The result for MouseMarrow is stored in ./result/tune_hyperparameter_for_MineNet/muris_tabula/, and is summarized in Fig4.
-The tsne plot is shown in Fig5. As the result in Fig4 is not promising, in order to see whether it is because the scale is not large enough based on the fact that the reconstruction loss is several thousands thousand, while the mutual information is less than 1, run the experiment again, but scale=100000, 1000000, result shown in Fig6.
+The result for MouseMarrow when n_layers_encoder = 2 is stored in ./result/tune_hyperparameter_for_MineNet/muris_tabula/, and is summarized in Fig4. The tsne plot is shown in Fig6. 
+
+The result for MouseMarrow when n_layers_encoder = 10 is stored in ./result/tune_hyperparameter_for_MineNet/muris_tabula_encoder10layers/, and is summarized in Fig5. The tsne plot is shown in Fig6. 
+
 
 <!-- #endregion -->
 
@@ -338,64 +318,79 @@ import os
 %matplotlib inline
 import itertools
 exec(open('code\\SummarizeResult.py').read())
-Average_ClusteringMetric_Barplot(dataset_name = "Marrow",nuisance_variable='batch',results_dict = "result/tune_hyperparameter_for_MineNet/muris_tabula/", n_sample = 100, scvi_n_layers=2, hyperparameter_config = {'MineLoss_Scale':[200, 500, 800, 1000, 2000, 5000, 10000]})
+Average_ClusteringMetric_Barplot(dataset_name = "muris_tabula",nuisance_variable='batch',results_dict = "result/tune_hyperparameter_for_SCVI_MI/muris_tabula/", n_sample = 100, hyperparameter_config = {'MIScale':[200, 500, 800, 1000, 2000, 5000, 10000,100000,1000000]})
 
 file_paths = []
 subfile_titles = []
-MineLoss_Scales = [200,500,800, 1000, 2000,5000,10000]
-scvi_n_layers = 2 
+MIScales = [200,500,800, 1000, 2000,5000,10000, 100000, 1000000]
 
-for i,MineLoss_Scale in enumerate(MineLoss_Scales):
-    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\trainset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
-    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\testset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
-    subfile_titles = subfile_titles + ['trainset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
-    subfile_titles = subfile_titles + ['testset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
-file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'training')]
-file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'testing')]
-subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Marrow', 'batch','training')]
-subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Marrow', 'batch','testing')]
-SummarizeResult('image',file_paths,subfile_titles,'Fig4: Clustering metrics comparison between scVI and scVI+MI_Penalty on Marrow Dataset, batch nuisance factor')
+for i,MIScale in enumerate(MIScales):
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\trainset_mean_clustering_metrics_%s_%s_MIScale%s_%ssamples.png'%('muris_tabula', 'batch',  MIScale, 100)]
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\testset_mean_clustering_metrics_%s_%s_MIScale%s_%ssamples.png'%('muris_tabula', 'batch', MIScale, 100)]
+    subfile_titles = subfile_titles + ['trainset_%s_%s_MIScale%s_%ssamples.png'%('muris_tabula', 'batch', MIScale, 100)]
+    subfile_titles = subfile_titles + ['testset_%s_%s_MIScale%s_%ssamples.png'%('muris_tabula', 'batch', MIScale, 100)]
+file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\%s_%s_%s_clusteringmetrics.png' % ('muris_tabula', 'batch','training')]
+file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\%s_%s_%s_clusteringmetrics.png' % ('muris_tabula', 'batch','testing')]
+subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('muris_tabula', 'batch','training')]
+subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('muris_tabula', 'batch','testing')]
+SummarizeResult('image',file_paths,subfile_titles,'Fig4: Clustering metrics comparison between scVI and scVI+MI_Penalty on muris tabula dataset, batch nuisance factor')
 ```
 
 ```python
-scvi_n_layers = 2
-file_paths = ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\trainset_tsne_SCVI_%s_%s_n_layers%s_sample%s.png'%('Marrow', 'batch', scvi_n_layers, 0)]
-file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\testset_tsne_SCVI_%s_%s_n_layers%s_sample%s.png'%('Marrow', 'batch', scvi_n_layers, 0)]
-
-subfile_titles = ['scVI_%s_%s_trainset'%('Marrow', 'batch')]
-subfile_titles += ['scVI_%s_%s_testset'%('Marrow', 'batch')]
-MineLoss_Scales = [500, 1000, 5000, 10000]
-
-for i,MineLoss_Scale in enumerate(MineLoss_Scales):
-        file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\trainset_tsne_SCVI+MINE_%s_%s_n_layers%s_sample%s_MineLossScale%s.png'%('Marrow', 'batch',scvi_n_layers, 0, MineLoss_Scale)]
-        file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula\\testset_tsne_SCVI+MINE_%s_%s_n_layers%s_sample%s_MineLossScale%s.png'%('Marrow', 'batch',scvi_n_layers, 0, MineLoss_Scale)]
-        subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s trainset'%('Marrow', 'batch', MineLoss_Scale)]
-        subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s testset'%('Marrow', 'batch', MineLoss_Scale)] 
-SummarizeResult('image',file_paths,subfile_titles,'Fig5: tsne plot of scVI and scVI+MI_penalty for marrow dataset, batch nuisance factor')
-```
-
-```python slideshow={"slide_type": "-"}
 import os
 %matplotlib inline
 import itertools
 exec(open('code\\SummarizeResult.py').read())
-Average_ClusteringMetric_Barplot(dataset_name = "Marrow",nuisance_variable='batch',results_dict = "result/tune_hyperparameter_for_MineNet/muris_tabula_highscale/", n_sample = 100, scvi_n_layers=2, hyperparameter_config = {'MineLoss_Scale':[100000,1000000]})
+Average_ClusteringMetric_Barplot(dataset_name = "muris_tabula",nuisance_variable='batch',results_dict = "result/tune_hyperparameter_for_SCVI_MI/muris_tabula_encoder10layers/", n_sample = 100, hyperparameter_config = {'MIScale':[200, 500, 800, 1000, 2000, 5000, 10000,100000,1000000]})
 
 file_paths = []
 subfile_titles = []
-MineLoss_Scales = [100000,1000000]
-scvi_n_layers = 2 
+MIScales = [200,500,800, 1000, 2000,5000,10000,100000,1000000]
 
-for i,MineLoss_Scale in enumerate(MineLoss_Scales):
-    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\trainset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
-    file_paths = file_paths + ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\testset_mean_clustering_metrics_%s_%s_n_layers%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', scvi_n_layers, MineLoss_Scale, 100)]
-    subfile_titles = subfile_titles + ['trainset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
-    subfile_titles = subfile_titles + ['testset_%s_%s_MineLossScale%s_%ssamples.png'%('Marrow', 'batch', MineLoss_Scale, 100)]
-file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'training')]
-file_paths += ['result\\tune_hyperparameter_for_MineNet\\muris_tabula_highscale\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Marrow', 'batch',scvi_n_layers,'testing')]
-subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Marrow', 'batch','training')]
-subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Marrow', 'batch','testing')]
-SummarizeResult('image',file_paths,subfile_titles,'Fig6: Clustering metrics comparison between scVI and scVI+MI_Penalty on Marrow Dataset, batch nuisance factor')
+for i,MIScale in enumerate(MIScales):
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula_encoder10layers\\trainset_mean_clustering_metrics_%s_%s_MIScale%s_%ssamples.png'%('muris_tabula', 'batch',  MIScale, 100)]
+    file_paths = file_paths + ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula_encoder10layers\\testset_mean_clustering_metrics_%s_%s_MIScale%s_%ssamples.png'%('muris_tabula', 'batch', MIScale, 100)]
+    subfile_titles = subfile_titles + ['trainset_%s_%s_MIScale%s_%ssamples.png'%('muris_tabula', 'batch', MIScale, 100)]
+    subfile_titles = subfile_titles + ['testset_%s_%s_MIScale%s_%ssamples.png'%('muris_tabula', 'batch', MIScale, 100)]
+file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula_encoder10layers\\%s_%s_%s_clusteringmetrics.png' % ('muris_tabula', 'batch','training')]
+file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula_encoder10layers\\%s_%s_%s_clusteringmetrics.png' % ('muris_tabula', 'batch','testing')]
+subfile_titles += ['%s, %s, %s, encoder10layer,clusteringmetrics' % ('muris_tabula', 'batch','training')]
+subfile_titles += ['%s, %s, %s, encoder10layer,clusteringmetrics' % ('muris_tabula', 'batch','testing')]
+
+file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\%s_%s_%s_clusteringmetrics.png' % ('muris_tabula', 'batch','training')]
+file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\%s_%s_%s_clusteringmetrics.png' % ('muris_tabula', 'batch','testing')]
+subfile_titles += ['%s, %s, %s, encoder2layer,clusteringmetrics' % ('muris_tabula', 'batch','training')]
+subfile_titles += ['%s, %s, %s, encoder2layer,clusteringmetrics' % ('muris_tabula', 'batch','testing')]
+SummarizeResult('image',file_paths,subfile_titles,'Fig5: Clustering metrics comparison between scVI and scVI+MI_Penalty on muris tabula dataset, batch nuisance factor')
+```
+
+```python
+file_paths = ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\trainset_tsne_SCVI_%s_%s_sample%s.png'%('muris_tabula', 'batch', 0)]
+file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\testset_tsne_SCVI_%s_%s_sample%s.png'%('muris_tabula', 'batch', 0)]
+
+subfile_titles = ['scVI_%s_%s_encoder2layers_trainset'%('muris_tabula', 'batch')]
+subfile_titles += ['scVI_%s_%s_encoder2layers_testset'%('muris_tabula', 'batch')]
+MIScales = [100000]
+
+for i,MIScale in enumerate(MIScales):
+        file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\trainset_tsne_SCVI+MI_%s_%s_MIScale%s_sample%s.png'%('muris_tabula', 'batch', MIScale, 0)]
+        file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\testset_tsne_SCVI+MI_%s_%s_MIScale%s_sample%s.png'%('muris_tabula', 'batch', MIScale, 0)]
+        subfile_titles += ['scVI+MI_penalty %s %s MIScale%s trainset'%('muris_tabula', 'batch', MIScale)]
+        subfile_titles += ['scVI+MI_penalty %s %s MIScale%s testset'%('muris_tabula', 'batch', MIScale)] 
+
+file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula_encoder10layers\\trainset_tsne_SCVI_%s_%s_sample%s.png'%('muris_tabula', 'batch', 0)]
+file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula_encoder10layers\\testset_tsne_SCVI_%s_%s_sample%s.png'%('muris_tabula', 'batch', 0)]
+
+subfile_titles += ['scVI_%s_%s_encoder10layers_trainset'%('muris_tabula', 'batch')]
+subfile_titles += ['scVI_%s_%s_encoder10layers_testset'%('muris_tabula', 'batch')]
+
+for i,MIScale in enumerate(MIScales):
+        file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula_encoder10layers\\trainset_tsne_SCVI+MI_%s_%s_MIScale%s_sample%s.png'%('muris_tabula', 'batch', MIScale, 0)]
+        file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula_encoder10layers\\testset_tsne_SCVI+MI_%s_%s_MIScale%s_sample%s.png'%('muris_tabula', 'batch', MIScale, 0)]
+        subfile_titles += ['scVI+MI_penalty %s %s MIScale%s trainset'%('muris_tabula', 'batch', MIScale)]
+        subfile_titles += ['scVI+MI_penalty %s %s MIScale%s testset'%('muris_tabula', 'batch', MIScale)] 
+
+SummarizeResult('image',file_paths,subfile_titles,'Fig6: tsne plot of scVI and scVI+MI_penalty for muris tabula dataset, batch nuisance factor')
 ```
 
 ```python
@@ -419,7 +414,7 @@ file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\%s_%s_n_layers%s_
 file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\%s_%s_n_layers%s_%s_clusteringmetrics.png' % ('Pbmc', 'batch',scvi_n_layers,'testing')]
 subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Pbmc', 'batch','training')]
 subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('Pbmc', 'batch','testing')]
-SummarizeResult('image',file_paths,subfile_titles,'Fig7: Clustering metrics comparison between scVI and scVI+MI_Penalty on Pbmc Dataset, batch nuisance factor')
+SummarizeResult('image',file_paths,subfile_titles,'Fig8: Clustering metrics comparison between scVI and scVI+MI_Penalty on Pbmc Dataset, batch nuisance factor')
 ```
 
 ```python
@@ -436,7 +431,7 @@ for i,MineLoss_Scale in enumerate(MineLoss_Scales):
         file_paths += ['result\\tune_hyperparameter_for_MineNet\\pbmc\\testset_tsne_SCVI+MINE_%s_%s_n_layers%s_sample%s_MineLossScale%s.png'%('Pbmc', 'batch',scvi_n_layers, 0, MineLoss_Scale)]
         subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s trainset'%('Pbmc', 'batch', MineLoss_Scale)]
         subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s testset'%('Pbmc', 'batch', MineLoss_Scale)] 
-SummarizeResult('image',file_paths,subfile_titles,'Fig8: tsne plot of scVI and scVI+MI_penalty for pbmc dataset, batch nuisance factor')
+SummarizeResult('image',file_paths,subfile_titles,'Fig9: tsne plot of scVI and scVI+MI_penalty for pbmc dataset, batch nuisance factor')
 ```
 
 <b><font size="3">2.2.5 Questions</font></b> 
@@ -657,8 +652,10 @@ SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig6: Comp
 ```python
 Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\estimatedMI_with_trueMI.csv', method='Mine_Net', distribution='categorical', gaussian_dimensions=[2])
 Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\estimatedMI_with_trueMI.csv', method='nearest_neighbor', distribution='categorical', gaussian_dimensions=[2])
+Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\estimatedMI_with_trueMI.csv', method='Mine_Net4', distribution='categorical', gaussian_dimensions=[2])
+
 hyperparameter_config = {
-        'method': ['Mine_Net'],
+        'method': ['Mine_Net','Mine_Net4'],
         'distribution': ['categorical'],
         'gaussian_dimension': [2],
         'type': ['training','testing']
@@ -726,6 +723,127 @@ Generally, to tune deep learning network:To find the best deep learning network,
 [deep learning in biomedical image processing](http://biomedicalcomputationreview.org/content/deep-learning-and-future-%E2%80%A8biomedical-image-analysis)
 
 Researchers are working on ways of peeking inside the models to understand how they select discriminant features. For example, a group of Stanford graduate students led by Avanti Shrikumar, a PhD candidate in computer science, recently developed an algorithm called DeepLIFT that attempts to determine which features are important by analyzing the activity of a model’s neurons when they are exposed to data. A team of engineers at the Israel-Technion Institute of Technology have devised a method of visualizing the neural activity of a network that resembles what one sees in fMRI of the human brain. And Rubin recently published a paper in which he and his colleagues trained a CNN to distinguish between benign and malignant breast tumors, and then used a visualization algorithm, called Directed Dream, to heighten and exaggerate specific details in order to maximize the images’ scores as either benign or malignant. The resulting “CNN-based hallucinations” effectively show how the CNN 
+
+```python
+
+```
+
+<!-- #region -->
+keywords for searching: invari* + deep learning/deep neural network/deep network, high-level feature + learning, representation learning/learning representation, 
+No review paper about invariance of deep learning ???
+
+Goodfellow et al.([2009](https://ai.stanford.edu/~ang/papers/nips09-MeasuringInvariancesDeepNetworks.pdf)) showed that both stacked autoencoder networks and convolutional deep belief networks (CDBNs) enjoy increasing invariance with depth even to complex 3-D out-of-plane rotation of natural images and natural video sequences, although the effects of depth in the two cases are different. Their observations supports the common view that invariances to minor shifts, rotations and deformations are learned in the lower layers, and combined in the higher layers to form progressively more invariant features. 
+
+
+And the two aspects can be combined to achieve the best result.
+
+
+
+
+
+[Measuring Invariances in Deep Networks](https://ai.stanford.edu/~ang/papers/nips09-MeasuringInvariancesDeepNetworks.pdf)
+
+Our proposed invariance measure is broadly applicable to evaluating many deep learning algorithms
+for many tasks, but the present paper will focus on two different algorithms applied to computer
+vision. First, we examine the invariances of <b>stacked autoencoder networks</b> [2]. These networks
+were shown by Larochelle et al. [3] to learn useful features for a range of vision tasks; this suggests
+that their learned features are significantly invariant to the transformations present in those tasks.
+Unlike the artificial data used in [3], however, our work uses natural images and natural video
+sequences, and examines more complex variations such as out-of-plane changes in viewing angle.
+We find that when trained under these conditions, <b>stacked autoencoders</b> learn increasingly invariant
+features with depth, but the effect of depth is small compared to other factors such as <b>regularization</b>.
+Next, we show that convolutional deep belief networks (CDBNs) [5], which are hand-designed to be
+invariant to certain local image translations, do enjoy dramatically increasing invariance with depth.
+This suggests that there is a benefit to using deep architectures, but that mechanisms besides simple
+stacking of autoencoders are important for gaining increasing invariance.
+
+Another interesting finding is that by incorporating <b>sparsity</b>, networks can become more invariant. Refer to this paper about [induce sparsity to deep network](https://arxiv.org/pdf/1902.09574.pdf). Pay attention to section 2. How to understand? Difference between sparsity and drop out?
+
+We also document that explicit approaches to achieving invariance such as <b>max-pooling</b> and weightsharing in CDBNs are currently successful strategies for achieving invariance. Refer to [this website](https://towardsdatascience.com/a-comprehensive-guide-to-convolutional-neural-networks-the-eli5-way-3bd2b1164a53) for CNN introduction. In it, 
+For CNN, adding a Fully-Connected layer after the convolutional and pooling layers is a (usually) cheap way of learning non-linear combinations of the high-level features as represented by the output of the convolutional layer. The Fully-Connected layer is learning a possibly non-linear function in that space. Soft-Max activation is used. Why? Refer to [the link](https://towardsdatascience.com/activation-functions-and-its-types-which-is-better-a9a5310cc8f) to compare different activation functions in deep learning. How to understand the problems of each activation function.
+
+Our work also seeks to address the question: why are deep learning algorithms useful? Bengio and
+LeCun gave a theoretical answer to this question, in which they showed that a deep architecture is
+necessary to <b>represent many functions compactly</b> [1].
+
+<b>restricted Boltzmann machine</b> 
+
+<b>deep network vs deep belief network</b>
+
+
+
+[Deep Learning of Invariant Features via Simulated
+Fixations in Video](http://papers.nips.cc/paper/4730-deep-learning-of-invariant-features-via-simulated-fixations-in-video.pdf)
+
+As a learning principle, sparsity is essential to understanding the statistics of natural images [2].
+However, it remains unclear to what extent <b>sparsity and subspace pooling</b> [3, 4] could produce
+invariance exhibited in higher levels of visual systems. Another approach to learning invariance is
+temporal slowness [1, 5, 6, 7]. Experimental evidence suggests that high-level visual representations
+become slow-changing and tolerant towards non-trivial transformations, by associating low-level
+features which appear in a coherent sequence [5]
+
+By stacking learning modules, we are able to learn
+features that are increasingly invariant. Using <b>temporal slowness</b>, the first layer units become locally
+translational invariant, similar to subspace or spatial pooling; the second layer units can then encode
+more complex invariances such as out-of-plane transformations and non-linear warping
+
+We have described an unsupervised learning algorithm for learning invariant features from video
+using the temporal slowness principle. The system is improved by using simulated fixations and
+smooth pursuit to generate the video sequences provided to the learning algorithm. We illustrate
+by virtual of visualization and invariance tests, that the learned features are invariant to a collection
+of non-trivial transformations. With concrete recognition experiments, we show that the features
+learned from natural videos not only apply to still images, but also give competitive results on a
+number of object recognition benchmarks. Since our features can be extracted using a feed-forward
+neural network, they are also easy to use and efficient to compute.
+
+
+
+
+Single Cell RNA Seq
+
+In single cell RNA seq, batch effect could come from when the sample is processed and when sequencing takes place, sequence platform, which individual the samples come from, how the sample is treated. Sometimes, biological difference can also be considered as batch effect based on different research aims. For example, if T cells from blood samples and T cells from other samples are combined together, and the research aim is to investigate the difference between norm T cells and abnormal T cells, we do not want the origin of the T cells to influence the result, here the origins of the T cells although are biological factors, it is considered as batch effect.
+
+For a given dataset, how can we know there is batch difference at the beginning. The most easiest way is to do some exploratory analysis, like draw the tsne plot using SCVI, if the batch difference is big like from two different sequencing platform, it will be very easy to see. Or we can 
+
+Mutual Information
+
+Rewrite the following, because it is copied from wikipedia:
+Mutual information (MI) of two random variables is a measure of the mutual dependence between the two variables. Let <b><i>X</i></b> be a pair of random variables with values over the space $\mathcal{X}$ X $\mathcal{Y}$. If their joint distribution is \textbf{\textit{P}}_{(\textbf{\textit{X,Y}})}} and the marginal distributions are {\displaystyle P_{X}} P_X and {\displaystyle P_{Y}} {\displaystyle P_{Y}}, the mutual information is defined as
+MI determines how similar the joint distribution of the pair <b>(<i>X,Y</i>)</b> is to the product of the marginal distributions of <b><i>X</i></b> and <b><i>Y</i></b>, and is more general than the correlation coefficient which only determines linear dependency. Mutual information contains information about all dependence—linear and nonlinear—and not just linear dependence as the correlation coefficient measures. 
+
+According to the paper [mutual information neural estimation](https://arxiv.org/pdf/1801.04062.pdf), both deep neural network architecture and the sample size of input dataset are important to shrink the difference between the estimator and true value of the mutual information.
+
+  Sample size: There is a method of calculating the required sample size recommended in the paper, understand the equation better.   
+  
+  To tune MINE, apart from the general factors for general deep learning network, in the paper, it is talked about that a naive application of stochastic gradient estimation leads to a biased estimate of the full batch gradient, the bias can be reduced by replacing the estimate in the demonimator by an exponential moving average, which will imporove all-around performance of MINE. Get more details about it.
+
+The mutual information neural estimation is only for continuous variables? The mutual information neural estimation is compared with the true value and k-NN-based non-parametric estimator in the paper for multivariate gaussian random variabls.
+
+  Between two continuous variable: we can compare the neural network estimator with the true value of mutual inforamtion for multivariate gaussian random variables. How to produce a positive definitive covariance matrix for the joint distribution of two multivariate gaussian. Why the method used in the original paper works.
+  
+  Between one continuous and one discrete variable: compare the neural network estimator with the nearest neighbour estimator [Mutual information between discrete and continuous data sets](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0087357&type=printable).
+  
+  
+  [Different forms of the lognormal distribution](https://all-geo.org/volcan01010/2013/09/how-to-use-lognormal-distributions-in-python/)
+  
+  The lognormal probability distribution of a dataset, X, is commonly defined as:
+
+f(x | μ,σ)=1xσ2π−−√e−(lnx−μ)22σ2
+In this formulation, μ and σ are the mean and standard deviation of ln(X).
+In Python, the scipy.stats.lognorm module uses a more general, 3-parameter formulation:
+
+f(x | [shape],[location],[scale])=1(x−[location])[shape]2π−−√e−(ln(x−[location])−ln([scale]))22[shape]2
+For most uses (i.e. unless data contain negative values), the location parameter is fixed at 0. This can be done during curve fitting using floc=0. The expression then simplifies to:
+
+f(x | [shape],[scale])=1x[shape]2π−−√e−(lnx−ln[scale])22[shape]2
+Comparing the two forms shows that:
+
+ln([scale])=μ
+therefore: [scale]=eμ
+and: [shape]=σ
+Confusingly, these are different from the parameters controlling a normal distribution in the scipy.stats.norm module, where location corresponds to the mean and scale is the standard deviation. They are also different to the definitions of location and scale for lognormal distributions in Wikipedia.
+
+<!-- #endregion -->
 
 ```python
 
