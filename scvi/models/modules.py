@@ -8,6 +8,8 @@ from torch.distributions import Normal
 from scvi.models.utils import one_hot
 
 import torch.nn.functional as F
+from torch.autograd import Variable
+from scipy.stats import multivariate_normal
 
 class FCLayers(nn.Module):
     r"""A helper class to build fully-connected layers for a neural network.
@@ -309,6 +311,27 @@ class MINE_Net4(nn.Module):
         h2 = self.linears(xy_2)
         return h, h2
 
+class MINE_Net4_2(nn.Module):
+    def __init__(self, xy_dim, n_latents):
+        super(MINE_Net4_2, self).__init__()
+        self.xy_dim = xy_dim
+
+        modules = [nn.Linear(xy_dim, n_latents[0]), nn.ReLU()]
+
+        prev_layer = n_latents[0]
+        for layer in n_latents[1:]:
+            modules.append(nn.Linear(prev_layer, layer))
+            modules.append(nn.ReLU())
+            prev_layer = layer
+
+        modules.append(nn.Linear(prev_layer, 1))
+        self.linears = nn.Sequential(*modules)
+
+    def forward(self, x, y):
+        h = self.linears(x)
+        h2 = self.linears(y)
+        return h, h2
+
 
 # discrete_continuous_info(d, c) estimates the mutual information between a
 # discrete vector 'd' and a continuous vector 'c' using
@@ -384,3 +407,27 @@ def discrete_continuous_info(d, c, k:int = 3, base: float = 2):
 
     f = (scipy.special.digamma(d.shape[1]) - av_psi_Nd + psi_ks - m_tot/(d.shape[1]))/math.log(base)
     return f
+
+def Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, nsamples_z):
+        # nsamples_z: the number of z taken from the aggregated posterior distribution of z
+        # list of hidden nodes for Mine_Net4_2
+
+        qz_m_array = qz_m.detach().numpy()
+        qz_v_array = qz_v.detach().numpy()
+        batch_index_list = np.ndarray.tolist(batch_index.detach().numpy().ravel())
+        qz_m_array_batch0 = qz_m_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 0], :]
+        qz_m_array_batch1 = qz_m_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 1], :]
+        qz_v_array_batch0 = qz_v_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 0], :]
+        qz_v_array_batch1 = qz_v_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 1], :]
+
+        z_batch0 = np.empty((0, qz_m_array.shape[-1]), float)
+        z_batch1 = np.empty((0, qz_m_array.shape[-1]), float)
+        for k in range(nsamples_z):
+            posterior_index_batch0 = np.random.choice(np.arange(0, qz_m_array_batch0.shape[0]),p=[1 / qz_m_array_batch0.shape[0] for i in range(qz_m_array_batch0.shape[0])])
+            z_0 = multivariate_normal(qz_m_array_batch0[posterior_index_batch0],qz_v_array_batch0[posterior_index_batch0]).rvs()
+            z_batch0 = np.append(z_batch0, np.array([z_0]), axis=0)
+
+            posterior_index_batch1 = np.random.choice(np.arange(0, qz_m_array_batch1.shape[0]),p=[1 / qz_m_array_batch1.shape[0] for i in range(qz_m_array_batch1.shape[0])])
+            z_1 = multivariate_normal(qz_m_array_batch1[posterior_index_batch1],qz_v_array_batch1[posterior_index_batch1]).rvs()
+            z_batch1 = np.append(z_batch1, np.array([z_1]), axis=0)
+        return z_batch0, z_batch1
