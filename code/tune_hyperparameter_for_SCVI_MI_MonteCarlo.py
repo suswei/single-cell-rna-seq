@@ -149,7 +149,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             if trainer_vae_MI.model.log_variational:
                 x_ = torch.log(1 + x_)
             qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, y=None)
-            z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, trainer_vae_MI.train_set.gene_dataset.batch_indices, trainer_vae_MI.model.nsamples_z,trainer_vae_MI.model.MineNet4_layers)
+            z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, trainer_vae_MI.train_set.gene_dataset.batch_indices, trainer_vae_MI.model.nsamples_z)
             z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
             pred_xz, pred_x_z = trainer_vae_MI.model.minenet(x=z_batch0_tensor, y=z_batch1_tensor)
@@ -181,7 +181,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             if trainer_vae_MI.model.log_variational:
                 x_ = torch.log(1 + x_)
             qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, y=None)
-            z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, trainer_vae_MI.test_set.gene_dataset.batch_indices, trainer_vae_MI.model.nsamples_z,trainer_vae_MI.model.MineNet4_layers)
+            z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, trainer_vae_MI.test_set.gene_dataset.batch_indices, trainer_vae_MI.model.nsamples_z)
             z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
             pred_xz, pred_x_z = trainer_vae_MI.model.minenet(x=z_batch0_tensor, y=z_batch1_tensor)
