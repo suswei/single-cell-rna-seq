@@ -215,8 +215,11 @@ class VAE_MI(nn.Module):
         #pred_xz = minenet(batch_index, z) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
         #pred_x_z = minenet(batch_index, z_shuffle) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
 
+        z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.nsamples_z)
+        batch0_indices = np.array([[0] * (z_batch0.shape[0])])
+        batch1_indices = np.array([[1] * (z_batch1.shape[0])])
         # calculate mutual information(MI) using MINE_Net4
-        if self.MI_estimator=='Mine_Net4':
+        if self.MI_estimator=='Mine_Net4': #modify this if part, use the samples from posterior distribution
             batch_dataframe = pd.DataFrame.from_dict({'batch': np.ndarray.tolist(batch_index.ravel())})
             batch_dummy = pd.get_dummies(batch_dataframe['batch']).values
             batch_dummy = Variable(batch_dummy.type(torch.FloatTensor), requires_grad=True)
@@ -225,11 +228,10 @@ class VAE_MI(nn.Module):
             pred_xz, pred_x_z = self.minenet(xy=z_batch, x_shuffle=z_shuffle, x_n_dim=z.shape[-1])
         elif self.MI_estimator=='NN':
         # calculate mutual information(MI) using nearest neighbor method
-            batch_index_array = np.array(batch_index.detach().numpy().transpose())
-            z_array = z.detach().numpy().transpose()
-            predicted_mutual_info = discrete_continuous_info(d=batch_index_array, c=z_array)
+            batch_array = np.append(batch0_indices, batch1_indices, axis=1)
+            z_array = np.append(z_batch0, z_batch1, axis=0).transpose()
+            predicted_mutual_info = discrete_continuous_info(d=batch_array, c=z_array)
         elif self.MI_estimator=='aggregated_posterior':
-            z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.nsamples_z)
             z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
             self.minenet = MINE_Net4_2(z_batch0_tensor.shape[-1], self.MineNet4_layers)

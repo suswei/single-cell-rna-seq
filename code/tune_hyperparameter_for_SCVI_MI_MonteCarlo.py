@@ -6,6 +6,7 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.sparse import csr_matrix
 from scvi.dataset import *
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
@@ -37,7 +38,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [200, 500, 800, 1000, 2000, 5000, 10000, 100000, 1000000],
+            'MIScale': [500, 1000, 5000, 10000, 100000, 1000000,10000000],
             'train_size': [0.8],
             'lr': [0.001],
             'n_epochs' : [250],
@@ -132,7 +133,14 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         be = trainer_vae_MI.train_set.entropy_batch_mixing()
 
         latent, batch_indices, labels = trainer_vae_MI.train_set.get_latent(sample=False)
-        if MI_estimator == 'Mine_Net4':
+        x_ = trainer_vae_MI.train_set.gene_dataset._X.toarray()
+        if trainer_vae_MI.model.log_variational:
+            x_ = np.log(1 + x_)
+        qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, None)
+        z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, trainer_vae_MI.train_set.gene_dataset.batch_indices,trainer_vae_MI.model.nsamples_z)
+        batch0_indices = np.array([[0] * (z_batch0.shape[0])])
+        batch1_indices = np.array([[1] * (z_batch1.shape[0])])
+        if MI_estimator == 'Mine_Net4': ##this if part should be modified
             latent_tensor = Variable(latent.type(torch.FloatTensor), requires_grad=True)
             latent_shuffle = np.random.permutation(latent)
             latent_shuffle = Variable(torch.from_numpy(latent_shuffle).type(torch.FloatTensor), requires_grad=True)
@@ -141,15 +149,10 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             pred_xz, pred_x_z = trainer_vae_MI.model.minenet(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
         elif MI_estimator == 'NN':
-            batch_array = batch_indices.transpose()
-            latent_array = latent.transpose()
-            predicted_mutual_info = discrete_continuous_info(d=batch_array, c=latent_array)
+            batch_array = np.append(batch0_indices, batch1_indices, axis=1)
+            z_array = np.append(z_batch0, z_batch1, axis=0).transpose()
+            predicted_mutual_info = discrete_continuous_info(d=batch_array, c=z_array)
         elif MI_estimator == 'aggregated_posterior':
-            x_ = trainer_vae_MI.train_set.gene_dataset._X
-            if trainer_vae_MI.model.log_variational:
-                x_ = torch.log(1 + x_)
-            qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, y=None)
-            z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, trainer_vae_MI.train_set.gene_dataset.batch_indices, trainer_vae_MI.model.nsamples_z)
             z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
             pred_xz, pred_x_z = trainer_vae_MI.model.minenet(x=z_batch0_tensor, y=z_batch1_tensor)
@@ -164,7 +167,16 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         be = trainer_vae_MI.test_set.entropy_batch_mixing()
 
         latent, batch_indices, labels = trainer_vae_MI.test_set.get_latent(sample=False)
-        if MI_estimator == 'Mine_Net4':
+        x_ = trainer_vae_MI.test_set.gene_dataset._X.toarray()
+        x_ = Variable(torch.from_numpy(x_).type(torch.FloatTensor), requires_grad=True)
+        if trainer_vae_MI.model.log_variational:
+            x_ = torch.log(1 + x_)
+        qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, None)
+        batch_indices_tensor = Variable(torch.from_numpy(trainer_vae_MI.test_set.gene_dataset.batch_indices).type(torch.FloatTensor), requires_grad=True)
+        z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v,batch_indices_tensor,trainer_vae_MI.model.nsamples_z)
+        batch0_indices = np.array([[0] * (z_batch0.shape[0])])
+        batch1_indices = np.array([[1] * (z_batch1.shape[0])])
+        if MI_estimator == 'Mine_Net4': ##this if part should be modified
             latent_tensor = Variable(latent.type(torch.FloatTensor), requires_grad=True)
             latent_shuffle = np.random.permutation(latent)
             latent_shuffle = Variable(torch.from_numpy(latent_shuffle).type(torch.FloatTensor), requires_grad=True)
@@ -173,15 +185,10 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             pred_xz, pred_x_z = trainer_vae_MI.model.minenet(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
         elif MI_estimator == 'NN':
-            batch_array = batch_indices.transpose()
-            latent_array = latent.transpose()
-            predicted_mutual_info = discrete_continuous_info(d=batch_array, c=latent_array)
+            batch_array = np.append(batch0_indices,batch1_indices, axis=1)
+            z_array = np.append(z_batch0, z_batch1, axis=0).transpose()
+            predicted_mutual_info = discrete_continuous_info(d=batch_array, c=z_array)
         elif MI_estimator == 'aggregated_posterior':
-            x_ = trainer_vae_MI.test_set.gene_dataset._X
-            if trainer_vae_MI.model.log_variational:
-                x_ = torch.log(1 + x_)
-            qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, y=None)
-            z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, trainer_vae_MI.test_set.gene_dataset.batch_indices, trainer_vae_MI.model.nsamples_z)
             z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
             pred_xz, pred_x_z = trainer_vae_MI.model.minenet(x=z_batch0_tensor, y=z_batch1_tensor)
