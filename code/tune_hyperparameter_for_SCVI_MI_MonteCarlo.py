@@ -241,13 +241,19 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
     asw, nmi, ari, uca = trainer_vae.train_set.clustering_scores()
     be = trainer_vae.train_set.entropy_batch_mixing()
 
-    latent, batch_indices, labels = trainer_vae.train_set.get_latent(sample=False)
+    x_ = trainer_vae.train_set.gene_dataset._X.toarray()
+    if trainer_vae.model.log_variational:
+        x_ = np.log(1 + x_)
+    qz_m, qz_v, z = trainer_vae.model.z_encoder(x_, None)
+    z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v,trainer_vae.train_set.gene_dataset.batch_indices,trainer_vae.model.nsamples_z)
+    batch0_indices = np.array([[0] * (z_batch0.shape[0])])
+    batch1_indices = np.array([[1] * (z_batch1.shape[0])])
     if MI_estimator == 'Mine_Net4':
         predicted_mutual_info = None
     elif MI_estimator == 'NN':
-        batch_array = batch_indices.transpose()
-        latent_array = latent.transpose()
-        predicted_mutual_info = discrete_continuous_info(d=batch_array, c=latent_array)
+        batch_array = np.append(batch0_indices, batch1_indices, axis=1)
+        z_array = np.append(z_batch0, z_batch1, axis=0).transpose()
+        predicted_mutual_info = discrete_continuous_info(d=batch_array, c=z_array)
     elif MI_estimator == 'aggregated_posterior':
         predicted_mutual_info = None
 
@@ -258,13 +264,19 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
     asw, nmi, ari, uca = trainer_vae.test_set.clustering_scores()
     be = trainer_vae.test_set.entropy_batch_mixing()
 
-    latent, batch_indices, labels = trainer_vae.test_set.get_latent(sample=False)
+    x_ = trainer_vae.test_set.gene_dataset._X.toarray()
+    if trainer_vae.model.log_variational:
+        x_ = np.log(1 + x_)
+    qz_m, qz_v, z = trainer_vae.model.z_encoder(x_, None)
+    z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, trainer_vae.train_set.gene_dataset.batch_indices,trainer_vae.model.nsamples_z)
+    batch0_indices = np.array([[0] * (z_batch0.shape[0])])
+    batch1_indices = np.array([[1] * (z_batch1.shape[0])])
     if MI_estimator == 'Mine_Net4':
         predicted_mutual_info = None
     elif MI_estimator == 'NN':
-        batch_array = batch_indices.transpose()
-        latent_array = latent.transpose()
-        predicted_mutual_info = discrete_continuous_info(d=batch_array, c=latent_array)
+        batch_array = np.append(batch0_indices, batch1_indices, axis=1)
+        z_array = np.append(z_batch0, z_batch1, axis=0).transpose()
+        predicted_mutual_info = discrete_continuous_info(d=batch_array, c=z_array)
     elif MI_estimator == 'aggregated_posterior':
         predicted_mutual_info = None
 
