@@ -60,7 +60,7 @@ class VAE_MI(nn.Module):
                  dropout_rate: float = 0.1, dispersion: str = "gene",
                  log_variational: bool = True, reconstruction_loss: str = "zinb",
                  n_hidden_z: int = 5, n_layers_z: int = 10,
-                 MI_estimator: str = 'NN', MineNet4_layers: list=[32,16], MIScale: int=1, nsamples_z: int=1000):
+                 MI_estimator: str = 'NN', MineNet4_architecture: list=[32,16], MIScale: int=1, nsamples_z: int=200):
         super().__init__()
         self.dispersion = dispersion
         self.n_latent = n_latent
@@ -74,7 +74,7 @@ class VAE_MI(nn.Module):
         self.n_hidden_z = n_hidden_z
         self.n_layers_z = n_layers_z
         self.MI_estimator = MI_estimator
-        self.MineNet4_layers = MineNet4_layers
+        self.MineNet4_architecture = MineNet4_architecture
         self.MIScale = MIScale
         self.nsamples_z = nsamples_z
 
@@ -224,7 +224,7 @@ class VAE_MI(nn.Module):
             batch_dummy = pd.get_dummies(batch_dataframe['batch']).values
             batch_dummy = Variable(batch_dummy.type(torch.FloatTensor), requires_grad=True)
             z_batch = torch.cat([z, batch_dummy],dim=1)
-            self.minenet = MINE_Net4(z_batch.shape[-1], self.MineNet4_layers)
+            self.minenet = MINE_Net4(z_batch.shape[-1], self.MineNet4_architecture)
             pred_xz, pred_x_z = self.minenet(xy=z_batch, x_shuffle=z_shuffle, x_n_dim=z.shape[-1])
         elif self.MI_estimator=='NN':
         # calculate mutual information(MI) using nearest neighbor method
@@ -234,7 +234,7 @@ class VAE_MI(nn.Module):
         elif self.MI_estimator=='aggregated_posterior':
             z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
-            self.minenet = MINE_Net4_2(z_batch0_tensor.shape[-1], self.MineNet4_layers)
+            self.minenet = MINE_Net4_2(z_batch0_tensor.shape[-1], self.MineNet4_architecture)
             pred_xz, pred_x_z = self.minenet(x=z_batch0_tensor, y=z_batch1_tensor)
 
         #TODO: have another MINE net for library depth
