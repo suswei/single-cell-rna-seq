@@ -163,7 +163,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             latent_shuffle = Variable(torch.from_numpy(latent_shuffle).type(torch.FloatTensor), requires_grad=True)
             batch_tensor = Variable(batch_indices.type(torch.FloatTensor), requires_grad=True)
             latent_batch = torch.cat([latent_tensor, batch_tensor], dim=1)
-            pred_xz, pred_x_z = trainer_vae_MI.model.minenet(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
+            pred_xz, pred_x_z = trainer_vae_MI.adv_model(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
         elif MI_estimator == 'NN':
             batch_array = np.append(batch0_indices, batch1_indices, axis=1)
@@ -172,7 +172,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         elif MI_estimator == 'aggregated_posterior':
             z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
-            pred_xz, pred_x_z = trainer_vae_MI.model.minenet(x=z_batch0_tensor, y=z_batch1_tensor)
+            pred_xz, pred_x_z = trainer_vae_MI.adv_model(x=z_batch0_tensor, y=z_batch1_tensor)
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
 
         label = '%s_%s_MIScale%s_sample%s_VaeMI_trainset'%(dataset_name, nuisance_variable, MIScale, taskid)
@@ -199,7 +199,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             latent_shuffle = Variable(torch.from_numpy(latent_shuffle).type(torch.FloatTensor), requires_grad=True)
             batch_tensor = Variable(batch_indices.type(torch.FloatTensor), requires_grad=True)
             latent_batch = torch.cat([latent_tensor, batch_tensor], dim=1)
-            pred_xz, pred_x_z = trainer_vae_MI.model.minenet(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
+            pred_xz, pred_x_z = trainer_vae_MI.adv_model(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
         elif MI_estimator == 'NN':
             batch_array = np.append(batch0_indices,batch1_indices, axis=1)
@@ -208,7 +208,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         elif MI_estimator == 'aggregated_posterior':
             z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
-            pred_xz, pred_x_z = trainer_vae_MI.model.minenet(x=z_batch0_tensor, y=z_batch1_tensor)
+            pred_xz, pred_x_z = trainer_vae_MI.adv_model(x=z_batch0_tensor, y=z_batch1_tensor)
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
 
         label = '%s_%s_MIScale%s_sample%s_VaeMI_testset'%(dataset_name, nuisance_variable, MIScale, taskid)
