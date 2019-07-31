@@ -93,7 +93,6 @@ class Trainer:
     def train(self, n_epochs=20, lr=1e-3, eps=0.01, params=None):
         begin = time.time()
         self.model.train()
-
         if params is None:
             params = filter(lambda p: p.requires_grad, self.model.parameters())
 
