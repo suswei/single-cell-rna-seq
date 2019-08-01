@@ -44,7 +44,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             'lr': [0.001],
             'adv_lr': [0.00005],
             'n_epochs' : [250],
-            'nsamples_z': [1000],
+            'nsamples_z': [200],
             'adv': [True]
         }
     elif dataset_name=='pbmc' and nuisance_variable=='batch':
