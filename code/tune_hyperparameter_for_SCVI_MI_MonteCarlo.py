@@ -62,6 +62,8 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             'lr': [0.01],
             'adv_lr': [0.001],
             'n_epochs': [170],
+            'nsamples_z': [200],
+            'adv': [False]
         }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -113,10 +115,11 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
                         MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z= nsamples_z, adv=adv)
         trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
                                              use_cuda=use_cuda, frequency=5, kl=1)
-        minenet = MINE_Net4_2(vae_MI.n_latent, vae_MI.MineNet4_architecture)
-        adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
-        trainer_vae_MI.adv_model = minenet
-        trainer_vae_MI.adv_optimizer = adv_optimizer
+        if adv==True and MI_estimator=='Mine_Net4':
+            minenet = MINE_Net4_2(vae_MI.n_latent, vae_MI.MineNet4_architecture)
+            adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
+            trainer_vae_MI.adv_model = minenet
+            trainer_vae_MI.adv_optimizer = adv_optimizer
 
         vae_MI_file_path = '%s/%s_%s_MIScale%s_sample%s_VaeMI.pk1'%(data_save_path, dataset_name, nuisance_variable, MIScale, taskid)
 
