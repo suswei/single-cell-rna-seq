@@ -11,7 +11,7 @@ from scvi.dataset import *
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
-from scvi.models.modules import discrete_continuous_info, Sample_From_Aggregated_Posterior
+from scvi.models.modules import MINE_Net4_2, discrete_continuous_info, Sample_From_Aggregated_Posterior
 from scvi.inference import UnsupervisedTrainer
 import torch
 from torch.autograd import Variable
@@ -42,7 +42,10 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             'MIScale': [500, 1000, 5000, 10000, 100000, 1000000,10000000],
             'train_size': [0.8],
             'lr': [0.001],
+            'adv_lr': [0.00005],
             'n_epochs' : [250],
+            'nsamples_z': [200],
+            'adv': [True]
         }
     elif dataset_name=='pbmc' and nuisance_variable=='batch':
         hyperparameter_config = {
@@ -57,6 +60,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             'MIScale': [200, 500, 800, 1000, 2000, 5000, 10000, 100000],
             'train_size': [0.8],
             'lr': [0.01],
+            'adv_lr': [0.001],
             'n_epochs': [170],
         }
     keys, values = zip(*hyperparameter_config.items())
@@ -98,10 +102,22 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         MIScale = value[8]
         train_size = value[9]
         lr = value[10]
-        n_epochs = value[11]
+        adv_lr = value[11]
+        n_epochs = value[12]
+        nsamples_z = value[13]
+        adv = value[14]
 
-        vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder = n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss, MI_estimator=MI_estimator, MIScale=MIScale)
-        trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda,frequency=5, kl=1)
+        vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
+                        n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder = n_layers_encoder,
+                        n_layers_decoder=n_layers_decoder, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss,
+                        MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z= nsamples_z, adv=adv)
+        trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
+                                             use_cuda=use_cuda, frequency=5, kl=1)
+        minenet = MINE_Net4_2(vae_MI.n_latent, vae_MI.MineNet4_architecture)
+        adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
+        trainer_vae_MI.adv_model = minenet
+        trainer_vae_MI.adv_optimizer = adv_optimizer
+
         vae_MI_file_path = '%s/%s_%s_MIScale%s_sample%s_VaeMI.pk1'%(data_save_path, dataset_name, nuisance_variable, MIScale, taskid)
 
         if os.path.isfile(vae_MI_file_path):
@@ -147,7 +163,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             latent_shuffle = Variable(torch.from_numpy(latent_shuffle).type(torch.FloatTensor), requires_grad=True)
             batch_tensor = Variable(batch_indices.type(torch.FloatTensor), requires_grad=True)
             latent_batch = torch.cat([latent_tensor, batch_tensor], dim=1)
-            pred_xz, pred_x_z = trainer_vae_MI.model.minenet(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
+            pred_xz, pred_x_z = trainer_vae_MI.adv_model(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
         elif MI_estimator == 'NN':
             batch_array = np.append(batch0_indices, batch1_indices, axis=1)
@@ -156,7 +172,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         elif MI_estimator == 'aggregated_posterior':
             z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
-            pred_xz, pred_x_z = trainer_vae_MI.model.minenet(x=z_batch0_tensor, y=z_batch1_tensor)
+            pred_xz, pred_x_z = trainer_vae_MI.adv_model(x=z_batch0_tensor, y=z_batch1_tensor)
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
 
         label = '%s_%s_MIScale%s_sample%s_VaeMI_trainset'%(dataset_name, nuisance_variable, MIScale, taskid)
@@ -183,7 +199,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             latent_shuffle = Variable(torch.from_numpy(latent_shuffle).type(torch.FloatTensor), requires_grad=True)
             batch_tensor = Variable(batch_indices.type(torch.FloatTensor), requires_grad=True)
             latent_batch = torch.cat([latent_tensor, batch_tensor], dim=1)
-            pred_xz, pred_x_z = trainer_vae_MI.model.minenet(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
+            pred_xz, pred_x_z = trainer_vae_MI.adv_model(xy=latent_batch, x_shuffle=latent_shuffle, x_n_dim=latent.shape[-1])
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
         elif MI_estimator == 'NN':
             batch_array = np.append(batch0_indices,batch1_indices, axis=1)
@@ -192,7 +208,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         elif MI_estimator == 'aggregated_posterior':
             z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
-            pred_xz, pred_x_z = trainer_vae_MI.model.minenet(x=z_batch0_tensor, y=z_batch1_tensor)
+            pred_xz, pred_x_z = trainer_vae_MI.adv_model(x=z_batch0_tensor, y=z_batch1_tensor)
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
 
         label = '%s_%s_MIScale%s_sample%s_VaeMI_testset'%(dataset_name, nuisance_variable, MIScale, taskid)
