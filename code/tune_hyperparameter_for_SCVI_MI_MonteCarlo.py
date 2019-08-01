@@ -45,7 +45,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             'adv_lr': [0.00005],
             'n_epochs' : [250],
             'nsamples_z': [200],
-            'adv': [True]
+            'adv': [False]
         }
     elif dataset_name=='pbmc' and nuisance_variable=='batch':
         hyperparameter_config = {
