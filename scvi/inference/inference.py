@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import torch
 from torch.autograd import Variable
 from scvi.models.modules import Sample_From_Aggregated_Posterior
-
 from . import Trainer
 
 plt.switch_backend('agg')
