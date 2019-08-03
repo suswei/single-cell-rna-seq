@@ -61,7 +61,7 @@ class VAE_MI(nn.Module):
                  log_variational: bool = True, reconstruction_loss: str = "zinb",
                  n_hidden_z: int = 5, n_layers_z: int = 10,
                  MI_estimator: str = 'NN', MineNet4_architecture: list=[32,16], MIScale: int=1,
-                 nsamples_z: int=200, adv: bool=True):
+                 nsamples_z: int=200, adv: bool=False):
         super().__init__()
         self.dispersion = dispersion
         self.log_variational = log_variational
