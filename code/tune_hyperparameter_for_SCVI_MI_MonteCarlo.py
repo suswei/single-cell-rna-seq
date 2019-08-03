@@ -115,7 +115,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
                         MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z= nsamples_z, adv=adv)
         trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
                                              use_cuda=use_cuda, frequency=5, kl=1)
-        if adv==True and MI_estimator=='Mine_Net4':
+        if adv==True and MI_estimator=='aggregated_posterior':
             minenet = MINE_Net4_2(vae_MI.n_latent, vae_MI.MineNet4_architecture)
             adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
             trainer_vae_MI.adv_model = minenet
@@ -156,8 +156,10 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         x_ = trainer_vae_MI.train_set.gene_dataset._X.toarray()
         if trainer_vae_MI.model.log_variational:
             x_ = np.log(1 + x_)
+        x_ = Variable(torch.from_numpy(x_).type(torch.FloatTensor), requires_grad=True)
         qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, None)
-        z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, trainer_vae_MI.train_set.gene_dataset.batch_indices,trainer_vae_MI.model.nsamples_z)
+        batch_indices_tensor = Variable(torch.from_numpy(trainer_vae_MI.train_set.gene_dataset.batch_indices).type(torch.FloatTensor), requires_grad=True)
+        z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_indices_tensor ,trainer_vae_MI.model.nsamples_z)
         batch0_indices = np.array([[0] * (z_batch0.shape[0])])
         batch1_indices = np.array([[1] * (z_batch1.shape[0])])
         if MI_estimator == 'Mine_Net4': ##this if part should be modified
@@ -188,9 +190,9 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
 
         latent, batch_indices, labels = trainer_vae_MI.test_set.get_latent(sample=False)
         x_ = trainer_vae_MI.test_set.gene_dataset._X.toarray()
-        x_ = Variable(torch.from_numpy(x_).type(torch.FloatTensor), requires_grad=True)
         if trainer_vae_MI.model.log_variational:
-            x_ = torch.log(1 + x_)
+            x_ = np.log(1 + x_)
+        x_ = Variable(torch.from_numpy(x_).type(torch.FloatTensor), requires_grad=True)
         qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, None)
         batch_indices_tensor = Variable(torch.from_numpy(trainer_vae_MI.test_set.gene_dataset.batch_indices).type(torch.FloatTensor), requires_grad=True)
         z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v,batch_indices_tensor,trainer_vae_MI.model.nsamples_z)
@@ -219,7 +221,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
         clustering_metric.to_csv('%s/%s_%s_sample%s_ClusterMetric.csv' % (result_save_path, dataset_name, nuisance_variable, taskid), index=None, header=True)
 
-    vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder = n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss)
+    vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder = n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z)
     trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5)
     vae_file_path = '%s/%s_%s_sample%s_Vae.pk1'%(data_save_path,dataset_name, nuisance_variable, taskid)
 
@@ -264,8 +266,10 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
     x_ = trainer_vae.train_set.gene_dataset._X.toarray()
     if trainer_vae.model.log_variational:
         x_ = np.log(1 + x_)
+    x_ = Variable(torch.from_numpy(x_).type(torch.FloatTensor), requires_grad=True)
     qz_m, qz_v, z = trainer_vae.model.z_encoder(x_, None)
-    z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v,trainer_vae.train_set.gene_dataset.batch_indices,trainer_vae.model.nsamples_z)
+    batch_indices_tensor = Variable(torch.from_numpy(trainer_vae.train_set.gene_dataset.batch_indices).type(torch.FloatTensor), requires_grad=True)
+    z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v,batch_indices_tensor,trainer_vae.model.nsamples_z)
     batch0_indices = np.array([[0] * (z_batch0.shape[0])])
     batch1_indices = np.array([[1] * (z_batch1.shape[0])])
     if MI_estimator == 'Mine_Net4':
@@ -287,8 +291,10 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
     x_ = trainer_vae.test_set.gene_dataset._X.toarray()
     if trainer_vae.model.log_variational:
         x_ = np.log(1 + x_)
+    x_ = Variable(torch.from_numpy(x_).type(torch.FloatTensor), requires_grad=True)
     qz_m, qz_v, z = trainer_vae.model.z_encoder(x_, None)
-    z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, trainer_vae.train_set.gene_dataset.batch_indices,trainer_vae.model.nsamples_z)
+    batch_indices_tensor = Variable(torch.from_numpy(trainer_vae.test_set.gene_dataset.batch_indices).type(torch.FloatTensor), requires_grad=True)
+    z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_indices_tensor, trainer_vae.model.nsamples_z)
     batch0_indices = np.array([[0] * (z_batch0.shape[0])])
     batch1_indices = np.array([[1] * (z_batch1.shape[0])])
     if MI_estimator == 'Mine_Net4':
