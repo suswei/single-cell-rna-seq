@@ -17,6 +17,7 @@ import torch
 from torch.autograd import Variable
 import itertools
 
+
 def main(taskid, dataset_name, nuisance_variable, MI_estimator):
 
     # taskid is just any integer from 0 to 99
@@ -24,10 +25,10 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
     # nuisance_variable could be 'batch'
     # MI_estimator could be 'Mine_Net4', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
 
-    if not os.path.exists('data/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name)):
-        os.makedirs('data/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name))
-    if not os.path.exists('result/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name)):
-        os.makedirs('result/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name))
+    if not os.path.exists('../data/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name)):
+        os.makedirs('../data/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name))
+    if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name)):
+        os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name))
 
     if dataset_name=='muris_tabula' and nuisance_variable=='batch':
         hyperparameter_config = {
@@ -39,13 +40,16 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [500, 1000, 5000, 10000, 100000, 1000000,10000000],
+            'MIScale': [1000000], #500, 1000, 5000, 10000, 100000,
             'train_size': [0.8],
             'lr': [0.001],
-            'adv_lr': [0.00005],
+            'adv_lr': [1e-8],
             'n_epochs' : [250],
             'nsamples_z': [200],
-            'adv': [False]
+            'adv': [True],
+            'Adv_MineNet4_architecture': [[256,256,128,128,64,64,32,32,16,16]],
+            'adv_epochs': [250],
+            'change_adv_epochs': [250]
         }
     elif dataset_name=='pbmc' and nuisance_variable=='batch':
         hyperparameter_config = {
@@ -68,8 +72,8 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    data_save_path = './data/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name)
-    result_save_path = './result/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name)
+    data_save_path = '../data/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name)
+    result_save_path = '../result/tune_hyperparameter_for_SCVI_MI/%s'%(dataset_name)
 
     if dataset_name=='muris_tabula':
         dataset1 = TabulaMuris('facs',save_path = data_save_path)
@@ -103,26 +107,32 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         use_cuda = value[7]
         MIScale = value[8]
         train_size = value[9]
-        lr = value[10]
+        lr = value[10] #0.0005
         adv_lr = value[11]
-        n_epochs = value[12]
+        n_epochs = value[12] #500
         nsamples_z = value[13]
         adv = value[14]
+        Adv_MineNet4_architecture = value[15]
+        adv_epochs = value[16]
+        change_adv_epochs = value[17]
 
         vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
                         n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder = n_layers_encoder,
                         n_layers_decoder=n_layers_decoder, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss,
-                        MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z= nsamples_z, adv=adv)
+                        MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z= nsamples_z, adv=adv, Adv_MineNet4_architecture=Adv_MineNet4_architecture)
         trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
                                              use_cuda=use_cuda, frequency=5, kl=1)
         if adv==True and MI_estimator=='aggregated_posterior':
-            minenet = MINE_Net4_2(vae_MI.n_latent, vae_MI.MineNet4_architecture)
+            minenet = MINE_Net4_2(vae_MI.n_latent+1, vae_MI.Adv_MineNet4_architecture)
             adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
             trainer_vae_MI.adv_model = minenet
             trainer_vae_MI.adv_optimizer = adv_optimizer
+            trainer_vae_MI.adv_epochs = adv_epochs
+            trainer_vae_MI.change_adv_epochs = change_adv_epochs
 
         vae_MI_file_path = '%s/%s_%s_MIScale%s_sample%s_VaeMI.pk1'%(data_save_path, dataset_name, nuisance_variable, MIScale, taskid)
-
+        trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
+        '''
         if os.path.isfile(vae_MI_file_path):
             trainer_vae_MI.model.load_state_dict(torch.load(vae_MI_file_path))
             trainer_vae_MI.model.eval()
@@ -145,10 +155,10 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             fig1_path = '%s/training_testing_error_SCVI+MI_%s_%s__MIScale%s_sample%s.png'%(result_save_path, dataset_name,nuisance_variable, MIScale, taskid )
             fig.savefig(fig1_path)
             plt.close(fig)
-
+        
         trainer_vae_MI.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/trainset_tsne_SCVI+MI_%s_%s_MIScale%s_sample%s'%(result_save_path, dataset_name,nuisance_variable, MIScale, taskid))
         trainer_vae_MI.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='%s/testset_tsne_SCVI+MI_%s_%s_MIScale%s_sample%s'%(result_save_path, dataset_name,nuisance_variable, MIScale, taskid))
-
+        '''
         asw, nmi, ari, uca = trainer_vae_MI.train_set.clustering_scores()
         be = trainer_vae_MI.train_set.entropy_batch_mixing()
 
@@ -219,8 +229,8 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         label = '%s_%s_MIScale%s_sample%s_VaeMI_testset'%(dataset_name, nuisance_variable, MIScale, taskid)
         intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'MILoss':[predicted_mutual_info]})
         clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
-        clustering_metric.to_csv('%s/%s_%s_sample%s_ClusterMetric.csv' % (result_save_path, dataset_name, nuisance_variable, taskid), index=None, header=True)
-
+        #clustering_metric.to_csv('%s/%s_%s_sample%s_ClusterMetric.csv' % (result_save_path, dataset_name, nuisance_variable, taskid), index=None, header=True)
+    '''
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder = n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z)
     trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5)
     vae_file_path = '%s/%s_%s_sample%s_Vae.pk1'%(data_save_path,dataset_name, nuisance_variable, taskid)
@@ -311,7 +321,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
     clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
 
     clustering_metric.to_csv('%s/%s_%s_sample%s_ClusterMetric.csv'%(result_save_path, dataset_name, nuisance_variable, taskid), index=None, header=True)
-
+    '''
 # Run the actual program
 if __name__ == "__main__":
   main(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4])

@@ -5,6 +5,8 @@ import torch
 from torch.autograd import Variable
 from scvi.models.modules import Sample_From_Aggregated_Posterior
 from . import Trainer
+import numpy as np
+from tqdm import tqdm
 
 plt.switch_backend('agg')
 
@@ -29,12 +31,15 @@ class UnsupervisedTrainer(Trainer):
     """
     default_metrics_to_monitor = ['ll']
 
-    def __init__(self, model, gene_dataset, train_size=0.8, test_size=None, kl=None, seed=0, adv_model=None, adv_optimizer=None, **kwargs):
+    def __init__(self, model, gene_dataset, train_size=0.8, test_size=None, kl=None, seed=0, adv_model=None, adv_optimizer=None, adv_epochs=1, change_adv_epochs_index=0, change_adv_epochs=50, **kwargs):
         super().__init__(model, gene_dataset, **kwargs)
         self.kl = kl
         self.seed = seed
         self.adv_model = adv_model
         self.adv_optimizer = adv_optimizer
+        self.adv_epochs = adv_epochs
+        self.change_adv_epochs_index = change_adv_epochs_index
+        self.change_adv_epochs = change_adv_epochs
         if type(self) is UnsupervisedTrainer:
             self.train_set, self.test_set = self.train_test(model, gene_dataset, train_size, test_size, seed=self.seed)
             self.train_set.to_monitor = ['ll']
@@ -46,22 +51,33 @@ class UnsupervisedTrainer(Trainer):
 
     def loss(self, tensors):
         if self.model.adv == True:
-            for tensor_adv in self.data_loaders_loop():
-                sample_batch_adv, local_l_mean_adv, local_l_var_adv, batch_index_adv, _ = tensor_adv[0]
-                x_ = sample_batch_adv
-                if self.model.log_variational:
-                    x_ = torch.log(1 + x_)
-                # Sampling
-                qz_m, qz_v, z = self.model.z_encoder(x_, None)
-                z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v,batch_index_adv,self.model.nsamples_z)
-                z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
-                z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
-                pred_xz, pred_x_z = self.adv_model(x=z_batch0_tensor, y=z_batch1_tensor)
-                loss_adv = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
-                loss_adv2 = -loss_adv #maximizing loss_adv equals minimizing -loss_adv
-                self.adv_model.zero_grad()
-                loss_adv2.backward()
-                self.adv_optimizer.step()
+            for adv_epoch in tqdm(range(self.adv_epochs)):
+                for tensor_adv in self.data_loaders_loop():
+                    sample_batch_adv, local_l_mean_adv, local_l_var_adv, batch_index_adv, _ = tensor_adv[0]
+                    x_ = sample_batch_adv
+                    if self.model.log_variational:
+                        x_ = torch.log(1 + x_)
+                    # Sampling
+                    qz_m, qz_v, z = self.model.z_encoder(x_, None)
+                    ql_m, ql_v, library = self.model.l_encoder(x_)
+                    #z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v,batch_index_adv,self.model.nsamples_z)
+                    #z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
+                    #z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
+                    batch_index_adv_list = np.ndarray.tolist(batch_index_adv.detach().numpy())
+                    z_batch0_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i]==[0]],:]
+                    z_batch1_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i]==[1]],:]
+                    l_batch0_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i]==[0]],:]
+                    l_batch1_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]],:]
+                    l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor),dim=1)
+                    l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
+                    pred_xz, pred_x_z = self.adv_model(x=l_z_batch0_tensor, y=l_z_batch1_tensor)
+                    loss_adv = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+                    loss_adv2 = -loss_adv #maximizing loss_adv equals minimizing -loss_adv
+                    self.adv_model.zero_grad()
+                    loss_adv2.backward()
+                    self.adv_optimizer.step()
+            self.change_adv_epochs_index = 1
+            self.adv_epochs = self.change_adv_epochs
 
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
             reconst_loss, kl_divergence = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
@@ -70,10 +86,18 @@ class UnsupervisedTrainer(Trainer):
                 x_ = torch.log(1 + x_)
             # Sampling
             qz_m, qz_v, z = self.model.z_encoder(x_, None)
-            z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index_adv, self.model.nsamples_z)
-            z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
-            z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
-            pred_xz, pred_x_z = self.adv_model(x=z_batch0_tensor, y=z_batch1_tensor)
+            ql_m, ql_v, library = self.model.l_encoder(x_)
+            #z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index_adv, self.model.nsamples_z)
+            #z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
+            #z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
+            batch_index_list = np.ndarray.tolist(batch_index.detach().numpy())
+            z_batch0_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]], :]
+            z_batch1_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]], :]
+            l_batch0_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]],:]
+            l_batch1_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]],:]
+            l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
+            l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
+            pred_xz, pred_x_z = self.adv_model(x=l_z_batch0_tensor, y=l_z_batch1_tensor)
             MI_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
             scaled_MI_loss = self.model.MIScale*MI_loss
             print('reconst_loss:{}, MI_loss:{}, scaled_MI_loss:{}'.format(reconst_loss.mean(), MI_loss, scaled_MI_loss))

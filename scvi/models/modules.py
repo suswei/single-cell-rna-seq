@@ -344,7 +344,7 @@ import math
 import scipy
 def discrete_continuous_info(d, c, k:int = 3, base: float = 2):
     # First, bin the continuous data 'c' according to the discrete symbols 'd'
-    # d and c are array
+    # d and c are tensors
     first_symbol = []
     symbol_IDs = d.shape[1]*[0]
     c_split = []
@@ -362,11 +362,11 @@ def discrete_continuous_info(d, c, k:int = 3, base: float = 2):
         if symbol_IDs[c1] > num_d_symbols:
             num_d_symbols = num_d_symbols + 1
             first_symbol = first_symbol + [c1]
-            c_split = c_split + [np.array([c[:,c1]]).transpose()]
-            cs_indices = cs_indices + [np.array([[c1]])]
+            c_split = c_split + [torch.transpose(c[:,c1][np.newaxis,:],0,1)]
+            cs_indices = cs_indices + [Variable(torch.from_numpy(np.array([[c1]])).type(torch.FloatTensor),requires_grad=True)]
         else:
-            c_split[symbol_IDs[c1]-1] = np.concatenate((c_split[symbol_IDs[c1]-1], np.array([c[:,c1]]).transpose()), axis=1)
-            cs_indices[symbol_IDs[c1]-1] = np.concatenate((cs_indices[symbol_IDs[c1]-1], np.array([[c1]])), axis=1)
+            c_split[symbol_IDs[c1]-1] = torch.cat((c_split[symbol_IDs[c1]-1], torch.transpose(c[:,c1][np.newaxis,:],0,1)), dim=1)
+            cs_indices[symbol_IDs[c1]-1] = torch.cat((cs_indices[symbol_IDs[c1]-1], Variable(torch.from_numpy(np.array([[c1]])).type(torch.FloatTensor),requires_grad=True)), dim=1)
 
     # Second, compute the neighbor statistic for each data pair (c, d) using
     # the binned c_split list
@@ -381,23 +381,22 @@ def discrete_continuous_info(d, c, k:int = 3, base: float = 2):
         one_k = min(k, c_split[c_bin].shape[1]-1)
         if one_k > 0:
             c_distances = c_split[c_bin].shape[1]*[0]
-            c_split_one = np.asmatrix(c_split[c_bin])
+            c_split_one = c_split[c_bin]
             for pivot in range(c_split[c_bin].shape[1]):
                 # find the radius of our volume using only those samples with
                 # the particular value of the discrete symbol 'd'
                 for cv in range(c_split[c_bin].shape[1]):
-                    vector_diff = c_split_one[:,cv] - c_split_one[:,pivot]
-                    c_distances[cv] = math.sqrt(np.matmul(vector_diff.transpose(),vector_diff)[0,0])
+                    vector_diff = c_split_one[:,cv][np.newaxis,:] - c_split_one[:,pivot][np.newaxis,:]
+                    c_distances[cv] = torch.sqrt(torch.mm(vector_diff, torch.transpose(vector_diff,0,1)))
                 eps_over_2 = sorted(c_distances)[one_k]
-                c_matrix = np.asmatrix(c)
 
                 for cv in range(c.shape[1]):
-                    vector_diff = c_matrix[:,cv]-c_split_one[:,pivot]
-                    all_c_distances[cv] = math.sqrt(np.matmul(vector_diff.transpose(),vector_diff)[0,0])
+                    vector_diff = c[:,cv][np.newaxis,:]-c_split_one[:,pivot][np.newaxis,:]
+                    all_c_distances[cv] = torch.sqrt(torch.mm(vector_diff, torch.transpose(vector_diff,0,1)))
 
                 m =  max(len(list(filter(lambda x: x <= eps_over_2, all_c_distances)))-1,0)
                 m_tot = m_tot + scipy.special.digamma(m)
-                V[cs_indices[c_bin][0,pivot]] = (2*eps_over_2)**(d.shape[0])
+                V[cs_indices[c_bin][0,pivot].int()] = (2*eps_over_2)**(d.shape[0])
         else:
             m_tot = m_tot + scipy.special.digamma(num_d_symbols*2)
 
