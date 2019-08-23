@@ -122,8 +122,16 @@ class Trainer:
                 #torch.backends.cudnn.benchmark = False
                 #torch.backends.cudnn.deterministic = True
 
+                reconst_loss_list = list()
+                MI_loss_list = list()
+
                 for tensors_list in self.data_loaders_loop():
-                    loss = self.loss(*tensors_list)
+                    if self.model.adv == True:
+                       loss, reconst_loss, MI_loss = self.loss(*tensors_list)
+                       reconst_loss_list.append(reconst_loss.detach().cpu().numpy())
+                       MI_loss_list.append(MI_loss.detach().cpu().numpy())
+                    else:
+                       loss = self.loss(*tensors_list)
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
@@ -139,6 +147,8 @@ class Trainer:
         self.training_time += (time.time() - begin) - self.compute_metrics_time
         if self.verbose and self.frequency:
             print("\nTraining time:  %i s. / %i epochs" % (int(self.training_time), self.n_epochs))
+
+        return reconst_loss_list, MI_loss_list
 
     def on_epoch_begin(self):
         pass

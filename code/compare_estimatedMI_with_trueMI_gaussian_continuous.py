@@ -168,7 +168,7 @@ for taskid in range(len(hyperparameter_experiments)):
             MI_loss = torch.mean(pred_xy) - torch.log(torch.mean(torch.exp(pred_x_y)))
             loss = -1 * MI_loss
             plot_loss.append(loss.data.numpy())
-            MInet.zero_grad()  # clear previous gradients
+            optimizer.zero_grad()  # clear previous gradients
             loss.backward() # compute gradients of all variables wrt loss
             optimizer.step() # perform updates using calculated gradients
 

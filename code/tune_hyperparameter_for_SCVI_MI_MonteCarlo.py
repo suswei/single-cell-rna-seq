@@ -11,7 +11,7 @@ from scvi.dataset import *
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
-from scvi.models.modules import MINE_Net4_2, discrete_continuous_info, Sample_From_Aggregated_Posterior
+from scvi.models.modules import MINE_Net4_3, discrete_continuous_info, Sample_From_Aggregated_Posterior
 from scvi.inference import UnsupervisedTrainer
 import torch
 from torch.autograd import Variable
@@ -47,9 +47,12 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             'n_epochs' : [250],
             'nsamples_z': [200],
             'adv': [True],
-            'Adv_MineNet4_architecture': [[256,256,128,128,64,64,32,32,16,16]],
+            'Adv_MineNet4_architecture': [[256]*50],
             'adv_epochs': [250],
-            'change_adv_epochs': [250]
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'], # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+            'unbiased_loss': [False], # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'] # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse'
         }
     elif dataset_name=='pbmc' and nuisance_variable=='batch':
         hyperparameter_config = {
@@ -115,6 +118,9 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         Adv_MineNet4_architecture = value[15]
         adv_epochs = value[16]
         change_adv_epochs = value[17]
+        activation_fun = value[18]
+        unbiased_loss = value[19]
+        initial = value[20]
 
         vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
                         n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder = n_layers_encoder,
@@ -122,8 +128,8 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
                         MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z= nsamples_z, adv=adv, Adv_MineNet4_architecture=Adv_MineNet4_architecture)
         trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
                                              use_cuda=use_cuda, frequency=5, kl=1)
-        if adv==True and MI_estimator=='aggregated_posterior':
-            minenet = MINE_Net4_2(vae_MI.n_latent+1, vae_MI.Adv_MineNet4_architecture)
+        if adv==True:
+            minenet = MINE_Net4_3(input_dim=vae_MI.n_latent+1, n_latents=Adv_MineNet4_architecture, activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial)
             adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
             trainer_vae_MI.adv_model = minenet
             trainer_vae_MI.adv_optimizer = adv_optimizer
@@ -131,7 +137,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             trainer_vae_MI.change_adv_epochs = change_adv_epochs
 
         vae_MI_file_path = '%s/%s_%s_MIScale%s_sample%s_VaeMI.pk1'%(data_save_path, dataset_name, nuisance_variable, MIScale, taskid)
-        trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
+        reconst_loss_list, MI_loss_list = trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
         '''
         if os.path.isfile(vae_MI_file_path):
             trainer_vae_MI.model.load_state_dict(torch.load(vae_MI_file_path))
@@ -162,13 +168,27 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         asw, nmi, ari, uca = trainer_vae_MI.train_set.clustering_scores()
         be = trainer_vae_MI.train_set.entropy_batch_mixing()
 
-        latent, batch_indices, labels = trainer_vae_MI.train_set.get_latent(sample=False)
+        #latent, batch_indices, labels = trainer_vae_MI.train_set.get_latent(sample=False)
         x_ = trainer_vae_MI.train_set.gene_dataset._X.toarray()
         if trainer_vae_MI.model.log_variational:
             x_ = np.log(1 + x_)
         x_ = Variable(torch.from_numpy(x_).type(torch.FloatTensor), requires_grad=True)
         qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, None)
+        ql_m, ql_v, library = trainer_vae_MI.model.l_encoder(x_)
         batch_indices_tensor = Variable(torch.from_numpy(trainer_vae_MI.train_set.gene_dataset.batch_indices).type(torch.FloatTensor), requires_grad=True)
+
+        batch_index_adv_list = np.ndarray.tolist(batch_indices_tensor.detach().numpy())
+        z_batch0_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]], :]
+        z_batch1_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]], :]
+        l_batch0_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]], :]
+        l_batch1_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]], :]
+        l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
+        l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
+        pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
+        pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
+        predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+
+        '''
         z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_indices_tensor ,trainer_vae_MI.model.nsamples_z)
         batch0_indices = np.array([[0] * (z_batch0.shape[0])])
         batch1_indices = np.array([[1] * (z_batch1.shape[0])])
@@ -189,6 +209,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
             pred_xz, pred_x_z = trainer_vae_MI.adv_model(x=z_batch0_tensor, y=z_batch1_tensor)
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+        '''
 
         label = '%s_%s_MIScale%s_sample%s_VaeMI_trainset'%(dataset_name, nuisance_variable, MIScale, taskid)
 
@@ -198,13 +219,26 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         asw, nmi, ari, uca = trainer_vae_MI.test_set.clustering_scores()
         be = trainer_vae_MI.test_set.entropy_batch_mixing()
 
-        latent, batch_indices, labels = trainer_vae_MI.test_set.get_latent(sample=False)
+        #latent, batch_indices, labels = trainer_vae_MI.test_set.get_latent(sample=False)
         x_ = trainer_vae_MI.test_set.gene_dataset._X.toarray()
         if trainer_vae_MI.model.log_variational:
             x_ = np.log(1 + x_)
         x_ = Variable(torch.from_numpy(x_).type(torch.FloatTensor), requires_grad=True)
         qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, None)
         batch_indices_tensor = Variable(torch.from_numpy(trainer_vae_MI.test_set.gene_dataset.batch_indices).type(torch.FloatTensor), requires_grad=True)
+
+        batch_index_adv_list = np.ndarray.tolist(batch_indices_tensor.detach().numpy())
+        z_batch0_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]], :]
+        z_batch1_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]], :]
+        l_batch0_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]], :]
+        l_batch1_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]], :]
+        l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
+        l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
+        pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
+        pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
+        predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+
+        '''
         z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v,batch_indices_tensor,trainer_vae_MI.model.nsamples_z)
         batch0_indices = np.array([[0] * (z_batch0.shape[0])])
         batch1_indices = np.array([[1] * (z_batch1.shape[0])])
@@ -225,11 +259,12 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
             pred_xz, pred_x_z = trainer_vae_MI.adv_model(x=z_batch0_tensor, y=z_batch1_tensor)
             predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+        '''
 
         label = '%s_%s_MIScale%s_sample%s_VaeMI_testset'%(dataset_name, nuisance_variable, MIScale, taskid)
         intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'MILoss':[predicted_mutual_info]})
         clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
-        #clustering_metric.to_csv('%s/%s_%s_sample%s_ClusterMetric.csv' % (result_save_path, dataset_name, nuisance_variable, taskid), index=None, header=True)
+        clustering_metric.to_csv('%s/%s_%s_sample%s_ClusterMetric.csv' % (result_save_path, dataset_name, nuisance_variable, taskid), index=None, header=True)
     '''
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels, n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder = n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z)
     trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5)

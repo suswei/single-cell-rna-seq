@@ -70,10 +70,26 @@ class UnsupervisedTrainer(Trainer):
                     l_batch1_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]],:]
                     l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor),dim=1)
                     l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
-                    pred_xz, pred_x_z = self.adv_model(x=l_z_batch0_tensor, y=l_z_batch1_tensor)
-                    loss_adv = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
-                    loss_adv2 = -loss_adv #maximizing loss_adv equals minimizing -loss_adv
-                    self.adv_model.zero_grad()
+
+                    if (l_z_batch0_tensor.shape[0] == 0) or (l_z_batch1_tensor.shape[0] == 0):
+                        continue
+
+                    pred_xz = self.adv_model(input=l_z_batch0_tensor)
+                    pred_x_z = self.adv_model(input=l_z_batch1_tensor)
+
+                    if self.adv_model.unbiased_loss:
+                        t = pred_xz
+                        et = torch.exp(pred_x_z)
+                        if self.adv_model.ma_et is None:
+                            self.adv_model.ma_et = torch.mean(et).detach().item()
+                        self.adv_model.ma_et = (1 - self.adv_model.ma_rate) * self.adv_model.ma_et + self.adv_model.ma_rate * torch.mean(et)
+                        # unbiasing use moving average
+                        loss_adv2 = -(torch.mean(t) - (1 / self.adv_model.ma_et.mean()).detach() * torch.mean(et))
+                    else:
+                        loss_adv = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+                        loss_adv2 = -loss_adv #maximizing loss_adv equals minimizing -loss_adv
+
+                    self.adv_optimizer.zero_grad()
                     loss_adv2.backward()
                     self.adv_optimizer.step()
             self.change_adv_epochs_index = 1
@@ -97,12 +113,17 @@ class UnsupervisedTrainer(Trainer):
             l_batch1_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]],:]
             l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
             l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
-            pred_xz, pred_x_z = self.adv_model(x=l_z_batch0_tensor, y=l_z_batch1_tensor)
-            MI_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+
+            if (l_z_batch0_tensor.shape[0] == 0) or (l_z_batch1_tensor.shape[0] == 0):
+                MI_loss = -loss_adv2
+            else:
+                pred_xz = self.adv_model(input=l_z_batch0_tensor)
+                pred_x_z = self.adv_model(input=l_z_batch1_tensor)
+                MI_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
             scaled_MI_loss = self.model.MIScale*MI_loss
             print('reconst_loss:{}, MI_loss:{}, scaled_MI_loss:{}'.format(reconst_loss.mean(), MI_loss, scaled_MI_loss))
             loss = torch.mean(reconst_loss + kl_divergence+scaled_MI_loss) #why self.kl_weight * kl_divergence here? Why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
-            return loss
+            return loss, reconst_loss, MI_loss
         else:
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
             reconst_loss, kl_divergence = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
