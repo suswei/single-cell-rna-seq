@@ -36,23 +36,23 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             'n_layers_decoder': [2],
             'n_hidden' : [128],
             'n_latent' : [10],
-            'dropout_rate' : [0.1],
+            'dropout_rate' : [0.1, 0.3],
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [1000000], #500, 1000, 5000, 10000, 100000,
+            'MIScale': [1000, 5000, 10000, 100000], #500, 1000, 5000, 10000, 100000,
             'train_size': [0.8],
             'lr': [0.001],
-            'adv_lr': [1e-8],
+            'adv_lr': [5e-6, 1e-8],
             'n_epochs' : [250],
             'nsamples_z': [200],
             'adv': [True],
-            'Adv_MineNet4_architecture': [[256]*50],
+            'Adv_MineNet4_architecture': [[256]*50, [256]*100],
             'adv_epochs': [250],
             'change_adv_epochs': [1],
-            'activation_fun': ['ELU'], # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
-            'unbiased_loss': [False], # unbiased_loss: True or False. Whether to use unbiased loss or not
-            'initial': ['xavier_normal'] # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse'
+            'activation_fun': ['ReLU', 'ELU', 'Leaky_ReLU'], # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+            'unbiased_loss': [False, True], # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform', 'kaiming_normal', 'orthogonal', 'sparse'] # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse'
         }
     elif dataset_name=='pbmc' and nuisance_variable=='batch':
         hyperparameter_config = {
@@ -128,8 +128,12 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
                         MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z= nsamples_z, adv=adv, Adv_MineNet4_architecture=Adv_MineNet4_architecture)
         trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
                                              use_cuda=use_cuda, frequency=5, kl=1)
+        trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
+                                             use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
+
         if adv==True:
-            minenet = MINE_Net4_3(input_dim=vae_MI.n_latent+1, n_latents=Adv_MineNet4_architecture, activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial)
+            minenet = MINE_Net4_3(input_dim=vae_MI.n_latent+1, n_latents=Adv_MineNet4_architecture, activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
+                                  save_path='None', data_loader=trainer_vae_MI_adv.data_loaders_loop())
             adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
             trainer_vae_MI.adv_model = minenet
             trainer_vae_MI.adv_optimizer = adv_optimizer
@@ -138,6 +142,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
 
         vae_MI_file_path = '%s/%s_%s_MIScale%s_sample%s_VaeMI.pk1'%(data_save_path, dataset_name, nuisance_variable, MIScale, taskid)
         reconst_loss_list, MI_loss_list = trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
+
         '''
         if os.path.isfile(vae_MI_file_path):
             trainer_vae_MI.model.load_state_dict(torch.load(vae_MI_file_path))
@@ -148,7 +153,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             ll_train_set = trainer_vae_MI.history["ll_train_set"]
             ll_test_set = trainer_vae_MI.history["ll_test_set"]
             x = np.linspace(0, 500, (len(ll_train_set)))
-
+    
             fig = plt.figure(figsize=(14, 7))
             plt.plot(x, ll_train_set)
             plt.plot(x, ll_test_set)
@@ -157,14 +162,14 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
             elif dataset_name=='pbmc':
                plt.ylim(1150, 1600)
             plt.title("Blue for training error and orange for testing error")
-
+    
             fig1_path = '%s/training_testing_error_SCVI+MI_%s_%s__MIScale%s_sample%s.png'%(result_save_path, dataset_name,nuisance_variable, MIScale, taskid )
             fig.savefig(fig1_path)
             plt.close(fig)
-        
+        '''
         trainer_vae_MI.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/trainset_tsne_SCVI+MI_%s_%s_MIScale%s_sample%s'%(result_save_path, dataset_name,nuisance_variable, MIScale, taskid))
         trainer_vae_MI.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels', save_name='%s/testset_tsne_SCVI+MI_%s_%s_MIScale%s_sample%s'%(result_save_path, dataset_name,nuisance_variable, MIScale, taskid))
-        '''
+
         asw, nmi, ari, uca = trainer_vae_MI.train_set.clustering_scores()
         be = trainer_vae_MI.train_set.entropy_batch_mixing()
 

@@ -351,13 +351,16 @@ class MINE_Net4_2(nn.Module):
 
 
 class MINE_Net4_3(nn.Module):
-    def __init__(self, input_dim, n_latents, activation_fun, unbiased_loss, initial):
+    def __init__(self, input_dim, n_latents, activation_fun, unbiased_loss, initial, save_path, data_loader):
         # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
         # unbiased_loss: True or False. Whether to use unbiased loss or not
         # initial: could be 'None','normal', 'xavier_uniform', 'kaiming'
         super().__init__()
         self.activation_fun = activation_fun
         self.unbiased_loss = unbiased_loss
+        self.n_hidden_layers = len(n_latents)
+        self.save_path = save_path
+        self.data_loader = data_loader
 
         layers_dim = [input_dim] + n_latents + [1]
         self.layers = nn.Sequential(collections.OrderedDict(
