@@ -50,7 +50,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
             'change_adv_epochs': [1],
             'activation_fun': ['ReLU', 'ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
             'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
-            'initial': ['xavier_uniform', 'xavier_normal', 'kaiming_uniform', 'kaiming_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse'
+            'initial': ['xavier_uniform', 'xavier_normal', 'kaiming_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse'
             'optimiser': ['Adam']
         }
     elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
