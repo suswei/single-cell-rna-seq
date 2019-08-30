@@ -34,14 +34,14 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
             'n_layers_decoder': [2],
             'n_hidden': [128],
             'n_latent': [10],
-            'dropout_rate': [0.1, 0.3],
+            'dropout_rate': [0.1],
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [5000, 10000, 100000],  # 500, 1000, 5000, 10000, 100000,
+            'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
             'train_size': [0.8],
             'lr': [0.001],
-            'adv_lr': [5e-6, 1e-8, 1e-10],
+            'adv_lr': [5e-4, 1e-8, 1e-10],
             'n_epochs': [250],
             'nsamples_z': [200],
             'adv': [True],
@@ -50,8 +50,8 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
             'change_adv_epochs': [1],
             'activation_fun': ['ReLU', 'ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
             'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
-            'initial': ['normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform', 'kaiming_normal', 'orthogonal','sparse']
-            # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse'
+            'initial': ['xavier_uniform', 'xavier_normal', 'kaiming_uniform', 'kaiming_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse'
+            'optimiser': ['Adam']
         }
     elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
         hyperparameter_config = {
@@ -121,6 +121,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     activation_fun = value[18]
     unbiased_loss = value[19]
     initial = value[20]
+    optimiser = value[21]
 
     vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
                     n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
@@ -140,8 +141,11 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
         minenet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_MineNet4_architecture,
                               activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                               save_path='../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                              data_loader=trainer_vae_MI_adv.data_loaders_loop())
-        adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
+                              data_loader=trainer_vae_MI_adv)
+        if optimiser == 'SGD':
+            adv_optimizer = torch.optim.SGD(minenet.parameters(), lr=adv_lr, momentum=0.9)
+        if optimiser == 'Adam':
+            adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
         trainer_vae_MI.adv_model = minenet
         trainer_vae_MI.adv_optimizer = adv_optimizer
         trainer_vae_MI.adv_epochs = adv_epochs
@@ -158,7 +162,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
         trainer_vae_MI.adv_model.load_state_dict(torch.load(adv_MI_file_path))
         trainer_vae_MI.adv_model.eval()
     else:
-        trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
+        reconst_loss_list, MI_loss_list, activation_mean, activation_var = trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
         torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
         torch.save(trainer_vae_MI.adv_model.state_dict(), adv_MI_file_path)
         ll_train_set = trainer_vae_MI.history["ll_train_set"]
@@ -174,26 +178,32 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
            plt.ylim(1150, 1600)
         plt.title("Blue for training error and orange for testing error")
 
-        fig1_path = '%s/training_testing_error_SCVI+MI_%s_%s_config%s.png'%(result_save_path, dataset_name,nuisance_variable, config_id)
+        fig1_path = '%s/config%s/training_testing_error_SCVI+MI_%s_%s_config%s.png'%(result_save_path,config_id, dataset_name,nuisance_variable, config_id)
         fig.savefig(fig1_path)
         plt.close(fig)
+
+    layers = {'layers': ['layer2'] + ['layer%s'%((k+1)*10) for k in int(trainer_vae_MI.adv_model.n_hidden_layers / 10)]}
+    activation_mean_pd = pd.concat([pd.DataFrame.From_dict(layers),pd.DataFrame(data=activation_mean, columns=['epoch%s'%(i*10) for i in range(int(n_epochs/10))])],axis=1)
+    activation_var_pd = pd.concat([pd.DataFrame.From_dict(layers),pd.DataFrame(data=activation_var, columns=['epoch%s'%(i*10) for i in range(int(n_epochs/10))])],axis=1)
+    activation_mean_pd.to_csv('%s/config%s/%s_%s_config%s_activationmean.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
+    activation_var_pd.to_csv('%s/config%s/%s_%s_config%s_activationvar.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
 
     fig = plt.figure(figsize=(14, 7))
     plt.plot([i for i in range(len(reconst_loss_list))], [np.mean(i) for i in reconst_loss_list])
     plt.title("reconst_loss_%s_%s_config%s"%(dataset_name, nuisance_variable, config_id))
-    fig1_path = '%s/reconst_loss_%s_%s_config%s.png' % (result_save_path, dataset_name, nuisance_variable, config_id)
+    fig1_path = '%s/config%s/reconst_loss_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
     fig.savefig(fig1_path)
     plt.close(fig)
 
     fig = plt.figure(figsize=(14, 7))
     plt.plot([i for i in range(len(reconst_loss_list))], [np.mean(i) for i in reconst_loss_list])
     plt.title("MI_loss_%s_%s_config%s" % (dataset_name, nuisance_variable, config_id))
-    fig1_path = '%s/MI_%s_%s_config%s.png' % (result_save_path, dataset_name, nuisance_variable, config_id)
+    fig1_path = '%s/config%s/MI_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
     fig.savefig(fig1_path)
     plt.close(fig)
 
-    trainer_vae_MI.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/trainset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, dataset_name, nuisance_variable, config_id))
-    trainer_vae_MI.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/testset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, dataset_name, nuisance_variable, config_id))
+    trainer_vae_MI.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/trainset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
+    trainer_vae_MI.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/testset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
 
     asw, nmi, ari, uca = trainer_vae_MI.train_set.clustering_scores()
     be = trainer_vae_MI.train_set.entropy_batch_mixing()
@@ -250,7 +260,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     label = '%s_%s_config%s_VaeMI_testset' % (dataset_name, nuisance_variable, config_id)
     intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'MILoss': [predicted_mutual_info]})
     clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
-    clustering_metric.to_csv('%s/%s_%s_config%s_ClusterMetric.csv' % (result_save_path, dataset_name, nuisance_variable, config_id), index=None, header=True)
+    clustering_metric.to_csv('%s/config%s/%s_%s_config%s_ClusterMetric.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id), index=None, header=True)
 
 # Run the actual program
 if __name__ == "__main__":
