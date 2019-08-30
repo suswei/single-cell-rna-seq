@@ -208,15 +208,15 @@ class Trainer:
                             activation_var_oneepoch = activation_var_oneepoch + [statistics.stdev(torch.mean(activation['layer2'],dim=0).squeeze().tolist())]
 
                             for k in range(int(self.adv_model.n_hidden_layers / 10)):
-                                self.adv_model.layers[(k + 1) * 10].register_forward_hook(get_activation('layer%s' % ((k + 1) * 10)))
+                                self.adv_model.layers[(k + 1) * 10-1].register_forward_hook(get_activation('layer%s' % ((k + 1) * 10-1)))
                                 output0 = self.adv_model(input=l_z_batch0_tensor)
                                 fig = plt.figure(figsize=(14, 7))
-                                plt.hist(torch.mean(activation['layer%s' % ((k + 1) * 10)],dim=0).squeeze(), density=True, facecolor='g')
-                                plt.title("Distribution of activations of nodes in hidden layer%s for the second last minibatch in epoch%s" % ((k + 1) * 10, self.epoch))
-                                fig.savefig(self.adv_model.save_path + 'Dist_of_activations_layer%s_epoch%s.png' % ((k + 1) * 10, self.epoch))
+                                plt.hist(torch.mean(activation['layer%s' % ((k + 1) * 10-1)],dim=0).squeeze(), density=True, facecolor='g')
+                                plt.title("Distribution of activations of nodes in hidden layer%s for the second last minibatch in epoch%s" % ((k + 1) * 10-1, self.epoch))
+                                fig.savefig(self.adv_model.save_path + 'Dist_of_activations_layer%s_epoch%s.png' % ((k + 1) * 10-1, self.epoch))
                                 plt.close(fig)
-                                activation_mean_oneepoch = activation_mean_oneepoch + [statistics.mean(torch.mean(activation['layer%s' % ((k + 1) * 10)],dim=0).squeeze().tolist())]
-                                activation_var_oneepoch = activation_var_oneepoch + [statistics.mean(torch.mean(activation['layer%s' % ((k + 1) * 10)],dim=0).squeeze().tolist())]
+                                activation_mean_oneepoch = activation_mean_oneepoch + [statistics.mean(torch.mean(activation['layer%s' % ((k + 1) * 10-1)],dim=0).squeeze().tolist())]
+                                activation_var_oneepoch = activation_var_oneepoch + [statistics.mean(torch.mean(activation['layer%s' % ((k + 1) * 10-1)],dim=0).squeeze().tolist())]
                         minibatch_index += 1
 
                 self.change_adv_epochs_index = 1
