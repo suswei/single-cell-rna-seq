@@ -11,7 +11,7 @@ if not os.path.isdir('result/compare_estimatedMI_with_trueMI/continuous_gaussian
 import numpy as np
 import pandas as pd
 import torch
-from scvi.models.modules import MINE_Net4
+from scvi.models.modules import MINE_Net4_2
 import itertools
 from scipy.stats import multivariate_normal,lognorm
 from scipy.integrate import nquad
@@ -50,9 +50,9 @@ def dim4_range_x(y1, y2, y3, y4):
 final_dataframe = pd.DataFrame(columns=['method', 'distribution', 'distribution_dimension', 'gaussian_dimension', 'sample_size','train_size', 'rho', 'true_MI', 'training_or_testing', 'estimated_MI', 'final_loss'])
 
 hyperparameter_config = {
-        'distribution': ['lognormal', 'gaussian'],
-        'net_name': ['Mine_Net4'],
-        'gaussian_dimension': [2, 20],
+        'distribution': ['gaussian'],
+        'net_name': ['Mine_Net4_2'],
+        'gaussian_dimension': [2,20],
         'sample_size': [14388],
         'rho': [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
     }
@@ -73,50 +73,24 @@ for taskid in range(len(hyperparameter_experiments)):
     sample_size = value[3]
     rho = value[4]
 
-    if distribution == 'lognormal' and gaussian_dimension == 20 :
-       continue
 
-    if distribution == 'lognormal':
-        continuous_dimension = 1
-    elif distribution == 'gaussian':
-        continuous_dimension = gaussian_dimension
-
-    lognorm_sigma = 1
-    lognorm_mu = 0
-    lognorm_rv = lognorm(s=lognorm_sigma, loc=0, scale=math.exp(lognorm_mu))
-    lognorm_true_entropy = lognorm.entropy(s=lognorm_sigma, loc=0, scale=math.exp(lognorm_mu))
+    continuous_dimension = gaussian_dimension
 
     gaussian_entropy = multivariate_normal.entropy(gaussian_dimension*[0], np.identity(gaussian_dimension))
 
-    if distribution == 'lognormal':
-        if gaussian_dimension == 2:
-            if rho in [-0.99,-0.9, 0.9, 0.99]:
-                joint_entropy, joint_entropy_err = nquad(jointpdf_entropy_2, [dim2_range_x, [-10, 10], [-10, 10]]) #when rho is large, if x take very small or very large value, jointpdf(x,y1,y2) will be very small, and the logrithm will produce error?
-            else:
-                joint_entropy, joint_entropy_err = nquad(jointpdf_entropy_2, [[0, math.inf], [-10, 10], [-10, 10]])
+    cov_mat1 = np.concatenate((np.identity(gaussian_dimension), np.identity(gaussian_dimension)*rho), axis=1)
+    cov_mat2 = np.concatenate((np.identity(gaussian_dimension)*rho, np.identity(gaussian_dimension)), axis=1)
 
-        true_MI = lognorm_true_entropy + gaussian_entropy - joint_entropy
+    joint_entropy = multivariate_normal.entropy(2*gaussian_dimension*[0], np.concatenate((cov_mat1,cov_mat2),axis=0))
 
-        cov_mat1 = np.concatenate((np.identity(continuous_dimension), np.array([[1] + (gaussian_dimension - 1) * [0]]) * rho), axis=1)
-        cov_mat2 = np.concatenate(((np.array([[1] + (gaussian_dimension - 1) * [0]]) * rho).transpose(), np.identity(gaussian_dimension)), axis=1)
-        total_cov = np.concatenate((cov_mat1, cov_mat2), axis=0)
+    true_MI = 2*gaussian_entropy - joint_entropy
 
-        np.random.seed(seed)
-        dataset1 = np.random.multivariate_normal((gaussian_dimension+continuous_dimension) * [0], total_cov, (sample_size, 1))
-        dataset2 = np.reshape(np.ravel(dataset1), (sample_size, gaussian_dimension+continuous_dimension))
-        dataset2[:,0] = np.exp(dataset2[:,0])
+    np.random.seed(seed)
+    dataset1 = np.random.multivariate_normal(2*gaussian_dimension*[0], np.concatenate((cov_mat1,cov_mat2),axis=0),(sample_size,1))
+    dataset2 = np.reshape(np.ravel(dataset1), (sample_size, 2*gaussian_dimension))
 
-    elif distribution == 'gaussian':
-        cov_mat1 = np.concatenate((np.identity(gaussian_dimension), np.identity(gaussian_dimension)*rho), axis=1)
-        cov_mat2 = np.concatenate((np.identity(gaussian_dimension)*rho, np.identity(gaussian_dimension)), axis=1)
-
-        joint_entropy = multivariate_normal.entropy(2*gaussian_dimension*[0], np.concatenate((cov_mat1,cov_mat2),axis=0))
-
-        true_MI = 2*gaussian_entropy - joint_entropy
-
-        np.random.seed(seed)
-        dataset1 = np.random.multivariate_normal(2*gaussian_dimension*[0], np.concatenate((cov_mat1,cov_mat2),axis=0),(sample_size,1))
-        dataset2 = np.reshape(np.ravel(dataset1), (sample_size, 2*gaussian_dimension))
+    dataset1_2 = np.random.multivariate_normal(2 * gaussian_dimension * [0], np.concatenate((cov_mat1, cov_mat2), axis=0),(sample_size, 1))
+    dataset2_2 = np.reshape(np.ravel(dataset1_2), (sample_size, 2 * gaussian_dimension))
 
     n = len(dataset2)
     n_train, n_test = _validate_shuffle_split(n_samples=n, test_size= None, train_size = train_size)
@@ -128,8 +102,18 @@ for taskid in range(len(hyperparameter_experiments)):
     training_tensor = Variable(torch.from_numpy(dataset2[indices_train,:]).type(torch.FloatTensor))
     testing_tensor = Variable(torch.from_numpy(dataset2[indices_test, :]).type(torch.FloatTensor))
 
-    if net_name == 'Mine_Net4':
-        MInet = MINE_Net4(training_tensor.shape[-1], layers)
+    n_2 = len(dataset2_2)
+    n_train_2, n_test_2 = _validate_shuffle_split(n_samples=n_2, test_size=None, train_size=train_size)
+    np.random.seed(seed=seed+100)
+    permutation_2 = np.random.permutation(n_2)
+    indices_test_2 = permutation[:n_test_2]
+    indices_train_2 = permutation[n_test_2:(n_test_2 + n_train_2)]
+
+    training_tensor_2 = Variable(torch.from_numpy(dataset2_2[indices_train_2, :]).type(torch.FloatTensor))
+    testing_tensor_2 = Variable(torch.from_numpy(dataset2_2[indices_test_2, :]).type(torch.FloatTensor))
+
+    if net_name == 'Mine_Net4_2':
+        MInet = MINE_Net4_2(training_tensor.shape[-1], layers)
 
     if distribution=='gaussian' and gaussian_dimension == 20 and rho in [-0.99, -0.9, 0.9, 0.99]:
         lr = 0.00005
@@ -148,27 +132,22 @@ for taskid in range(len(hyperparameter_experiments)):
                 indices = permutation[j:]
             else:
                 indices = permutation[j:j_end]
-            if distribution == 'lognormal':
-               batch_x, batch_y = training_tensor[indices, 0], training_tensor[indices, 1:]
-               batch_x_shuffle = np.array([np.random.permutation(batch_x.detach().numpy())]).transpose()
 
-            elif distribution == 'gaussian':
-               batch_x, batch_y = training_tensor[indices, 0:gaussian_dimension], training_tensor[indices,gaussian_dimension:]
-               batch_x_shuffle = np.random.permutation(batch_x.detach().numpy())
+            batch_x_y = training_tensor[indices, :]
+            batch_x_2, batch_y_2 = training_tensor_2[indices, 0:gaussian_dimension], training_tensor_2[indices,gaussian_dimension:]
+            batch_x_2_shuffle = np.random.permutation(batch_x_2.detach().numpy())
+            batch_x_y_2 = np.append(batch_x_2_shuffle,batch_y_2.detach().numpy(), axis=1)
 
-            batch_x_shuffle = Variable(torch.from_numpy(batch_x_shuffle).type(torch.FloatTensor), requires_grad=True)
-            batch_y = Variable(batch_y.type(torch.FloatTensor), requires_grad=True)
+            batch_x_y = Variable(torch.from_numpy(batch_x_y.detach().numpy()).type(torch.FloatTensor), requires_grad=True)
+            batch_x_y_2 = Variable(torch.from_numpy(batch_x_y_2).type(torch.FloatTensor), requires_grad=True)
 
-            if net_name == 'Mine_Net4':
-                if distribution == 'lognormal':
-                    pred_xy, pred_x_y = MInet(xy=training_tensor[indices, :], x_shuffle=batch_x_shuffle, x_n_dim=1)
-                elif distribution == 'gaussian':
-                    pred_xy, pred_x_y = MInet(xy=training_tensor[indices, :], x_shuffle=batch_x_shuffle, x_n_dim=gaussian_dimension)
+
+            pred_xy, pred_x_y = MInet(x=batch_x_y, y=batch_x_y_2)
 
             MI_loss = torch.mean(pred_xy) - torch.log(torch.mean(torch.exp(pred_x_y)))
             loss = -1 * MI_loss
             plot_loss.append(loss.data.numpy())
-            optimizer.zero_grad()  # clear previous gradients
+            MInet.zero_grad()  # clear previous gradients
             loss.backward() # compute gradients of all variables wrt loss
             optimizer.step() # perform updates using calculated gradients
 
@@ -176,24 +155,21 @@ for taskid in range(len(hyperparameter_experiments)):
     MInet.eval()
     final_loss = -np.array(plot_loss).reshape(-1, )[-1]
     training_testing_dict = {'training': training_tensor, 'testing': testing_tensor}
+    training_testing_dict_2 = {'training': training_tensor_2, 'testing': testing_tensor_2}
     for type in ['training','testing']:
         dataset_tensor = training_testing_dict[type]
-        if distribution == 'lognormal':
-           data_x, data_y = dataset_tensor[:, 0], dataset_tensor[:, 1:]
-           data_x_shuffle = np.array([np.random.permutation(data_x.detach().numpy())]).transpose()
+        dataset_tensor_2 = training_testing_dict_2[type]
 
-        elif distribution == 'gaussian':
-           data_x, data_y = dataset_tensor[:, 0:gaussian_dimension], dataset_tensor[:, gaussian_dimension:]
-           data_x_shuffle = np.random.permutation(data_x.detach().numpy())
+        data_x_y = dataset_tensor
+        data_x_2, data_y_2 = dataset_tensor_2[:, 0:gaussian_dimension], dataset_tensor_2[:, gaussian_dimension:]
+        data_x_2_shuffle = np.random.permutation(data_x_2.detach().numpy())
+        data_x_y_2 = np.append(data_x_2_shuffle, data_y_2.detach().numpy(), axis=1)
 
-        data_x_shuffle = Variable(torch.from_numpy(data_x_shuffle).type(torch.FloatTensor), requires_grad=True)
-        data_y = Variable(data_y.type(torch.FloatTensor), requires_grad=True)
+        data_x_y = Variable(torch.from_numpy(data_x_y.detach().numpy()).type(torch.FloatTensor), requires_grad=True)
+        data_x_y_2 = Variable(torch.from_numpy(data_x_y_2).type(torch.FloatTensor), requires_grad=True)
 
-        if net_name == 'Mine_Net4':
-            if distribution == 'lognormal':
-               data_pred_xy, data_pred_x_y = MInet(xy=dataset_tensor[:, :], x_shuffle=data_x_shuffle, x_n_dim=1)
-            elif distribution == 'gaussian':
-               data_pred_xy, data_pred_x_y = MInet(xy=dataset_tensor[:, :], x_shuffle=data_x_shuffle, x_n_dim=gaussian_dimension)
+
+        data_pred_xy, data_pred_x_y = MInet(x=data_x_y, y=data_x_y_2)
 
         estimated_MI = torch.mean(data_pred_xy) - torch.log(torch.mean(torch.exp(data_pred_x_y)))
         estimated_MI = torch.Tensor.cpu(estimated_MI).detach().numpy().item()
@@ -202,4 +178,4 @@ for taskid in range(len(hyperparameter_experiments)):
         intermediate_dataframe = pd.DataFrame.from_dict(dict)
         final_dataframe = pd.concat([final_dataframe,intermediate_dataframe])
 
-final_dataframe.to_csv('result/compare_estimatedMI_with_trueMI/continuous_gaussian/estimatedMI_with_trueMI.csv', index=None, header=True)
+final_dataframe.to_csv('result/compare_estimatedMI_with_trueMI/continuous_gaussian/estimatedMI_with_trueMI_MineNet4_2.csv', index=None, header=True)
