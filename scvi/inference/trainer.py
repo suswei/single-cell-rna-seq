@@ -119,8 +119,8 @@ class Trainer:
         reconst_loss_list = list()
         MI_loss_list = list()
         nrows = int(self.adv_model.n_hidden_layers / 10) + 1
-        activation_mean = np.empty([nrows,1],dtype=float)
-        activation_var = np.empty([nrows,1],dtype=float)
+        activation_mean = np.empty((nrows,0),dtype=float)
+        activation_var = np.empty((nrows,0),dtype=float)
 
         with trange(n_epochs, desc="training", file=sys.stdout, disable=self.verbose) as pbar:
             # We have to use tqdm this way so it works in Jupyter notebook.
@@ -139,10 +139,9 @@ class Trainer:
                 #torch.backends.cudnn.benchmark = False
                 #torch.backends.cudnn.deterministic = True
 
-                activation_mean_oneepoch = list()
-                activation_var_oneepoch = list()
-
                 for adv_epoch in tqdm(range(self.adv_epochs)):
+                    activation_mean_oneepoch = list()
+                    activation_var_oneepoch = list()
                     minibatch_index = 0
                     for tensor_adv in self.adv_model.data_loader.data_loaders_loop():
                         print(minibatch_index)
@@ -217,13 +216,17 @@ class Trainer:
                                 plt.close(fig)
                                 activation_mean_oneepoch = activation_mean_oneepoch + [statistics.mean(torch.mean(activation['layer%s' % ((k + 1) * 10-1)],dim=0).squeeze().tolist())]
                                 activation_var_oneepoch = activation_var_oneepoch + [statistics.mean(torch.mean(activation['layer%s' % ((k + 1) * 10-1)],dim=0).squeeze().tolist())]
+                                print(activation_mean_oneepoch)
                         minibatch_index += 1
 
                 self.change_adv_epochs_index = 1
                 self.adv_epochs = self.change_adv_epochs
 
-                activation_mean = np.append(activation_mean, np.array([activation_mean_oneepoch]).transpose(), axis=1)
-                activation_var = np.append(activation_var, np.array([activation_var_oneepoch]).transpose(), axis=1)
+                if len(activation_mean_oneepoch) > 0:
+                    activation_mean = np.append(activation_mean, np.array([activation_mean_oneepoch]).transpose(), axis=1)
+                    print(activation_mean)
+                    print(activation_mean.shape)
+                    activation_var = np.append(activation_var, np.array([activation_var_oneepoch]).transpose(), axis=1)
 
                 for tensors_list in self.data_loaders_loop():
                     if self.model.adv :
