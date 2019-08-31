@@ -153,7 +153,6 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
 
     vae_MI_file_path = '%s/%s_%s_config%s_VaeMI.pk1' % (data_save_path, dataset_name, nuisance_variable, config_id)
     adv_MI_file_path = '%s/%s_%s_config%s_advMI.pk1' % (data_save_path, dataset_name, nuisance_variable, config_id)
-    reconst_loss_list, MI_loss_list = trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
 
 
     if os.path.isfile(vae_MI_file_path) and os.path.isfile(adv_MI_file_path):
@@ -182,9 +181,9 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
         fig.savefig(fig1_path)
         plt.close(fig)
 
-    layers = {'layers': ['layer2'] + ['layer%s'%((k+1)*10) for k in int(trainer_vae_MI.adv_model.n_hidden_layers / 10)]}
-    activation_mean_pd = pd.concat([pd.DataFrame.From_dict(layers),pd.DataFrame(data=activation_mean, columns=['epoch%s'%(i*10) for i in range(int(n_epochs/10))])],axis=1)
-    activation_var_pd = pd.concat([pd.DataFrame.From_dict(layers),pd.DataFrame(data=activation_var, columns=['epoch%s'%(i*10) for i in range(int(n_epochs/10))])],axis=1)
+    layers = {'layers': ['layer2'] + ['layer%s'%((k+1)*10-1) for k in range(int(trainer_vae_MI.adv_model.n_hidden_layers / 10))]}
+    activation_mean_pd = pd.concat([pd.DataFrame.from_dict(layers),pd.DataFrame(data=activation_mean, columns=['epoch%s'%(i*10) for i in range(int((n_epochs-1)/10)+1)])],axis=1)
+    activation_var_pd = pd.concat([pd.DataFrame.from_dict(layers),pd.DataFrame(data=activation_var, columns=['epoch%s'%(i*10) for i in range(int((n_epochs-1)/10)+1)])],axis=1)
     activation_mean_pd.to_csv('%s/config%s/%s_%s_config%s_activationmean.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
     activation_var_pd.to_csv('%s/config%s/%s_%s_config%s_activationvar.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
 
@@ -196,7 +195,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     plt.close(fig)
 
     fig = plt.figure(figsize=(14, 7))
-    plt.plot([i for i in range(len(reconst_loss_list))], [np.mean(i) for i in reconst_loss_list])
+    plt.plot([i for i in range(len(reconst_loss_list))], MI_loss_list)
     plt.title("MI_loss_%s_%s_config%s" % (dataset_name, nuisance_variable, config_id))
     fig1_path = '%s/config%s/MI_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
     fig.savefig(fig1_path)
