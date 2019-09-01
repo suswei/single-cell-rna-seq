@@ -258,3 +258,31 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
                 plt.title('%s, %s, gaussian_dim%s, %s'%(method, distribution, gaussian_dimension,type),fontsize=18)
                 fig.savefig(result_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method, distribution, gaussian_dimension,type))
                 plt.close(fig)
+
+def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label: str='muris_tabula_batch_config.*._VaeMI_trainset'):
+    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be','MILoss'])
+    valid_config = []
+    for i in range(107):
+        clustermetric_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_ClusterMetric.csv'%(i,i)
+        if os.path.isfile(clustermetric_filepath_oneconfig):
+            clustermetric_oneconfig = pd.read_csv(clustermetric_filepath_oneconfig)
+            valid_config = valid_config + ['%s'%(i)]
+            clustermetric = pd.concat([clustermetric, clustermetric_oneconfig], axis=0)
+        else:
+            continue
+
+    xaxis_index = list(range(1, len(valid_config) + 1))
+    xtick_labels = valid_config
+    fig = plt.figure(figsize=(10, 7))
+    lines1=plt.plot(xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['asw']].values, xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['nmi']].values,
+             xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['ari']].values, xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['uca']].values,
+             xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['be']].values)
+    plt.legend(('asw', 'nmi','ari','uca','be'),loc='upper right', fontsize=16)
+    plt.xticks(xaxis_index, xtick_labels, rotation='horizontal', fontsize=14)
+    plt.xlabel('config index', fontsize=16)
+    #plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
+    plt.title('%s, %s, %s, clusteringmetrics' % (dataset_name, nuisance_variable, 'configs'), fontsize=18)
+    fig.savefig(results_dict + '%s_%s_%s_clusteringmetrics.png' % (dataset_name, nuisance_variable, 'configs'))
+    plt.close(fig)

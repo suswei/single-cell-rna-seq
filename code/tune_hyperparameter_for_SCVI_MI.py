@@ -42,7 +42,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
             'train_size': [0.8],
             'lr': [0.001],
             'adv_lr': [5e-6, 1e-8, 1e-10],
-            'n_epochs': [250],
+            'n_epochs': [500,750],
             'nsamples_z': [200],
             'adv': [True],
             'Adv_MineNet4_architecture': [[256] * 50, [256] * 100],
@@ -189,6 +189,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
 
     fig = plt.figure(figsize=(14, 7))
     plt.plot([i for i in range(len(reconst_loss_list))], [np.mean(i) for i in reconst_loss_list])
+    plt.ylim(12000, 30000)
     plt.title("reconst_loss_%s_%s_config%s"%(dataset_name, nuisance_variable, config_id))
     fig1_path = '%s/config%s/reconst_loss_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
     fig.savefig(fig1_path)
@@ -225,7 +226,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
     pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
     pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
-    predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+    predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
 
     label = '%s_%s_config%s_VaeMI_trainset' % (dataset_name, nuisance_variable, config_id)
 
@@ -254,7 +255,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
     pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
     pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
-    predicted_mutual_info = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+    predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
 
     label = '%s_%s_config%s_VaeMI_testset' % (dataset_name, nuisance_variable, config_id)
     intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'MILoss': [predicted_mutual_info]})
