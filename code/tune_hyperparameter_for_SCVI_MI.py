@@ -40,7 +40,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
             'use_cuda': [False],
             'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
             'train_size': [0.8],
-            'lr': [5e-3,1e-4,5e-5,1e-5],
+            'lr': [5e-3,5e-4,1e-4,5e-5,1e-5],
             'adv_lr': [1e-8, 1e-10],
             'n_epochs': [500,750],
             'nsamples_z': [200],
