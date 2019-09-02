@@ -40,17 +40,17 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
             'use_cuda': [False],
             'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
             'train_size': [0.8],
-            'lr': [0.001],
-            'adv_lr': [5e-6, 1e-8, 1e-10],
+            'lr': [5e-3,1e-4,5e-5,1e-5],
+            'adv_lr': [1e-8, 1e-10],
             'n_epochs': [500,750],
             'nsamples_z': [200],
             'adv': [True],
-            'Adv_MineNet4_architecture': [[256] * 50, [256] * 100],
+            'Adv_MineNet4_architecture': [[256] * 50],
             'adv_epochs': [250],
             'change_adv_epochs': [1],
-            'activation_fun': ['ReLU', 'ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+            'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
             'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
-            'initial': ['xavier_uniform', 'xavier_normal', 'kaiming_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse'
+            'initial': ['xavier_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
             'optimiser': ['Adam']
         }
     elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
