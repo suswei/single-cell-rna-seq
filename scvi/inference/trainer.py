@@ -174,9 +174,9 @@ class Trainer:
                             et = torch.exp(pred_x_z)
                             if self.adv_model.ma_et is None:
                                 self.adv_model.ma_et = torch.mean(et).detach().item()
-                            self.adv_model.ma_et = (1 - self.adv_model.ma_rate) * self.adv_model.ma_et + self.adv_model.ma_rate * torch.mean(et)
+                            self.adv_model.ma_et += self.adv_model.ma_rate * (torch.mean(et).detach().item() - self.adv_model.ma_et)
                             # unbiasing use moving average
-                            loss_adv2 = -(torch.mean(t) - (1 / self.adv_model.ma_et.mean()).detach() * torch.mean(et))
+                            loss_adv2 = -(torch.mean(t) - (torch.log(torch.mean(et))*torch.mean(et).detach()/ self.adv_model.ma_et))
                         else:
                             loss_adv = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
                             loss_adv2 = -loss_adv  # maximizing loss_adv equals minimizing -loss_adv
