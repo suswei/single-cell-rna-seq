@@ -10,6 +10,7 @@ from sklearn.model_selection._split import _validate_shuffle_split
 from torch.utils.data.sampler import SubsetRandomSampler
 import matplotlib.pyplot as plt
 import statistics
+import pandas as pd
 from torch.autograd import Variable
 from scvi.models.modules import Sample_From_Aggregated_Posterior
 
@@ -121,6 +122,7 @@ class Trainer:
         nrows = int(self.adv_model.n_hidden_layers / 10) + 1
         activation_mean = np.empty((nrows,0),dtype=float)
         activation_var = np.empty((nrows,0),dtype=float)
+        clustermetrics_trainingprocess = pd.DataFrame(columns=['asw', 'nmi', 'ari', 'uca', 'be'])
 
         with trange(n_epochs, desc="training", file=sys.stdout, disable=self.verbose) as pbar:
             # We have to use tqdm this way so it works in Jupyter notebook.
@@ -239,6 +241,11 @@ class Trainer:
                     loss.backward()
                     optimizer.step()
 
+                    asw, nmi, ari, uca = self.train_set.clustering_scores()
+                    be = self.train_set.entropy_batch_mixing()
+                    clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw':[asw],'nmi':[nmi],'ari':[ari],'uca':[uca],'be':[be]})
+                    clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
+
                 if not self.on_epoch_end():
                     break
 
@@ -251,7 +258,7 @@ class Trainer:
         if self.verbose and self.frequency:
             print("\nTraining time:  %i s. / %i epochs" % (int(self.training_time), self.n_epochs))
 
-        return reconst_loss_list, MI_loss_list, activation_mean, activation_var
+        return reconst_loss_list, MI_loss_list, activation_mean, activation_var, clustermetrics_trainingprocess
 
     def on_epoch_begin(self):
         pass
