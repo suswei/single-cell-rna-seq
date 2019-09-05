@@ -49,8 +49,8 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
             'adv_epochs': [250],
             'change_adv_epochs': [1],
             'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
-            'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
-            'initial': ['xavier_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal1','xavier_normal2'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
             'optimiser': ['Adam']
         }
     elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
@@ -161,7 +161,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
         trainer_vae_MI.adv_model.load_state_dict(torch.load(adv_MI_file_path))
         trainer_vae_MI.adv_model.eval()
     else:
-        reconst_loss_list, MI_loss_list, activation_mean, activation_var = trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
+        reconst_loss_list, MI_loss_list, activation_mean, activation_var, clustermetrics_trainingprocess = trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
         torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
         torch.save(trainer_vae_MI.adv_model.state_dict(), adv_MI_file_path)
         ll_train_set = trainer_vae_MI.history["ll_train_set"]
@@ -180,7 +180,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
         fig1_path = '%s/config%s/training_testing_error_SCVI+MI_%s_%s_config%s.png'%(result_save_path,config_id, dataset_name,nuisance_variable, config_id)
         fig.savefig(fig1_path)
         plt.close(fig)
-
+    clustermetrics_trainingprocess.to_csv('%s/config%s/%s_%s_config%s_clustermetrics_duringtraining.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
     layers = {'layers': ['layer2'] + ['layer%s'%((k+1)*10-1) for k in range(int(trainer_vae_MI.adv_model.n_hidden_layers / 10))]}
     activation_mean_pd = pd.concat([pd.DataFrame.from_dict(layers),pd.DataFrame(data=activation_mean, columns=['epoch%s'%(i*10) for i in range(int((n_epochs-1)/10)+1)])],axis=1)
     activation_var_pd = pd.concat([pd.DataFrame.from_dict(layers),pd.DataFrame(data=activation_var, columns=['epoch%s'%(i*10) for i in range(int((n_epochs-1)/10)+1)])],axis=1)
