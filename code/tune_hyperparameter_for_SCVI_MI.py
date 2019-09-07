@@ -40,17 +40,17 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
             'use_cuda': [False],
             'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
             'train_size': [0.8],
-            'lr': [5e-3,1e-4,1e-5,5e-6,1e-6],
+            'lr': [5e-3, 1e-4, 1e-5, 5e-6, 1e-6],
             'adv_lr': [1e-8, 1e-10],
             'n_epochs': [1500],
             'nsamples_z': [200],
             'adv': [True],
             'Adv_MineNet4_architecture': [[256] * 50],
             'adv_epochs': [250],
-            'change_adv_epochs': [1],
+            'change_adv_epochs': [1,60],
             'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
-            'initial': ['xavier_normal1','xavier_normal2'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+            'initial': ['xavier_normal1'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
             'optimiser': ['Adam']
         }
     elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
@@ -123,19 +123,19 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     initial = value[20]
     optimiser = value[21]
 
+    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id)):
+        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id))
+
     vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
                     n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
                     n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,
                     reconstruction_loss=reconstruction_loss,
                     MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z=nsamples_z, adv=adv,
-                    Adv_MineNet4_architecture=Adv_MineNet4_architecture)
+                    Adv_MineNet4_architecture=Adv_MineNet4_architecture, save_path=result_save_path+'/config%s/'%(config_id))
     trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
                                          use_cuda=use_cuda, frequency=5, kl=1)
     trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
                                              use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
-
-    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id)):
-        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id))
 
     if adv == True:
         minenet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_MineNet4_architecture,
@@ -153,7 +153,6 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
 
     vae_MI_file_path = '%s/%s_%s_config%s_VaeMI.pk1' % (data_save_path, dataset_name, nuisance_variable, config_id)
     adv_MI_file_path = '%s/%s_%s_config%s_advMI.pk1' % (data_save_path, dataset_name, nuisance_variable, config_id)
-
 
     if os.path.isfile(vae_MI_file_path) and os.path.isfile(adv_MI_file_path):
         trainer_vae_MI.model.load_state_dict(torch.load(vae_MI_file_path))
@@ -189,7 +188,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
 
     fig = plt.figure(figsize=(14, 7))
     plt.plot([i for i in range(len(reconst_loss_list))], [np.mean(i) for i in reconst_loss_list])
-    plt.ylim(12000, 30000)
+    plt.ylim(12000, 60000)
     plt.title("reconst_loss_%s_%s_config%s"%(dataset_name, nuisance_variable, config_id))
     fig1_path = '%s/config%s/reconst_loss_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
     fig.savefig(fig1_path)

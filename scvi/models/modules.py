@@ -368,7 +368,7 @@ class MINE_Net4_3(nn.Module):
                 nn.Linear(n_in, n_out)) for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))
              ]))
 
-        if initial in ['normal', 'xavier_uniform', 'xavier_normal1','xavier_normal2', 'kaiming_uniform','kaiming_normal','orthogonal','sparse']:
+        if initial in ['normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse']:
             for i in range(len(layers_dim)-1):
                 if initial == 'normal':
                     nn.init.normal_(self.layers[i].weight, std=0.02)
@@ -376,10 +376,8 @@ class MINE_Net4_3(nn.Module):
                 elif initial == 'xavier_uniform':
                     nn.init.xavier_uniform_(self.layers[i].weight)
                     nn.init.zeros_(self.layers[i].bias)
-                elif initial == 'xavier_normal1':
+                elif initial == 'xavier_normal':
                     nn.init.xavier_normal_(self.layers[i].weight, gain=1.0)
-                elif initial == 'xavier_normal2':
-                    nn.init.xavier_normal_(self.layers[i].weight, gain=4.0)
                 elif initial == 'kaiming_uniform':
                     if isinstance(self.layers[i], nn.Linear):
                         nn.init.kaiming_uniform_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
