@@ -125,7 +125,8 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator):
         vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
                         n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder = n_layers_encoder,
                         n_layers_decoder=n_layers_decoder, dropout_rate = dropout_rate, reconstruction_loss=reconstruction_loss,
-                        MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z= nsamples_z, adv=adv, Adv_MineNet4_architecture=Adv_MineNet4_architecture)
+                        MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z= nsamples_z, adv=adv,
+                        Adv_MineNet4_architecture=Adv_MineNet4_architecture)
         trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
                                              use_cuda=use_cuda, frequency=5, kl=1)
         trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
