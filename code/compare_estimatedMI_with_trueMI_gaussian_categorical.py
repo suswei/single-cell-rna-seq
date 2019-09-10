@@ -8,7 +8,7 @@ if not os.path.isdir('result/compare_estimatedMI_with_trueMI/gaussian_categorica
 import numpy as np
 import pandas as pd
 import torch
-from scvi.models.modules import MI_Net, discrete_continuous_info, MI_Net4
+from scvi.models.modules import MINE_Net, discrete_continuous_info, MINE_Net4
 import itertools
 from scipy.integrate import nquad
 from scipy.stats import multivariate_normal
@@ -20,7 +20,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 
 hyperparameter_config = {
-        'method': ['MI_Net','nearest_neighbor','MI_Net4'],
+        'method': ['Mine_Net','nearest_neighbor','Mine_Net4'],
         'gaussian_dimension': [2],
         'repos': [100]
     }
@@ -103,7 +103,7 @@ for taskid in range(len(hyperparameter_experiments)):
         mu_list = mu_array[iteration, :]
         sigma_list = sigma_array[iteration, :]
 
-        if method in ['MI_Net','MI_Net4']:
+        if method in ['Mine_Net','Mine_Net4']:
             sample_size = 14388
             train_size = 0.5
             x_array = np.empty((1, sample_size), int)
@@ -116,7 +116,7 @@ for taskid in range(len(hyperparameter_experiments)):
                                                               ((sigma_list[index]) ** 2) * np.identity(
                                                                   gaussian_dimension), 1)
             x_dataframe = pd.DataFrame.from_dict({'x': np.ndarray.tolist(x_array.ravel())})
-            x_dummy = pd.get_dummies(x_dataframe['x']).values
+            x_dummy = pd.get_dummies(x_dataframe['x']).values ##change categorical variable into dummy variable
             y_array2 = np.transpose(y_array)
 
             x_dim = x_dummy.shape[1]
@@ -133,10 +133,10 @@ for taskid in range(len(hyperparameter_experiments)):
 
             training_tensor = Variable(torch.from_numpy(dataset2[indices_train, :]).type(torch.FloatTensor))
             testing_tensor = Variable(torch.from_numpy(dataset2[indices_test, :]).type(torch.FloatTensor))
-            if method=='MI_Net':
-                MInet = MI_Net(n_input_nuisance=x_dim, n_input_z=y_dim, n_hidden_z=n_hidden_z, n_layers_z=n_hidden_z)
-            elif method=='MI_Net4':
-                MInet = MI_Net4(xy_dim=x_dim+y_dim, n_latents=[64,32,16,8,4])
+            if method=='Mine_Net':
+                MInet = MINE_Net(n_input_nuisance=x_dim, n_input_z=y_dim, n_hidden_z=n_hidden_z, n_layers_z=n_hidden_z)
+            elif method=='Mine_Net4':
+                MInet = MINE_Net4(xy_dim=x_dim+y_dim, n_latents=[64,32,16,8,4])
 
             params = filter(lambda p: p.requires_grad, MInet.parameters())
             optimizer = torch.optim.Adam(params, lr=lr, eps=0.01)
@@ -159,10 +159,10 @@ for taskid in range(len(hyperparameter_experiments)):
                     batch_y_shuffle = np.random.permutation(batch_y.detach().numpy())
                     batch_y_shuffle = Variable(torch.from_numpy(batch_y_shuffle).type(torch.FloatTensor),requires_grad=True)
 
-                    if method=='MI_Net':
+                    if method=='Mine_Net':
                         pred_xy = MInet(batch_x, batch_y)
                         pred_x_y = MInet(batch_x, batch_y_shuffle)
-                    elif method=='MI_Net4':
+                    elif method=='Mine_Net4':
                         y_x = torch.cat([batch_y,batch_x],dim=1)
                         pred_xy, pred_x_y = MInet(xy=y_x, x_shuffle=batch_y_shuffle, x_n_dim=y_dim) #keep consistent with MI_Net in which the continuous variable is shuffled
                     MI_loss = torch.mean(pred_xy) - torch.log(torch.mean(torch.exp(pred_x_y)))
@@ -181,10 +181,10 @@ for taskid in range(len(hyperparameter_experiments)):
                 data_x = Variable(data_x.type(torch.FloatTensor), requires_grad=True)
                 data_y_shuffle = np.random.permutation(data_y.detach().numpy())
                 data_y_shuffle = Variable(torch.from_numpy(data_y_shuffle).type(torch.FloatTensor), requires_grad=True)
-                if method=='MI_Net':
+                if method=='Mine_Net':
                     pred_xy = MInet(data_x, data_y)
                     pred_x_y = MInet(data_x, data_y_shuffle)
-                elif method=='MI_Net4':
+                elif method=='Mine_Net4':
                     data_y_x = torch.cat([data_y, data_x], dim=1)
                     pred_xz, pred_x_z = MInet(xy=data_y_x, x_shuffle=data_y_shuffle, x_n_dim=y_dim)
                 estimated_MI = torch.mean(pred_xy) - torch.log(torch.mean(torch.exp(pred_x_y)))

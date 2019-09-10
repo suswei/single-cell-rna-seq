@@ -11,7 +11,7 @@ if not os.path.isdir('result/compare_estimatedMI_with_trueMI/continuous_gaussian
 import numpy as np
 import pandas as pd
 import torch
-from scvi.models.modules import MI_Net4
+from scvi.models.modules import MINE_Net4
 import itertools
 from scipy.stats import multivariate_normal,lognorm
 from scipy.integrate import nquad
@@ -51,7 +51,7 @@ final_dataframe = pd.DataFrame(columns=['method', 'distribution', 'distribution_
 
 hyperparameter_config = {
         'distribution': ['lognormal', 'gaussian'],
-        'net_name': ['MI_Net4'],
+        'net_name': ['Mine_Net4'],
         'gaussian_dimension': [2, 20],
         'sample_size': [14388],
         'rho': [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
@@ -128,8 +128,8 @@ for taskid in range(len(hyperparameter_experiments)):
     training_tensor = Variable(torch.from_numpy(dataset2[indices_train,:]).type(torch.FloatTensor))
     testing_tensor = Variable(torch.from_numpy(dataset2[indices_test, :]).type(torch.FloatTensor))
 
-    if net_name == 'MI_Net4':
-        MInet = MI_Net4(training_tensor.shape[-1], layers)
+    if net_name == 'Mine_Net4':
+        MInet = MINE_Net4(training_tensor.shape[-1], layers)
 
     if distribution=='gaussian' and gaussian_dimension == 20 and rho in [-0.99, -0.9, 0.9, 0.99]:
         lr = 0.00005
@@ -159,7 +159,7 @@ for taskid in range(len(hyperparameter_experiments)):
             batch_x_shuffle = Variable(torch.from_numpy(batch_x_shuffle).type(torch.FloatTensor), requires_grad=True)
             batch_y = Variable(batch_y.type(torch.FloatTensor), requires_grad=True)
 
-            if net_name == 'MI_Net4':
+            if net_name == 'Mine_Net4':
                 if distribution == 'lognormal':
                     pred_xy, pred_x_y = MInet(xy=training_tensor[indices, :], x_shuffle=batch_x_shuffle, x_n_dim=1)
                 elif distribution == 'gaussian':
@@ -168,7 +168,7 @@ for taskid in range(len(hyperparameter_experiments)):
             MI_loss = torch.mean(pred_xy) - torch.log(torch.mean(torch.exp(pred_x_y)))
             loss = -1 * MI_loss
             plot_loss.append(loss.data.numpy())
-            MInet.zero_grad()  # clear previous gradients
+            optimizer.zero_grad()  # clear previous gradients
             loss.backward() # compute gradients of all variables wrt loss
             optimizer.step() # perform updates using calculated gradients
 
@@ -189,7 +189,7 @@ for taskid in range(len(hyperparameter_experiments)):
         data_x_shuffle = Variable(torch.from_numpy(data_x_shuffle).type(torch.FloatTensor), requires_grad=True)
         data_y = Variable(data_y.type(torch.FloatTensor), requires_grad=True)
 
-        if net_name == 'MI_Net4':
+        if net_name == 'Mine_Net4':
             if distribution == 'lognormal':
                data_pred_xy, data_pred_x_y = MInet(xy=dataset_tensor[:, :], x_shuffle=data_x_shuffle, x_n_dim=1)
             elif distribution == 'gaussian':

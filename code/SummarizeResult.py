@@ -258,3 +258,214 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
                 plt.title('%s, %s, gaussian_dim%s, %s'%(method, distribution, gaussian_dimension,type),fontsize=18)
                 fig.savefig(result_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method, distribution, gaussian_dimension,type))
                 plt.close(fig)
+
+def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label: str='muris_tabula_batch_config.*._VaeMI_trainset', config_numbers: int=107,
+                  activation_config_list: list=['None'], hyperparameter_config_index: int=2):
+    '''
+    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be','MILoss'])
+    valid_config = []
+    valid_config_index = []
+    for i in range(config_numbers):
+        clustermetric_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_ClusterMetric.csv'%(i,i)
+        if os.path.isfile(clustermetric_filepath_oneconfig):
+            clustermetric_oneconfig = pd.read_csv(clustermetric_filepath_oneconfig)
+            valid_config = valid_config + ['%s'%(i)]
+            valid_config_index = valid_config_index + [i]
+            clustermetric = pd.concat([clustermetric, clustermetric_oneconfig], axis=0)
+        else:
+            continue
+
+    xaxis_index = list(range(1, len(valid_config) + 1))
+    xtick_labels = valid_config
+    fig = plt.figure(figsize=(10, 7))
+    lines1=plt.plot(xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['asw']].values, xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['nmi']].values,
+             xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['ari']].values, xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['uca']].values,
+             xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['be']].values)
+    plt.legend(('asw', 'nmi','ari','uca','be'),loc='upper right', fontsize=16)
+    plt.xticks(xaxis_index, xtick_labels, rotation='vertical', fontsize=14)
+    plt.xlabel('config index', fontsize=16)
+    #plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
+    plt.title('%s, %s, %s, clusteringmetrics' % (dataset_name, nuisance_variable, 'configs'), fontsize=18)
+    fig.savefig(results_dict + '%s_%s_%s_clusteringmetrics.png' % (dataset_name, nuisance_variable, 'configs'))
+    plt.close(fig)
+
+    if activation_config_list != ['None']:
+        for k in activation_config_list:
+            activationmean_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_activationmean.csv'%(k, k)
+            activationvar_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_activationvar.csv'%(k, k)
+            activationmean_oneconfig = pd.read_csv(activationmean_filepath_oneconfig)
+            activationvar_oneconfig = pd.read_csv(activationvar_filepath_oneconfig)
+            xaxis_index = list(range(1, activationmean_oneconfig.shape[-1]))
+            xtick_labels = list(activationmean_oneconfig.columns)[1:]
+            fig = plt.figure(figsize=(10, 7))
+            lines1 = plt.plot(xaxis_index, activationmean_oneconfig[activationmean_oneconfig['layers'].str.match('layer9')].iloc[:, 1:].values.transpose(),
+                              xaxis_index, activationmean_oneconfig[activationmean_oneconfig['layers'].str.match('layer19')].iloc[:, 1:].values.transpose(),
+                              xaxis_index, activationmean_oneconfig[activationmean_oneconfig['layers'].str.match('layer29')].iloc[:, 1:].values.transpose(),
+                              xaxis_index, activationmean_oneconfig[activationmean_oneconfig['layers'].str.match('layer39')].iloc[:, 1:].values.transpose(),
+                              xaxis_index, activationmean_oneconfig[activationmean_oneconfig['layers'].str.match('layer49')].iloc[:, 1:].values.transpose())
+            plt.legend(('layer9','layer19','layer29','layer39','layer49'), loc='upper right', fontsize=16)
+            plt.xticks(xaxis_index, xtick_labels, rotation='vertical', fontsize=14)
+            plt.xlabel('epoch', fontsize=16)
+            # plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
+            plt.title('%s, %s, %s, activationmean' % (dataset_name, nuisance_variable, 'configs'), fontsize=18)
+            fig.savefig(results_dict + 'config%s/%s_%s_%s_activationmean.png' % (k,dataset_name, nuisance_variable, 'configs'))
+            plt.close(fig)
+
+            xaxis_index = list(range(1, activationvar_oneconfig.shape[-1]))
+            xtick_labels = list(activationvar_oneconfig.columns)[1:]
+            fig = plt.figure(figsize=(10, 7))
+            lines1 = plt.plot(xaxis_index, activationvar_oneconfig[activationvar_oneconfig['layers'].str.match('layer9')].iloc[:, 1:].transpose(),
+                              xaxis_index, activationvar_oneconfig[activationvar_oneconfig['layers'].str.match('layer19')].iloc[:, 1:].transpose(),
+                              xaxis_index, activationvar_oneconfig[activationvar_oneconfig['layers'].str.match('layer29')].iloc[:, 1:].transpose(),
+                              xaxis_index, activationvar_oneconfig[activationvar_oneconfig['layers'].str.match('layer39')].iloc[:, 1:].transpose(),
+                              xaxis_index, activationvar_oneconfig[activationvar_oneconfig['layers'].str.match('layer49')].iloc[:, 1:].transpose())
+            plt.legend(('layer9', 'layer19', 'layer29', 'layer39', 'layer49'), loc='upper right', fontsize=16)
+            plt.xticks(xaxis_index, xtick_labels, rotation='vertical', fontsize=14)
+            plt.xlabel('epoch', fontsize=16)
+            # plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
+            plt.title('%s, %s, %s, activationvar' % (dataset_name, nuisance_variable, 'configs'), fontsize=18)
+            fig.savefig(results_dict + 'config%s/%s_%s_%s_activationvar.png' % (k, dataset_name, nuisance_variable, 'configs'))
+            plt.close(fig)
+    '''
+    for p in range(config_numbers):
+        clustermetric_trainingprocess_filepath = input_dir_path + 'config%s/clustermetrics_duringtraining.csv'%(p)
+        if os.path.isfile(clustermetric_trainingprocess_filepath):
+            clustermetric_trainingprocess_oneconfig = pd.read_csv(clustermetric_trainingprocess_filepath)
+            xaxis_index = list(range(1, clustermetric_trainingprocess_oneconfig.shape[0] + 1))
+            #xtick_labels = ['%s'%(i) for i in xaxis_index]
+            fig = plt.figure(figsize=(10, 7))
+            lines1 = plt.plot(xaxis_index, clustermetric_trainingprocess_oneconfig.loc[:, ['asw']].values,
+                              xaxis_index, clustermetric_trainingprocess_oneconfig.loc[:, ['nmi']].values,
+                              xaxis_index, clustermetric_trainingprocess_oneconfig.loc[:, ['ari']].values,
+                              xaxis_index, clustermetric_trainingprocess_oneconfig.loc[:, ['uca']].values,
+                              xaxis_index, clustermetric_trainingprocess_oneconfig.loc[:, ['be']].values)
+            plt.legend(('asw', 'nmi', 'ari', 'uca', 'be'), loc='upper right', fontsize=16)
+            #plt.xticks(xaxis_index, xtick_labels, rotation='vertical', fontsize=14)
+            plt.xlabel('epoch number', fontsize=16)
+            plt.title('%s, %s, config%s, clusteringmetrics' % (dataset_name, nuisance_variable, p), fontsize=18)
+            fig.savefig(results_dict + 'config%s/%s_%s_config%s_clusteringmetrics.png' % (p, dataset_name, nuisance_variable, p))
+            plt.close(fig)
+
+    valid_config = list(range(0, config_numbers))
+    hyperparameter_dataframe = pd.DataFrame(columns=['lr','adv_lr','n_epochs','Adv_MineNet4_architecture','change_adv_epochs','activation_fun','unbiased_loss','initial'])
+    configs = pd.DataFrame.from_dict({'configs':valid_config})
+
+    if hyperparameter_config_index == 2:
+        hyperparameter_config = {
+            'n_layers_encoder': [2],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
+            'train_size': [0.8],
+            'lr': [0.001],
+            'adv_lr': [5e-6, 1e-8, 1e-10],
+            'n_epochs': [500, 750],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_MineNet4_architecture': [[256] * 50, [256] * 100],
+            'adv_epochs': [250],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ReLU', 'ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+            'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_uniform', 'xavier_normal', 'kaiming_normal'],
+            # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+            'optimiser': ['Adam']
+        }
+    elif hyperparameter_config_index == 3:
+        hyperparameter_config = {
+            'n_layers_encoder': [2],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
+            'train_size': [0.8],
+            'lr': [5e-3, 5e-4, 1e-4, 5e-5, 1e-5],
+            'adv_lr': [1e-8, 1e-10],
+            'n_epochs': [500,750],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_MineNet4_architecture': [[256] * 50],
+            'adv_epochs': [250],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+            'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+            'optimiser': ['Adam']
+        }
+    elif hyperparameter_config_index == 4:
+        hyperparameter_config = {
+            'n_layers_encoder': [2],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
+            'train_size': [0.8],
+            'lr': [5e-3, 1e-4, 1e-5, 5e-6, 1e-6],
+            'adv_lr': [1e-8, 1e-10],
+            'n_epochs': [1500],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_MineNet4_architecture': [[256] * 50],
+            'adv_epochs': [250],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+            'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+            'optimiser': ['Adam']
+        }
+    elif hyperparameter_config_index == 5:
+        hyperparameter_config = {
+            'n_layers_encoder': [2],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
+            'train_size': [0.8],
+            'lr': [5e-3, 1e-4, 1e-5, 5e-6, 1e-6],
+            'adv_lr': [1e-8, 1e-10],
+            'n_epochs': [1500],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_MineNet4_architecture': [[256] * 50],
+            'adv_epochs': [250],
+            'change_adv_epochs': [1, 60],
+            'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal1'],
+            # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+            'optimiser': ['Adam']
+        }
+
+    keys, values = zip(*hyperparameter_config.items())
+    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+    valid_config_index = valid_config
+    for m in valid_config_index:
+        key, value = zip(*hyperparameter_experiments[m].items())
+        intermediate_dataframe = pd.DataFrame.from_dict({'lr': [value[10]],'adv_lr': [value[11]],'n_epochs': [value[12]],'Adv_MineNet4_architecture': [len(value[15])],'change_adv_epochs': [value[17]],'activation_fun':[value[18]],'unbiased_loss':[value[19]],'initial':[value[20]]})
+        hyperparameter_dataframe = pd.concat([hyperparameter_dataframe, intermediate_dataframe], axis=0)
+
+    hyperparameter_dataframe.index = range(0, len(valid_config_index))
+    hyperparameter_dataframe = pd.concat([configs, hyperparameter_dataframe], axis=1)
+    hyperparameter_dataframe.to_csv(results_dict + '%s_%s_%s_hyperparameters.csv' % (dataset_name, nuisance_variable, 'configs'), index=None, header=True)

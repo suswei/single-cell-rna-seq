@@ -48,7 +48,8 @@ class VAE(nn.Module):
                  n_hidden: int = 128, n_latent: int = 10, n_layers_encoder: int = 1,
                  n_layers_decoder: int = 1,
                  dropout_rate: float = 0.1, dispersion: str = "gene",
-                 log_variational: bool = True, reconstruction_loss: str = "zinb"):
+                 log_variational: bool = True, reconstruction_loss: str = "zinb", nsamples_z: int=200, adv: bool=False,
+                 save_path: str='None', minibatch_index: int=0):
         super().__init__()
         self.dispersion = dispersion
         self.n_latent = n_latent
@@ -58,6 +59,10 @@ class VAE(nn.Module):
         self.n_batch = n_batch
         self.n_labels = n_labels
         self.n_latent_layers = 1  # not sure what this is for, no usages?
+        self.nsamples_z = nsamples_z
+        self.adv = adv
+        self.save_path = save_path
+        self.minibatch_index = minibatch_index
 
         if self.dispersion == "gene":
             self.px_r = torch.nn.Parameter(torch.randn(n_input, )) #create a tensor filled with random numbers from a normal distribution, consider as module parameter
