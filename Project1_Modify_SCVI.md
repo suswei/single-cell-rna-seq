@@ -17,13 +17,14 @@ jupyter:
 <h1><center>Project1_Modify_SCVI</center></h1>
 <b><font size="+2">1. Introduction</font></b>
 <a href='#section2'><p style="margin-left: 40px"><b><font size="+1">1.1 Deep Learning and the Invariance Problem</font></b></p></a>
-<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 SCVI</font></b></p></a>
-<a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 SCVI with mutual information penalty</font></b></p></a>
+<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 scVI</font></b></p></a>
+<a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 scVI with mutual information penalty</font></b></p></a>
 
 <b><font size="+2">2. Have Done and Discussion</font></b>
-<a href='#section6'><p style="margin-left: 40px"><b><font size="+1">2.1 Break SCVI</font></b></p></a>
+<a href='#section6'><p style="margin-left: 40px"><b><font size="+1">2.1 Break scVI</font></b></p></a>
 <a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.2 Compare estimated mutual inforamtion with true mutual inforamtion</font></b></p></a>
-<a href='#section7'><p style="margin-left: 40px"><b><font size="+1">2.3 Compare SCVI and SCVI+MI_Penalty</font></b></p></a>
+<a href='#section7'><p style="margin-left: 40px"><b><font size="+1">2.3 Compare scVI and scVI+MI_Penalty-strategy 1</font></b></p></a>
+<a href='#section7'><p style="margin-left: 40px"><b><font size="+1">2.4 Compare scVI and scVI+MI_Penalty-strategy 2</font></b></p></a>
 
 <a href='#section10'><b><font size="+2">3. To Does</font></b></a>
 
@@ -38,19 +39,17 @@ jupyter:
 <a id='section2'></a>
 <b><font size="+1">1.1 Invariance of Deep Learning</font></b>
 
-Deep learning has been widely used in many pattern recognition tasks, like image classification, object detection, and segmentation. Invariance of deep learning means a pattern can still be correctly recognized when there are many confounding properties. For example, a cat in an image can still be classified correctly as a cat even when the image is rotated, enlarged or brightened. There are many researches, especially in computer vision field, about how to make deep learning network selects the complex, high level invariant features of the input, yet robust to irrelevant input transformations, which can be summarized in two aspects. 
+Deep learning has been widely used in many pattern recognition tasks, like image classification, object detection, and segmentation. During the process of deep learning, invariance could be imposed such that a pattern can still be correctly recognized when there are many confounding properties. For example, a cat in an image can still be classified correctly as a cat even when the image is rotated, enlarged or brightened. There are many researches, especially in computer vision field, about how to make deep learning network selects the complex, high level invariant features of the input, yet robust to irrelevant input transformations, which can be summarized in two aspects. 
 
-One aspect to achieve invariability is to increase the amount of training data. Le et al.([2013](http://static.googleusercontent.com/media/research.google.com/en//archive/unsupervised_icml2012.pdf)) devoted enormous unlabeled image data and computation power to train a large neuron network with billions of parameters. The face feature detector learnt from the neuron network without labeling images as containing a face or not is robust not only to translation but also to scaling and out-of-plane rotation. Small training dataset can be expanded by generating new samples in the way of applying small random deformations to the original training examples, using deformations like rotations, scaling, translation or shearing, which are known not to change the target variables of interest. Ciresan et al. ([2010](https://arxiv.org/pdf/1003.0358.pdf)) applied large deep neural network on deformed MNIST digits and reached 0.35% classification error rate. Simard et al. ([2003](http://cognitivemedium.com/assets/rmnist/Simard.pdf)) trained convolutional neural network on MNIST English digit images with both affine and elastic deformations, and reached a record of 0.32% classification error rate. The other aspect to achieve invariability is to model general (e.g. a hierarchical organization of explanatory factors as the depth of neural network grows) or domain-specific prior information (e.g. the topological 2D structure of image data in computer vision) into deep learning network in the form of network structures or probability distributions before any data is fed in ([Bengio, Courville, & Vincent, 2012](https://arxiv.org/pdf/1206.5538.pdf)). <font color=red>can we learn nuisance factor effect from house keeping genes, and delete these effects for other genes???</font>
+One aspect to achieve invariability is to increase the amount of training data. Le et al.([2013](http://static.googleusercontent.com/media/research.google.com/en//archive/unsupervised_icml2012.pdf)) devoted enormous unlabeled image data and computation power to train a large neuron network with billions of parameters. The face feature detector learnt from the neuron network without labeling images as containing a face or not is robust not only to translation but also to scaling and out-of-plane rotation. Small training dataset can be expanded by generating new samples in the way of applying small random deformations to the original training examples, using deformations like rotations, scaling, translation or shearing, which are known not to change the target variables of interest. Ciresan et al. ([2010](https://arxiv.org/pdf/1003.0358.pdf)) applied large deep neural network on deformed MNIST digits and reached 0.35% classification error rate. Simard et al. ([2003](http://cognitivemedium.com/assets/rmnist/Simard.pdf)) trained convolutional neural network on MNIST English digit images with both affine and elastic deformations, and reached a record of 0.32% classification error rate. The other aspect to achieve invariability is to model general (e.g. a hierarchical organization of explanatory factors as the depth of neural network grows) or domain-specific prior information (e.g. the topological 2D structure of image data in computer vision, penalty) into deep learning network in the form of network structures before any data is fed in ([Bengio, Courville, & Vincent, 2012](https://arxiv.org/pdf/1206.5538.pdf)). <font color=red>can we learn nuisance factor effect from house keeping genes, and delete these effects for other genes???</font>
 
-Although the invariance of reprensentation learning is extremely investigated in engineering field, it is also a general, or even more important problem in biology research when data is relatively expensive to obtain and difficult to deform to generate new data. One major interest is to represent the single-cell RNA sequencing (scRNA-seq) data in a way invariant to diverse confounding factors including transcriptional noise (Wagner et al., [2016](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nbt.3711), capture efficiency and sequnencing depth (Vallejos et al., [2017](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nmeth.4292)), amplication bias, and batch effects (Shaham et al., [2017](https://academic-oup-com.ezp.lib.unimelb.edu.au/bioinformatics/article/33/16/2539/3611270)), such that only true biological variance is left for downstream analysises including imputation of missing data in the scRNA-seq datasets with highly abundant 'drop-out' events, visualization and clustering, differential gene expression analysis. Successful utilization of deep learning to solve this prolem in scRNA-seq research will contribute significantly to diverse research areas such as cancer(Patel et al., [2014](https://science-sciencemag-org.ezp.lib.unimelb.edu.au/content/344/6190/1396)), development (Semrau et al., [2017](https://www.nature.com/articles/s41467-017-01076-4)), autoimmunity (Gaublomme et al., [2015](https://www-sciencedirect-com.ezp.lib.unimelb.edu.au/science/article/pii/S0092867415014890)).
-
-Lopez et al. ([2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)) has already developed SCVI, a generative deep learning network, which first learn representation from the original scRNA-seq datasets through an encoder network, and then generate new scRNA-seq data based on the learned representations through an decoder network. The new generated scRNA-seq data is claimed to be similar to the original data as much as possible, as well as correct for confounding factors to an appropriate extent <font color=red>(make sure whether it is correct to say so)</font>. 
+Although imposing invariance to the patterns identified by deep learning is extremely investigated in computer vision, it is also a general, or even more important problem in biology research when data is relatively expensive to obtain and difficult to deform to generate new data. scRNA-seq data analysis has gained enormous attention recently and is contributing significantly to diverse research areas such as cancer(Patel et al., [2014](https://science-sciencemag-org.ezp.lib.unimelb.edu.au/content/344/6190/1396)), development (Semrau et al., [2017](https://www.nature.com/articles/s41467-017-01076-4)), autoimmunity (Gaublomme et al., [2015](https://www-sciencedirect-com.ezp.lib.unimelb.edu.au/science/article/pii/S0092867415014890)). One major interest is to represent the single-cell RNA sequencing (scRNA-seq) data in a way invariant to diverse confounding factors including transcriptional noise (Wagner et al., [2016](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nbt.3711), capture efficiency and sequnencing depth (Vallejos et al., [2017](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nmeth.4292)), amplication bias, and batch effects (Shaham et al., [2017](https://academic-oup-com.ezp.lib.unimelb.edu.au/bioinformatics/article/33/16/2539/3611270)), such that only true biological variance is left for downstream analysises including imputation of missing data in the scRNA-seq datasets with highly abundant 'drop-out' events, visualization and clustering, differential gene expression analysis. Although deep learning, especially generative deep network for unsupervised learning (<font color=red>(are there other neural network used in single cell rna seq for unsupervised learning?)</font>), has been used recently to analyze single-cell RNA seq data in several researches (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5), Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X), Eraslan, et al. [2018](https://www.nature.com/articles/s41467-018-07931-2), Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3), Lopez et al. [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)), some of them only focus on dimension reduction (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5),Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X)) and clustering cell types (Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3)). Among those that do investigate about removing the technical variations from the data (Deep Count Autoencoder network (DCA) developed by Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2), Single-cell Variational Inference (scVI) developed by Lopez et al. [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)), the correction effect is limited because it only comes from the basic nature of generative deep learning network that compression forces the autoencoder to learn only the essential latent features and the reconstruction ignores non-essential sources of variation. As scVI is superior than DCA in the sense that library size and batch labels are explicitly modeled in the deep neural network architecture, our research starts from scVI and investigate how to increase the correction effect for specific nuisance factors, library size and batch labels.
 
 <!-- #region -->
 <a id='section4'></a>
-<b><font size="+1">1.2 SCVI</font></b>
+<b><font size="+1">1.2 scVI</font></b>
 
-SCVI is essentially a variational autoencoder, one of the most popular approaches to unsupervised learning of complicated distributions (Doersch, [2016](https://arxiv.org/abs/1606.05908)). Therefore, variational autoencoder will be discussed first. Suppose $x$ is a data point in a dataset with an unknown possibility distribution $p(x)$, $z$ is the representation called latent vector for the data point $x$, defined over a high-, but lower-dimensional space $Z$ than the original datapoint $x$. For each $x$, $z$ is a random variable with probability density $p(z)$. Suppose we have a family of derministic functions $f(z;\theta)$, parameterized by a vector $\theta$ in some space $\Theta$, where $f: Z \times \Theta \rightarrow X$, the objective is to optimize $\theta$ such that the probability of each $x$ in the training dataset can be maximized, according to the definition: $p(x) = \int_{Z} p(x|z;\theta)p(z)dz$. In most cases, p(z) is set to be $N(0,I)$, where $I$ is the identity matrix. $p(x)$ can be approximated by sampling a large number of z values $\{z_{1},...,z_{n}\}$ and averaging $p(x|z_{i}), z\in \{1,...,n\}$. In practice, for most $z$ sampled from $p(z)$, $p(x|z)$ will be almost zero, contributing nothing to our estimator for $p(x)$. The solution to circumvent this problem is to narrow down the sampling space of $z$ such that $z$ are more likely to have produced $x$, thus giving a meaningful value of $p(x|z)$. The narrowed space of $z$ is determined by the posteror probability distribution $p(z|x)$, which, however, is usually difficult to compute analytically. Suppose $q(z|x)$ is a function approximator for $p(z|x)$, then:
+scVI is essentially a variational autoencoder, one of the most popular approaches to unsupervised learning of complicated distributions (Doersch, [2016](https://arxiv.org/abs/1606.05908)). Therefore, variational autoencoder will be discussed first. Suppose $x$ is a data point in a dataset with an unknown possibility distribution $p(x)$, $z$ is the representation called latent vector for the data point $x$, defined over a high-, but lower-dimensional space $Z$ than the original datapoint $x$. For each $x$, $z$ is a random variable with probability density $p(z)$. Suppose we have a family of derministic functions $f(z;\theta)$, parameterized by a vector $\theta$ in some space $\Theta$, where $f: Z \times \Theta \rightarrow X$, the objective is to optimize $\theta$ such that the probability of each $x$ in the training dataset can be maximized, according to the definition: $p(x) = \int_{Z} p(x|z;\theta)p(z)dz$. In most cases, p(z) is set to be $N(0,I)$, where $I$ is the identity matrix. $p(x)$ can be approximated by sampling a large number of z values $\{z_{1},...,z_{n}\}$ and averaging $p(x|z_{i}), i\in \{1,...,n\}$. In practice, for most $z$ sampled from $p(z)$, $p(x|z)$ will be almost zero, contributing nothing to our estimator for $p(x)$. The solution to circumvent this problem is to narrow down the sampling space of $z$ such that $z$ are more likely to have produced $x$, thus giving a meaningful value of $p(x|z)$. The narrowed space of $z$ is determined by the posteror probability distribution $p(z|x)$, which, however, is usually difficult to compute analytically. Suppose $q(z|x)$ is a function approximator for $p(z|x)$, then:
 
 \begin{equation}
 logp(x) - D[q(z|x)||p(z|x)] = E_{z \sim q(z|x)} [logp(x|z)] - D[q(z|x)||p(z)], 
@@ -108,10 +107,58 @@ the parameter $\theta \in \mathbb{R}_{+}^{G}$ denotes a gene-specific inverse di
 
 <font color=red>(how to calculate logp(x|z,l,s) and backpropogate?)</font>
 
-SCVI is claimed to be superior than other existing methods inferring the biological variation in single-cell data with nuisance factors in three aspects (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)). First, although both SCVI and other existing methods use a parametric statistical model with a 'expressiion' component (e.g., ZINB-WaVE uses a negative binomial as the expression componnet (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5)), BISCUIT uses a log normal distribution as the expression component (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))) and a zero compnent (usually a bernoulli distribution <font color=red>(is it true?)</font>) to fit the distribution of the random variable which is the count of the transcripts for each gene in each cell, and although both SCVI and other methods are first trying to learn a low-dimensional manifold from the single-cell RNA count data as well additional covariates provided as metadata (e.g., batch (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5) (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf))), cell quality (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5))) and map the low-dimensional representation to the parameter of the model, the neural network in scvi frees the mapping function from the constraint of the generalized linear assumption in other methods, which is difficult to justify. <font color=red>(check at least one method e.g. ZINB-WaVE to check what is the generalized linear assumption in this method?)</font>). Second, scvi can be used to analyze the single-cell RNA seq data for all the various downstream tasks to ensure consistency, compared with other methods usually designed specially only for different subsets of all tasks (e.g., imputation and clustering, but not differential expression (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))). Third, scvi provides a higher computational scalability, desirable for the ever-growing size of recent datasets consisting of hundreads of thousands of cells (commercial 10x genomics, [2017](https://support.10xgenomics.com/single-cell-gene-expression/datasets/), or envisioned by consortia like the Human Cell Atlas (Regev, et al., [2017](https://elifesciences.org/articles/27041))), compared with other methods applicable only to tens of thousands of cells <font color=red>(why scvi has higher computational scalability?)</font>). 
+There are many traditional statistical methods, compared with deep learning, to infer the biological variation in single-cell data with nuisance factors. scVI is claimed to be superior than the traditional statistical methods in three aspects (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)). First, although both SCVI and other existing methods use a parametric statistical model with a 'expressiion' component (e.g., ZINB-WaVE uses a negative binomial as the expression componnet (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5)), BISCUIT uses a log normal distribution as the expression component (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))) and a zero compnent (usually a bernoulli distribution <font color=red>(is it true?)</font>) to fit the distribution of the random variable which is the count of the transcripts for each gene in each cell, and although both SCVI and other methods are first trying to learn a low-dimensional manifold from the single-cell RNA count data <font color=red>(what are the other low-dimension manifold learning methods?)</font> as well additional covariates provided as metadata (e.g., batch (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5) (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf))), cell quality (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5))) and map the low-dimensional representation to the parameter of the model, the neural network in scvi frees the mapping function from the constraint of the generalized linear assumption in other methods, which is difficult to justify. <font color=red>(check at least one method e.g. ZINB-WaVE to check what is the generalized linear assumption in this method?)</font>). Second, scvi can be used to analyze the single-cell RNA seq data for all the various downstream tasks to ensure consistency, compared with other methods usually designed specially only for different subsets of all tasks (e.g., imputation and clustering, but not differential expression (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))). Third, scvi provides a higher computational scalability, desirable for the ever-growing size of recent datasets consisting of hundreads of thousands of cells (commercial 10x genomics, [2017](https://support.10xgenomics.com/single-cell-gene-expression/datasets/), or envisioned by consortia like the Human Cell Atlas (Regev, et al., [2017](https://elifesciences.org/articles/27041))), compared with other methods applicable only to tens of thousands of cells <font color=red>(why scvi has higher computational scalability?)</font>). 
 
-However, 
+As mentioned above, scVI is also superior to other deep learning methods (e.g. DCA, Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2)) for removing the techinical variation, in a way that apart from removing technical variations from all resources, scVI explicitly models two nuisance factors, library size and batch labels. However, there is still much variation from nuisance factors (e.g. batch) remained in the dataset after scVI implementation when those nuisance factors have large confounding effects initially(Xu, et al. [2019](https://www.biorxiv.org/content/10.1101/532895v1)). Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) analyzed that the different dimensions of the latent vectors are hardly independent because the approximateed posterior distribution poorly matches the real posterior and the data we have are always finite, and they also observed empirically that the the independence properties encoded by the generative model wil often not be respected by the approximate posterior. Therefore, in order to impose invariance to nuisance factors in scVI, Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) proposed a a framework named Hilbert-Schmidt Independence Criterion (HSIC)-constrained variational autoencoder (VAE), which enforces independence between the learnt latent representations and arbitrary nuisance factors through maximizing the traditional variational lower bound of VAE with a penalty for desired independence requirement calibrated by a kernel-based non-parametric method called HSIC. <font color=red>(Describe the HSIC method here in details!!!!!!!, the code for the paper is [here](https://github.com/romain-lopez/HCV/blob/master/scVI/scVIgenqc.py))</font>. 
 
+However, the main drawback for HSIC to measure dependence is that it is not applicable to high-dimensional random variables, which is the inherent shortcoming for non-parametric kernel estimator. Belghazi et al. [2018](https://arxiv.org/pdf/1801.04062.pdf) proposed a neural network estimator named MINE for mutual information between high dimensional continuous random variables, where mutual information quantifies both linear and non-linear dependence of two random variables. And when given two random variables $X$ and $Z$, it is defined as:
+\begin{equation}
+\begin{aligned}
+ I(X;Z) = \int_{\mathcal{X} \times \mathcal{Z}} log \frac{d\mathbb{P}_{XZ}}{d\mathbb{P}_{Z} \otimes d\mathbb{P}_{Z}}d\mathbb{P}_{XZ},
+\end{aligned}
+\end{equation}
+
+where $\mathbb{P}_{XZ}$ is the joint probability distribution of $X$ and $Z$, $\mathbb{P}_{X} = \int_{\mathcal{Z}}d\mathbb{P}_{XZ}$ and $\mathbb{P}_{Z} = \int_{\mathcal{X}}d\mathbb{P}_{XZ}$ are the marginal probability distribution for $X$ and $Z$, respectively. Essentially, the mutual information is equivalent to the Kullback-Leibler (KL-) divergence between the joint $\mathbb{P}_{XZ}$ and the product of the marginals $\mathbb{P} \otimes \mathbb{Q}$: $I(X, Z) = D_{KL}(\mathbb{P}_{XZ}||\mathbb{P}_{X} \otimes \mathbb{P}_{Z})$, where $D_{KL}(\mathbb{P}||\mathbb{Q})=\mathbb{E}_{\mathbb{P}} \Big[log \frac{d\mathbb{P}}{d\mathbb{Q}}\Big]$. Put simply, the mutual information of two random variable is the KL-divergence between the true joint distribution and joint distribution when $X$ and $Z$ are assumed to be independent. According to the Donsker-Varadhan representation, $D_{KL}(\mathbb{P}||\mathbb{Q}) = \underset{T: \Omega \rightarrow \mathbb{R}}{sup} E_{\mathbb{P}}[T] - log(\mathbb{E}_{\mathbb{Q}}[e^{T}])$, where T is all functions under which the two expectations are finite. Consequently, $D_{KL}(\mathbb{P}||\mathbb{Q}) \geq \underset{T \in \mathcal{F}}{sup} E_{\mathbb{P}}[T] - log(\mathbb{E}_{\mathbb{Q}}[e^{T}])$, where $\mathcal{F}$ is any class of functions $T: \Omega \rightarrow \mathbb{R}$. The larger number of functions $\mathcal{F}$ contains, the tighter the lower bound for $D_{KL}(\mathbb{P}||\mathbb{Q})$ is. $\mathcal{F}$ is chosen to be a family of function $T_{\theta}: \mathcal{X} X \mathcal{Z} \rightarrow \mathbb{R}$ parametrized with parameters $\theta \in \Theta$ in the MINE neural network. Therefore, $I(X;Z) \geq I_{\Theta}(X, Z) = \underset{\theta \in \Theta}{sup} E_{\mathbb{P}_{XZ}}[T_{\theta}] - log(\mathbb{E}_{\mathbb{P}_{X} \otimes \mathbb{P}_{Z}}[e^{T_{\theta}}])$
+
+
+ 
+
+Let x be data points, z be latent variable, s be batch, then the aggregated posterior of $z$ conditional on batch $s$ is:
+\begin{equation}
+\begin{aligned}
+ \hat{q}_{\phi}(z|s) &= \mathbb{E}_{p_{data}(x|s)}[q_{\phi}(z|x|s)] \\
+                     &\approx \frac{1}{n}\Sigma_{i=1}^{n}\hat{q}_{\phi}(z|x|s) \\
+\end{aligned}
+\end{equation}
+
+Let $\mathbb{P}$ and $\mathbb{Q}$ be the aggregated posterior of $z$ conditional on batch $s=0$ and $s=1$ respectively, then we have:
+\begin{equation}
+\begin{aligned}
+                    \mathbb{P} &= \hat{q}_{\phi}(z|s=0) \\
+                    \mathbb{Q} &= \hat{q}_{\phi}(z|s=1) \\
+\end{aligned}
+\end{equation}
+
+According to Belghazi, et al. [2018](https://arxiv.org/pdf/1801.04062.pdf),   KL-divergence between $\mathbb{P}$ and $\mathbb{Q}$ is:
+
+\begin{equation}
+\begin{aligned}
+D_{KL}(\mathbb{P}||\mathbb{Q}) &= \underset{T: Z \rightarrow \mathbb{R}}{sup} E_{\mathbb{P}}[T] - log(\mathbb{E}_{\mathbb{Q}}[e^{T}]) \\
+                               &= \underset{T: Z \rightarrow \mathbb{R}}{sup}\int_{Z|s=0}T(z)\hat{q}_{\phi}(z|s=0)dz - log(\int_{Z|s=1}e^{T(z)}\hat{q}_{\phi}(z|s=1)dz), \\
+\end{aligned}
+\end{equation}
+
+where $T: Z \rightarrow \mathbb{R}$ means all functions that makes the two expectations finite.
+
+Let $\mathbb{F}$ be any class of functions $T: Z \rightarrow \mathbb{R}$, then the lower bound for $D_{KL}(\mathbb{P}||\mathbb{Q})$ is:
+
+\begin{equation}
+\begin{aligned}
+D_{KL}(\mathbb{P}||\mathbb{Q}) &\geq \underset{T\in \mathbb{F}}{sup} E_{\mathbb{P}}[T] - log(\mathbb{E}_{\mathbb{Q}}[e^{T}]) \\
+                               &= \underset{T\in \mathcal{F}}{sup}\int_{Z|s=0}T(z)\hat{q}_{\phi}(z|s=0)dz - log(\int_{Z|s=1}e^{T(z)}\hat{q}_{\phi}(z|s=1)dz) \\
+                               &\approx \underset{T\in \mathcal{F}}{sup}\frac{1}{N_{0}}\Sigma_{i=1}^{N_{0}}T(z_{i}|s=0) - log(\frac{1}{N_{1}}\Sigma_{i=1}^{N_{1}}e^{T(z_{i}|s=1)})\\
+\end{aligned}
+\end{equation}
 
 
 
@@ -167,16 +214,16 @@ Why when the ratio is 5, batch mixing entropy is even higher than that when the 
 
 <!-- #region -->
 <a id='section7'></a>
-<b><font size="+1">2.2 Compare SCVI and SCVI+MI_Penalty</font></b>
+<b><font size="+1">2.3 Compare SCVI and SCVI+MI_Penalty: strategy 1</font></b>
 
-<b><font size="3">2.2.1 Goal</font></b> 
+<b><font size="3">2.3.1 Goal</font></b> 
 
 Compare SCVI and SCVI with penalty of mutual information(MI) between nuisance factor and latent factor, using cluster metrics, and tsne plots as the comparison criteria.  
 
-<b><font size="3">2.2.2 Design</font></b>
+<b><font size="3">2.3.2 Design</font></b>
 
 Apply SCVI, SCVI with penalty of mutual information to the datasets: MouseMarrow, pbmc, retina.
-For the nuisance factor 'batch', use nearest neighbor method to estimate the mutual information between batch and the latent factor, as batch is a categorical variable. For the nuisance factor 'library size', use Mine_Net4 to estimate the mutual information between library size and the latent factor, as library size is a lognormal variable.
+When the nuisance factor is 'batch', as batch is a categorical variable, use nearest neighbor method to estimate the mutual information between batch and the latent factor. When the nuisance factor is 'library size', use Mine_Net4 to estimate the mutual information between library size and the latent factor, as library size is a lognormal variable.
 
 According to the paper [Deep Generative Modeling for Single-cell Transcriptomics](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf), the four clustering metrics are :
 
@@ -206,6 +253,8 @@ When the nuisance factor is batch, for each iteration, apply SCVI once to MouseM
     -n_layers_encoder: [2] (the number of hidden layers for encoder network in SCVI, and SCVI+MI_penalty)
     
     -n_layers_decoder: [2] (the number of hidden layers for decoder network in SCVI, and SCVI+MI_penalty)
+    
+    -n_layers_encoder (for l_encoder): [1] (the default value from the original SCVI)
     
     -n_hidden: [128] (the number of nodes in each hidden layer in both encoder and decoder in SCVI, and SCVI+MI_penalty)
     
@@ -237,6 +286,8 @@ As the invariance increases as network becomes deeper, I also tried n_layers_enc
     -n_layers_encoder: [10] (the number of hidden layers for encoder network in SCVI, and SCVI+MI_penalty)
     
     -n_layers_decoder: [2] (the number of hidden layers for decoder network in SCVI, and SCVI+MI_penalty)
+    
+    -n_layers_encoder (for l_encoder): [10] (equals the n_layers_encoder for z_encoder)
     
     -n_hidden: [128] (the number of nodes in each hidden layer in both encoder and decoder in SCVI, and SCVI+MI_penalty)
     
@@ -296,13 +347,13 @@ The values for the following hyperparameters: n_layers, n_hidden, n_latent, drop
 
 
 
-<b><font size="3">2.2.3 Code</font></b>
+<b><font size="3">2.3.3 Code</font></b>
 
 In the shell,  git clone the Hui_Li branch of the github page https://github.com/susanwe/single-cell-rna-seq.git. Then in the working directory, create a virtual environment named venv, activate venv, and install all required packages with specific versions listed in Project1_Modify_SCVI-requirements.txt in the venv environment. Use command: cp code/tune_hyperparameter_for_MineNet4_MonteCarlo.sh tune_hyperparameter_for_MineNet4_MonteCarlo.sh to copy the tune_hyperparameter_for_MineNet4_MonteCarlo.sh file to the working directory. Use command: cp code/tune_hyperparameter_for_MineNet4_MonteCarlo.py tune_hyperparameter_for_MineNet4_MonteCarlo.py to copy the tune_hyperparameter_for_MineNet4_MonteCarlo.py to the working directory. Then in the working directory use command: sh tune_hyperparameter_for_MineNet4_MonteCarlo.sh to run tune_hyperparameter_for_MineNet4_MonteCarlo.py 100 times.
 
 After all jobs finish on spartan, git clone the Hui_Li branch of the github page https://github.com/susanwe/single-cell-rna-seq.git to local computer. Use the command: scp myusername@spartan.hpc.unimelb.edu.au:/data/projects/myproject/remote.dat local.dat to copy the results on spartan to local computer.
 
-<b><font size="3">2.2.4 Result</font></b>
+<b><font size="3">2.3.4 Result</font></b>
 
 <b><font size="3">a MouseMarrow</font></b>
 
@@ -335,6 +386,46 @@ subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('muris_tabula', 'batch','t
 subfile_titles += ['%s, %s, %s, clusteringmetrics' % ('muris_tabula', 'batch','testing')]
 SummarizeResult('image',file_paths,subfile_titles,'Fig4: Clustering metrics comparison between scVI and scVI+MI_Penalty on muris tabula dataset, batch nuisance factor')
 ```
+
+Try to adjust hyperparameters:
+
+1. When the hyperparameters are as follows:
+   
+    -n_layers_encoder: [2] (the number of hidden layers for encoder network in SCVI, and SCVI+MI_penalty)
+    
+    -n_layers_decoder: [2] (the number of hidden layers for decoder network in SCVI, and SCVI+MI_penalty)
+    
+    -n_layers_encoder (for l_encoder): [1] (the default value from the original SCVI)
+    
+    -n_hidden: [128] (the number of nodes in each hidden layer in both encoder and decoder in SCVI, and SCVI+MI_penalty)
+    
+    -n_latent: [10] (the dimension of the latent vector Z)
+    
+    -dropout_rate: [0.1]
+    
+    -reconstruction_loss: ['zinb']
+    
+    -use_batches: [True]
+    
+    -use_cuda: [False]
+    
+    -Scale: [200, 500, 800, 1000, 2000, 5000, 10000, 100000, 1000000] (the scale multiplied to MI estimator)
+    
+    -train_size: [0.8] (the ratio to split the dataset into training and testing dataset)
+    
+    -lr: [0.001](learning rate)
+    
+    -n_epochs: [250] 
+ batch_mixing_entropy is about 0.05 for vae, and 0.07 for vae_MI when scale=100000
+ 
+2. From case 1, when only change the number of hidden layers in l_encoder to n_layers_encoder (which is 2 in the case), batch_mixing_entropy is about 0.12 for vae, and 0.14 for vae_MI (scale=100000) (this is the one time result)
+
+3. From case 1, when maintain the hyperparameter in 1, but change MI=max(MI_l_s, MI_z_s), the batch_mixing_entropy is about 0.04 for vae, 0.1 for vae_MI (scale=100000)(this is the one time result)
+
+4. From case 1, when change n_epochs=500, lr=0.0005, MI=max(MI_l_s, MI_z_s), the batch_mixing_entropy is about 0.11 for vae, 0.12 for vae_MI (scale=100000)(this is the one time result)
+
+5. From case 1, when change change the number of hidden layers in l_encoder to n_layers_encoder (which is 2 in the case), MI=max(MI_l_s, MI_z_s), batch_mix_entropy for vae is 0.12, vae_MI(scale: 100000) is 0.13, vae_MI(scale:10000000) is  0.11 (this is the one time result)
+
 
 ```python
 import os
@@ -447,14 +538,325 @@ regression, logistic regression etc can be also considered as a type of simple d
 <font color=red>But how to consider linear regresion or logistic regression as deep learning neural network?Be clear about the details</font>
 
 
-<a id='section9'></a>
-<b><font size="+1">2.3 Compare estimated mutual information with true mutual inforamtion</font></b>
+<a id='section7'></a>
+<b><font size="+1">2.4 Compare SCVI and SCVI+MI_Penalty: strategy 2</font></b>
 
-<b><font size="+1">2.3.1 Goal </font></b>
+<b><font size="3">2.4.1 Goal</font></b> 
+
+Compare SCVI and SCVI with penalty of mutual information(MI) between nuisance factor and latent factor, using cluster metrics, and tsne plots as the comparison criteria.  
+
+<b><font size="3">2.4.2 Design</font></b>
+
+Apply SCVI, SCVI with penalty of mutual information(MI) to the datasets: MouseMarrow, pbmc, retina.
+Use Mine_Net architecture to estimate the mutual information no matter whether the nuisance factor is batch or library size.
+Although Nearest_neighbor method can get a good estimator for MI when nuisance factor is batch, the MI estimator can not be back-propogated because of the sorting and counting steps in the nearest-neighbor method. This means although the nearest-neighbor estimator of MI is added to the reconstruction loss, it can not have any influence to update the weights of the vae network. Fortunately, we can use Mine_Net architecture to estimate the MI even when the nuisance factor is batch, a categorical variable. The rational is that when batch is independent with latent vector, then the K-L divergence between $P(z|s=0)$ and $p(z|s=1)$ is zero. The more dependent batch and latent vector is, the larger the K-L divergence between $P(z|s=0)$ and $p(z|s=1)$ is. Therefore, we can use the K-L divergence between $P(z|s=0)$ and $p(z|s=1)$ as the penalty. (Refer to the introductory section for the mathematical equations)
+
+Refer to Section 2.3 for the four clustering metrics.
+
+<b><font size="3">a. MouseMarrow</font></b>
+
+Refer to Section 2.3 for how to get the MouseMarrow dataset
+
+The first step is to tune the hyperparameter for Mine_Net architecture. 
+   
+    'n_layers_encoder': [2],  (This is the n_layers for both z_encoder and l_encoder)          
+    'n_layers_decoder': [2],
+    'n_hidden': [128],
+    'n_latent': [10],
+    'dropout_rate': [0.1],
+    'reconstruction_loss': ['zinb'],
+    'use_batches': [True],
+    'use_cuda': [False],
+    'MIScale': [100000], 
+    'train_size': [0.8],
+    'lr': [0.001],
+    'adv_lr': [5e-6, 1e-8, 1e-10],
+    'n_epochs': [250],
+    'nsamples_z': [200],
+    'adv': [True],
+    'Adv_MineNet4_architecture': [[256] * 50, [256] * 100],
+    'adv_epochs': [250],
+    'change_adv_epochs': [1],
+    'activation_fun': ['ReLU', 'ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+    'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+    'initial': ['xavier_uniform', 'xavier_normal', 'kaiming_normal'], 
+    'optimiser': ['Adam']
+    
+ The result is stored in the lr1e-3epoch250 directory. There are in total 3*2*3*2*3=108 configurations. Run one interation for each configuration for a preliminary screening. As I have run the scvi with the hyperparameters (same as above):
+    'n_layers_encoder': [2],  (This is the n_layers for both z_encoder and l_encoder)          
+    'n_layers_decoder': [2],
+    'n_hidden': [128],
+    'n_latent': [10],
+    'dropout_rate': [0.1],
+    'reconstruction_loss': ['zinb'],
+    'use_batches': [True],
+    'use_cuda': [False],
+    'train_size': [0.8],
+    'lr': [0.001],
+    'n_epochs': [250],
+The BE clustering metric is about 0.12. SCVI is not run again in this experiment.  
+
+Because in figure 9, the result shows that none of the 108 configs work well, but for some configs like config 49, when the training stops, the MI is still in the trend of increase, there I try to increase the n_epochs from 250 to 500 or even 750, but keep all other hyperparameters the same,which means:
+   
+    'n_layers_encoder': [2],  (This is the n_layers for both z_encoder and l_encoder)          
+    'n_layers_decoder': [2],
+    'n_hidden': [128],
+    'n_latent': [10],
+    'dropout_rate': [0.1],
+    'reconstruction_loss': ['zinb'],
+    'use_batches': [True],
+    'use_cuda': [False],
+    'MIScale': [100000], 
+    'train_size': [0.8],
+    'lr': [0.001],
+    'adv_lr': [5e-6, 1e-8, 1e-10],
+    'n_epochs': [500, 750],
+    'nsamples_z': [200],
+    'adv': [True],
+    'Adv_MineNet4_architecture': [[256] * 50, [256] * 100],
+    'adv_epochs': [250],
+    'change_adv_epochs': [1],
+    'activation_fun': ['ReLU', 'ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+    'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+    'initial': ['xavier_uniform', 'xavier_normal', 'kaiming_normal'], 
+    'optimiser': ['Adam']
+The result is stored in lr1e-3epoch500_750 directory. In total there are 216 configs, some fails to complete successfully because there is some error in calculating the unbiased MI loss during MINE net training. For the successful configs, the result is shown in figure 10.
+ 
+Because the MI_loss in figure 10 in all 216 configs are not satisfactory, I want to test whether it is because the vae network learns so fast that the MINE_Net architecture has to change even when it is far behind its optimal estimator, I decreased the lr for vae, choose the n_epochs for vae to be 750, the setting is as follows:
+
+    'n_layers_encoder': [2],  (This is the n_layers for both z_encoder and l_encoder)          
+    'n_layers_decoder': [2],
+    'n_hidden': [128],
+    'n_latent': [10],
+    'dropout_rate': [0.1],
+    'reconstruction_loss': ['zinb'],
+    'use_batches': [True],
+    'use_cuda': [False],
+    'MIScale': [100000], 
+    'train_size': [0.8],
+    'lr': [1e-6],
+    'adv_lr': [1e-8],
+    'n_epochs': [750],
+    'nsamples_z': [200],
+    'adv': [True],
+    'Adv_MineNet4_architecture': [[256] * 50],
+    'adv_epochs': [250],
+    'change_adv_epochs': [1],
+    'activation_fun': ['ELU'], 
+    'unbiased_loss': [False],  
+    'initial': ['xavier_normal'], 
+    'optimiser': ['Adam']
+Interestingly, this time the reconstruction loss can not be decreased enough to 12-16 thousands, but remained at 3 millions, the MI_estimator for minibatch increases to 0.9 from very small, then decreases to about 0.2. BE clustering metrics is 0.00063, asw=-0.37, NMI=0.44, ARI=0.18, UCA=0.26. It seems that lr=1e-3 is too large for MINE_Net, but lr=1e-6 is very small for vae itself
+
+Combined this trial and the last experiment, I tried the following experiment:
+
+    'n_layers_encoder': [2],  (This is the n_layers for both z_encoder and l_encoder)          
+    'n_layers_decoder': [2],
+    'n_hidden': [128],
+    'n_latent': [10],
+    'dropout_rate': [0.1],
+    'reconstruction_loss': ['zinb'],
+    'use_batches': [True],
+    'use_cuda': [False],
+    'MIScale': [100000], 
+    'train_size': [0.8],
+    'lr': [5e-3,5e-4,1e-4,5e-5,1e-5],
+    'adv_lr': [1e-8, 1e-10],
+    'n_epochs': [500,750],
+    'nsamples_z': [200],
+    'adv': [True],
+    'Adv_MineNet4_architecture': [[256] * 50],
+    'adv_epochs': [250],
+    'change_adv_epochs': [1],
+    'activation_fun': ['ELU', 'Leaky_ReLU'],  # ReLU and Leaky_ReLU are similar
+    'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+    'initial': ['xavier_normal'], # xavier_uniform is similar to xavier_normal, kaiming_normal doesn't work well in any 
+                                   combinations
+    'optimiser': ['Adam']
+The result is stored in lrchange directory. As the reconstruction loss has not been optimal even after 750 epochs, I tried the following, increase the n_epochs to 1500: 
+
+            'n_layers_encoder': [2],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
+            'train_size': [0.8],
+            'lr': [5e-3,1e-4,1e-5,5e-6,1e-6],
+            'adv_lr': [1e-8, 1e-10],
+            'n_epochs': [1500],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_MineNet4_architecture': [[256] * 50],
+            'adv_epochs': [250],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU', 'Leaky_ReLU'], 
+            'unbiased_loss': [False, True],  
+            'initial': ['xavier_normal'], 
+            'optimiser': ['Adam']
+The result is stored in lrchange2 directory. Although the reconstruction loss decreased a little bit than the above condition when the n_epochs is 750, it still doesn't decrease the level as scvi alone does. Susan suggests maybe this is as expected that the reconstruction loss hasn't decreased to the level as the scvi alone does, after all we have the MI penalty, which means there are sacrifice in the reconstruction loss. And she suggests me to see the change of the clustering metrics during the training process, because although the clustering metrics after the training process is not satisfactory, maybe there are some points in the training process that produces a good clustering metrics. As from last experiment, I notice that there is not much difference between unbiased_loss=false and unbiased_loss=True, therefore I only tried unbiased_loss=True. But I add one more option for change_adv_epochs which is 60 as a way to increase the learning process of MINE compared with scvi, the combinations of the hyperparameter is:
+
+            'n_layers_encoder': [2],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
+            'train_size': [0.8],
+            'lr': [5e-3, 1e-4, 1e-5, 5e-6, 1e-6],
+            'adv_lr': [1e-8, 1e-10],
+            'n_epochs': [1500],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_MineNet4_architecture': [[256] * 50],
+            'adv_epochs': [250],
+            'change_adv_epochs': [1,60],
+            'activation_fun': ['ELU', 'Leaky_ReLU'],  
+            'unbiased_loss': [True],
+            'initial': ['xavier_normal1'], 
+            'optimiser': ['Adam']
+The result is stored in lrchange3
+
+<b><font size="3">2.4.3 Code</font></b>
+
+copy code/tune_hyperparameter_for_SCVI_MI.sh and code/tune_hyperparameter_for_SCVI_MI.py to the directory containing the code directory. Then in the directory containing code directory, submit tune_hyperparameter_for_SCVI_MI.sh for job submission which will run the tune_hyperparameter_for_SCVI_MI.py 108 times. For muris_tabula dataset and batch nuisance factor, the parameters for the main function in the tune_hyperparameter_for_SCVI_MI.py is taskid=0, dataset_name='muris_tabula', nuisance_variable='batch', MI_estimator='MINE_Net4_3', config_id=a number from range(0, 108). The result of different configurations are downloaded from spartan and stored in local computer.
+
+<b><font size="3">2.4.4 Result</font></b>
+
+Among the 108 configurations for SCVI+Mine_estimated_MI, only 23 configurations complete successfully, among which none gives a better BE clustering metric than SCVI alone with the same hyperparameter for the SCVI part as the SCVI+Mine_estimated_MI here. And the MI_loss of minibatch of size 256 during the whole training process is very small. Refer to figure 9.
+
+Figure 10 shows when the epoch increases to 500 and 750, 44 among 216 configs run successfully. By analyzing figure 10, in the plot of the clustering metrics, there are cyclic phenomena for the right half of the plot, which is three consective configs giving drastically small clustering metrics, two consecutive configs give similar large clustering metrics compared with the three consecutive configs. When comparing their corresponding hyperparameters between the three consective configs and the two consective configs, I find that the main difference is the activation function. For the two consective configs, the activation fuction is either ReLU or leaky_ReLU, while for the three consecutive configs, the activation function is ELU. The MI_loss plots show that when the activation function is ELU, MI_loss of minibatch will decrease fast, however, when activation function is ReLU or leaky_ReLU, the MI_loss of minibatch will either remain almost stable or increases. The conclusion here is that activation function is important ELU vs ReLU/leaky_ReLU, however ReLU and leaky_ReLU are similar. When analyzing the three consective configs, another finding is that MINE_Net with 50 layers are almost similar as MINE_Net with 100 layers.
+
+Then another phenomenon to notice is that the left half of the clustering metric plot doesn't have such cyclic phenomenon, when comparing the single peak in the left half and the two consecutive peaks of clustering metrics in the right half, the main difference is the adv_lr, from left, to right are 5e-6, 1e-8, 1e-10. Therefore, when adv_lr is smaller, the MINE_Net4 is less sensitive to initiation strategies.
+
+
+
+```python
+import os
+%matplotlib inline
+import itertools
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lr1e-3epoch250/',
+                  results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lr1e-3epoch250/',
+                  dataset_name='muris_tabula', nuisance_variable='batch', Label='muris_tabula_batch_config.*._VaeMI_trainset')
+
+file_paths = ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lr1e-3epoch250\\muris_tabula_batch_configs_clusteringmetrics.png']
+for config in [43,49,73]:
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lr1e-3epoch250\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+
+SummarizeResult('image',file_paths,subfile_titles,'Fig9: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+
+
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lr1e-3epoch500_750/',
+                  results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lr1e-3epoch500_750/',
+                  dataset_name='muris_tabula', nuisance_variable='batch', Label='muris_tabula_batch_config.*._VaeMI_trainset',config_numbers=216, activation_config_list=[151,156]
+             ,hyperparameter_config_index=2)
+
+file_paths = ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lr1e-3epoch500_750\\muris_tabula_batch_configs_clusteringmetrics.png']
+
+for config in [151,156]:
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lr1e-3epoch500_750\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lr1e-3epoch500_750\\config%s\\reconst_loss_muris_tabula_batch_config%s.png'%(config,config)]
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lr1e-3epoch500_750\\config%s\\muris_tabula_batch_configs_activationmean.png'%(config)]
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lr1e-3epoch500_750\\config%s\\muris_tabula_batch_configs_activationvar.png'%(config)]
+
+SummarizeResult('image',file_paths,subfile_titles,'Fig10: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lr1e-3epoch500_750/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange/',
+              results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange/',
+              dataset_name='muris_tabula', nuisance_variable='batch', Label='muris_tabula_batch_config.*._VaeMI_trainset',config_numbers=80,activation_config_list=[66,68]
+             ,hyperparameter_config_index=3)
+
+file_paths = ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange\\muris_tabula_batch_configs_clusteringmetrics.png']
+for config in [66,68]:
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange\\config%s\\reconst_loss_muris_tabula_batch_config%s.png'%(config,config)]
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange\\config%s\\muris_tabula_batch_configs_activationmean.png'%(config)]
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange\\config%s\\muris_tabula_batch_configs_activationvar.png'%(config)]
+
+SummarizeResult('image',file_paths,'Fig11: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange2/',
+              results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange2/',
+              dataset_name='muris_tabula', nuisance_variable='batch', Label='muris_tabula_batch_config.*._VaeMI_trainset',config_numbers=40,activation_config_list=[16,17,24,25,32,33]
+             ,hyperparameter_config_index=4)
+
+file_paths = ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange2\\muris_tabula_batch_configs_clusteringmetrics.png']
+for config in [16,17,24,25,32,33]:
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange2\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange2\\config%s\\reconst_loss_muris_tabula_batch_config%s.png'%(config,config)]
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange2\\config%s\\muris_tabula_batch_configs_activationmean.png'%(config)]
+   file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange2\\config%s\\muris_tabula_batch_configs_activationvar.png'%(config)]
+
+SummarizeResult('image',file_paths,'Fig12: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange2/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+
+
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange3/',
+                  results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange3/',
+                  dataset_name='muris_tabula', nuisance_variable='batch', Label='muris_tabula_batch_config.*._VaeMI_trainset',config_numbers=40, activation_config_list=[16,17]
+             ,hyperparameter_config_index=5)
+
+file_paths = []
+
+for config in range(40):
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange3\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+    if (config+1)%8==0:
+      file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange3\\scviconfig%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(int(config/8),int(config/8))]
+
+SummarizeResult('image',file_paths,subfile_titles,'Fig10: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange3/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+<a id='section9'></a>
+<b><font size="+1">2.2 Compare estimated mutual information with true mutual inforamtion</font></b>
+
+<b><font size="+1">2.2.1 Goal </font></b>
 
 Compare estimated mutual information with true mutual information for three cases, namely, mutual information between a gaussian random variable and a gaussian random variable, between a lognorm random variable and a gaussian random variable, between a categorical random variable and a gaussian random variable
 
-<b><font size="3">2.3.2 Design</font></b>
+<b><font size="3">2.2.2 Design</font></b>
 
 <b><font size="3">a. between a gaussian random variable and a gaussian random variable</font></b>
 
@@ -567,13 +969,13 @@ The parameters for nearest neighbors:
     
     - base: 2 (a parameter with default value 2 in the nearest neighbor method)
 
-<b><font size="3">2.3.3 Code</font></b>
+<b><font size="3">2.2.3 Code</font></b>
 
 code/compare_estimatedMI_with_trueMI_gaussian_continuous.py produces estimatedMI_with_trueMI.csv in ./result/compare_estimatedMI_with_trueMI/continuous_gaussian/, use this csv file as read-in dataset for the Summarize_EstimatedMI_with_TrueMI() function in code/SummarizeResult.py file to produce plots in Fig5 and Fig6.
 
 code/compare_estimatedMI_with_trueMI_gaussian_categorical.py produces estimatedMI_with_trueMI.csv in ./result/compare_estimatedMI_with_trueMI/gaussian_categorical/, use this csv file as read-in dataset for the Summarize_EstimatedMI_with_TrueMI() function in code/SummarizeResult.py file to produce plots in Fig7.
 
-<b><font size="3">2.3.4 Result</font></b>
+<b><font size="3">2.2.4 Result</font></b>
 
 <b><font size="3">a. between a gaussian random variable and a gaussian random variable</font></b>
 
@@ -718,15 +1120,23 @@ Generally, to tune deep learning network:To find the best deep learning network,
 
 [Stanford University CS231n, Spring 2017](https://www.youtube.com/playlist?list=PLC1qU-LWwrF64f4QKQT-Vg5Wr4qEE1Zxk)
 
-<b><font size="+1">4.4 Peak into the black box of deep learning </font></b>
+<b><font size="+1">4.4 Peek into the black box of deep learning </font></b>
 
 [deep learning in biomedical image processing](http://biomedicalcomputationreview.org/content/deep-learning-and-future-%E2%80%A8biomedical-image-analysis)
 
 Researchers are working on ways of peeking inside the models to understand how they select discriminant features. For example, a group of Stanford graduate students led by Avanti Shrikumar, a PhD candidate in computer science, recently developed an algorithm called DeepLIFT that attempts to determine which features are important by analyzing the activity of a model’s neurons when they are exposed to data. A team of engineers at the Israel-Technion Institute of Technology have devised a method of visualizing the neural activity of a network that resembles what one sees in fMRI of the human brain. And Rubin recently published a paper in which he and his colleagues trained a CNN to distinguish between benign and malignant breast tumors, and then used a visualization algorithm, called Directed Dream, to heighten and exaggerate specific details in order to maximize the images’ scores as either benign or malignant. The resulting “CNN-based hallucinations” effectively show how the CNN 
 
-```python
+<b><font size="+1">4.5 Fairness of machine learning</font></b>
 
-```
+[Link to blog about fairness of machine learning](https://blog.godatadriven.com/fairness-in-ml)
+
+<b><font size="+1">4.6 Initialization of weight for deep neural network</font></b>
+
+[Link to weight initialization](https://www.deeplearning.ai/ai-notes/initialization/)
+
+
+
+
 
 <!-- #region -->
 keywords for searching: invari* + deep learning/deep neural network/deep network, high-level feature + learning, representation learning/learning representation, 

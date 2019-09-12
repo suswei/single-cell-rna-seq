@@ -79,6 +79,7 @@ class UnsupervisedTrainer(Trainer):
             print('reconst_loss:{}, MI_loss:{}, scaled_MI_loss:{}'.format(reconst_loss.mean(), MI_loss, scaled_MI_loss))
             loss = torch.mean(reconst_loss + kl_divergence+scaled_MI_loss) #why self.kl_weight * kl_divergence here? Why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
             if self.model.minibatch_index == len(list(self.data_loaders_loop())):
+                print(self.train_set.gene_dataset.n_labels)
                 asw, nmi, ari, uca = self.train_set.clustering_scores()
                 be = self.train_set.entropy_batch_mixing()
                 return loss, reconst_loss, MI_loss, asw, nmi, ari, uca, be
@@ -90,6 +91,7 @@ class UnsupervisedTrainer(Trainer):
             print('penalty:{}'.format(kl_divergence))
             loss = torch.mean(reconst_loss + kl_divergence)  # why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
             if self.model.minibatch_index == len(list(self.data_loaders_loop())):
+                print(self.train_set.gene_dataset.n_labels)
                 asw, nmi, ari, uca = self.train_set.clustering_scores()
                 be = self.train_set.entropy_batch_mixing()
                 return loss, asw, nmi, ari, uca, be
