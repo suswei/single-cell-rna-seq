@@ -148,8 +148,8 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
     fig.savefig(fig1_path)
     plt.close(fig)
 
-    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/trainset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
-    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/testset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
+    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/scviconfig%s/trainset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
+    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/scviconfig%s/testset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
 
     asw, nmi, ari, uca = trainer_vae.train_set.clustering_scores()
     be = trainer_vae.train_set.entropy_batch_mixing()
