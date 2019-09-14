@@ -62,7 +62,7 @@ class VAE_MI(nn.Module):
                  n_hidden_z: int = 5, n_layers_z: int = 10,
                  MI_estimator: str = 'NN', Adv_MineNet4_architecture: list=[32,16], MIScale: int=1,
                  nsamples_z: int=200, adv: bool=False, adv_minibatch_MI: float=0, save_path: str='None',
-                 minibatch_index: int=0):
+                 minibatch_index: int=0, mini_reconst_loss: int=10000, max_reconst_loss: int=1000000):
         super().__init__()
         self.dispersion = dispersion
         self.log_variational = log_variational
@@ -83,6 +83,8 @@ class VAE_MI(nn.Module):
         self.adv_minibatch_MI = adv_minibatch_MI
         self.save_path = save_path
         self.minibatch_index = minibatch_index
+        self.mini_reconst_loss = mini_reconst_loss
+        self.max_reconst_loss = max_reconst_loss
 
         if self.dispersion == "gene":
             self.px_r = torch.nn.Parameter(torch.randn(n_input, ))

@@ -435,6 +435,64 @@ class MINE_Net5(nn.Module):
         x = F.leaky_relu(self.fc3(x), negative_slope=2e-1)
         return x
 
+class Distinguisher_Net(nn.Module):
+    def __init__(self, input_dim, n_latents, activation_fun, initial, save_path, data_loader):
+        # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+        # initial: could be 'None','normal', 'xavier_uniform', 'kaiming'
+        super().__init__()
+        self.activation_fun = activation_fun
+        self.n_hidden_layers = len(n_latents)
+        self.save_path = save_path
+        self.data_loader = data_loader
+
+        layers_dim = [input_dim] + n_latents + [1]
+        self.layers = nn.Sequential(collections.OrderedDict(
+            [('layer{}'.format(i),
+                nn.Linear(n_in, n_out)) for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))
+             ]))
+
+        if initial in ['normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse']:
+            for i in range(len(layers_dim)-1):
+                if initial == 'normal':
+                    nn.init.normal_(self.layers[i].weight, std=0.02)
+                    nn.init.constant_(self.layers[i].bias, 0)
+                elif initial == 'xavier_uniform':
+                    nn.init.xavier_uniform_(self.layers[i].weight)
+                    nn.init.zeros_(self.layers[i].bias)
+                elif initial == 'xavier_normal':
+                    nn.init.xavier_normal_(self.layers[i].weight, gain=1.0)
+                elif initial == 'kaiming_uniform':
+                    if isinstance(self.layers[i], nn.Linear):
+                        nn.init.kaiming_uniform_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
+                        nn.init.constant_(self.layers[i].bias, 0.0)
+                elif initial == 'kaiming_normal':
+                    if isinstance(self.layers[i], nn.Linear):
+                        nn.init.kaiming_normal_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
+                        nn.init.constant_(self.layers[i].bias, 0.0)
+                elif initial == 'orthogonal':
+                    nn.init.orthogonal_(self.layers[i].weight)
+                    nn.init.zeros_(self.layers[i].bias)
+                elif initial == 'sparse':
+                    nn.init.sparse_(self.layers[i].weight, sparsity=0.1)
+                    nn.init.zeros_(self.layers[i].bias)
+
+        if self.unbiased_loss:
+            self.ma_et = None
+            self.ma_rate = 0.001
+
+    def forward(self, input):
+        for one_layer in self.layers[0:-1]:
+            if self.activation_fun == 'ReLU':
+                input_next = F.relu(one_layer(input))
+            elif self.activation_fun == "ELU":
+                input_next = F.elu(one_layer(input))
+            elif self.activation_fun == 'Leaky_ReLU':
+                input_next = F.leaky_relu(one_layer(input),negative_slope=2e-1)
+            input = input_next
+        output = self.layers[-1](input)
+        return output
+
+
 # discrete_continuous_info(d, c) estimates the mutual information between a
 # discrete vector 'd' and a continuous vector 'c' using
 # nearest-neighbor statistics.  Similar to the estimator described by

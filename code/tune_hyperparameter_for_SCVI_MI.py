@@ -41,7 +41,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
             'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
             'train_size': [0.8],
             'lr': [5e-3, 1e-4, 1e-5, 5e-6, 1e-6],
-            'adv_lr': [1e-8, 1e-10],
+            'adv_lr': [5e-4, 1e-8],
             'n_epochs': [1500],
             'nsamples_z': [200],
             'adv': [True],
@@ -51,6 +51,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
             'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
             'initial': ['xavier_normal1'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+            'adv_model' : ['Mine', 'Distinguisher'],
             'optimiser': ['Adam']
         }
     elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
@@ -121,31 +122,37 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     activation_fun = value[18]
     unbiased_loss = value[19]
     initial = value[20]
-    optimiser = value[21]
+    adv_model = value[21]
+    optimiser = value[22]
 
     if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id)):
         os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id))
 
+    vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
+              n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z, adv=adv,
+              save_path=result_save_path + '/scviconfig%s/' % (config_id))
+    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
+    vae_reconst_loss_list, clustermetrics_trainingprocess = trainer_vae.train(n_epochs=n_epochs, lr=lr)
+
     vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
                     n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
-                    n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,
-                    reconstruction_loss=reconstruction_loss,
+                    n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate, reconstruction_loss=reconstruction_loss,
                     MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z=nsamples_z, adv=adv,
-                    Adv_MineNet4_architecture=Adv_MineNet4_architecture, save_path=result_save_path+'/config%s/'%(config_id))
-    trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
-                                         use_cuda=use_cuda, frequency=5, kl=1)
-    trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,
-                                             use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
+                    Adv_MineNet4_architecture=Adv_MineNet4_architecture, save_path=result_save_path+'/config%s/'%(config_id),
+                    mini_reconst_loss=min(vae_reconst_loss_list), max_reconst_loss=max(vae_reconst_loss_list))
+    trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
+    trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
 
     if adv == True:
-        minenet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_MineNet4_architecture,
-                              activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
-                              save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                              data_loader=trainer_vae_MI_adv)
-        if optimiser == 'SGD':
-            adv_optimizer = torch.optim.SGD(minenet.parameters(), lr=adv_lr, momentum=0.9)
-        if optimiser == 'Adam':
-            adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
+        if adv_model == 'Mine':
+            minenet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_MineNet4_architecture,
+                                  activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
+                                  save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
+                                  data_loader=trainer_vae_MI_adv)
+        elif adv_model == 'Distinguisher':
+            minenet = Distinguisher_Net()
+
+        adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
         trainer_vae_MI.adv_model = minenet
         trainer_vae_MI.adv_optimizer = adv_optimizer
         trainer_vae_MI.adv_epochs = adv_epochs
