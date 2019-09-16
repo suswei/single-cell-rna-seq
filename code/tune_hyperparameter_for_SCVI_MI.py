@@ -11,22 +11,22 @@ from scvi.dataset import *
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
-from scvi.models.modules import MINE_Net4_3, discrete_continuous_info, Sample_From_Aggregated_Posterior
+from scvi.models.modules import MINE_Net4_3, Classifier_Net
 from scvi.inference import UnsupervisedTrainer
 import torch
 from torch.autograd import Variable
 import itertools
 
-def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
+def main(taskid, dataset_name, nuisance_variable, config_id):
     # taskid is just any integer from 0 to 99
     # dataset_name could be 'muris_tabula', 'pbmc'
     # nuisance_variable could be 'batch'
     # MI_estimator could be 'Mine_Net4', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
 
-    if not os.path.exists('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
-    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
+    if not os.path.exists('../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
+        os.makedirs('../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
+    if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
+        os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
 
     if dataset_name == 'muris_tabula' and nuisance_variable == 'batch':
         hyperparameter_config = {
@@ -38,21 +38,22 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
+            'MIScale': [0.2, 0.5, 0.8],
             'train_size': [0.8],
-            'lr': [5e-3, 1e-4, 1e-5, 5e-6, 1e-6],
+            'lr': [1e-3, 5e-3, 1e-4],
             'adv_lr': [5e-4, 1e-8],
-            'n_epochs': [1500],
+            'n_epochs': [2500],
             'nsamples_z': [200],
             'adv': [True],
-            'Adv_MineNet4_architecture': [[256] * 50],
-            'adv_epochs': [250],
-            'change_adv_epochs': [1,60],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [100],
+            'change_adv_epochs': [5],
             'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
             'initial': ['xavier_normal1'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
-            'adv_model' : ['Mine', 'Distinguisher'],
-            'optimiser': ['Adam']
+            'adv_model' : ['MI','Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2]
         }
     elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
         hyperparameter_config = {
@@ -75,8 +76,8 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    data_save_path = './data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
-    result_save_path = './result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    data_save_path = '../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    result_save_path = '../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
 
     if dataset_name == 'muris_tabula':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
@@ -116,7 +117,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     n_epochs = value[12]  # 500
     nsamples_z = value[13]
     adv = value[14]
-    Adv_MineNet4_architecture = value[15]
+    Adv_Net_architecture = value[15]
     adv_epochs = value[16]
     change_adv_epochs = value[17]
     activation_fun = value[18]
@@ -124,36 +125,39 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     initial = value[20]
     adv_model = value[21]
     optimiser = value[22]
+    adv_drop_out = value[23]
 
-    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id)):
-        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id))
+    if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id)):
+        os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id))
 
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
-              n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z, adv=adv,
-              save_path=result_save_path + '/scviconfig%s/' % (config_id))
+              n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z, adv=False,
+              save_path='None')
     trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
-    vae_reconst_loss_list, clustermetrics_trainingprocess = trainer_vae.train(n_epochs=n_epochs, lr=lr)
+    vae_ELBO_list = trainer_vae.train(n_epochs=n_epochs, lr=lr)
 
     vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
                     n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
                     n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate, reconstruction_loss=reconstruction_loss,
-                    MI_estimator=MI_estimator, MIScale=MIScale, nsamples_z=nsamples_z, adv=adv,
-                    Adv_MineNet4_architecture=Adv_MineNet4_architecture, save_path=result_save_path+'/config%s/'%(config_id),
-                    mini_reconst_loss=min(vae_reconst_loss_list), max_reconst_loss=max(vae_reconst_loss_list))
+                    MI_estimator=adv_model, MIScale=MIScale, nsamples_z=nsamples_z, adv=adv,
+                    Adv_MineNet4_architecture=Adv_Net_architecture, save_path=result_save_path+'/config%s/'%(config_id),
+                    mini_ELBO=min(vae_ELBO_list), max_ELBO=np.percentile(vae_ELBO_list, 90))
     trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
     trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
 
     if adv == True:
-        if adv_model == 'Mine':
-            minenet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_MineNet4_architecture,
+        if adv_model == 'MI':
+            advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
-                                  save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI_adv)
-        elif adv_model == 'Distinguisher':
-            minenet = Distinguisher_Net()
-
-        adv_optimizer = torch.optim.Adam(minenet.parameters(), lr=adv_lr)
-        trainer_vae_MI.adv_model = minenet
+                                  save_path='../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model)
+        elif adv_model == 'Classifier':
+            advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
+                                  activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
+                                  save_path='../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model)
+        adv_optimizer = torch.optim.Adam(advnet.parameters(), lr=adv_lr)
+        trainer_vae_MI.adv_model = advnet
         trainer_vae_MI.adv_optimizer = adv_optimizer
         trainer_vae_MI.adv_epochs = adv_epochs
         trainer_vae_MI.change_adv_epochs = change_adv_epochs
@@ -167,7 +171,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
         trainer_vae_MI.adv_model.load_state_dict(torch.load(adv_MI_file_path))
         trainer_vae_MI.adv_model.eval()
     else:
-        reconst_loss_list, MI_loss_list, activation_mean, activation_var, clustermetrics_trainingprocess = trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
+        ELBO_list, penalty_loss_list, activation_mean, activation_var = trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
         torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
         torch.save(trainer_vae_MI.adv_model.state_dict(), adv_MI_file_path)
         ll_train_set = trainer_vae_MI.history["ll_train_set"]
@@ -186,7 +190,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
         fig1_path = '%s/config%s/training_testing_error_SCVI+MI_%s_%s_config%s.png'%(result_save_path,config_id, dataset_name,nuisance_variable, config_id)
         fig.savefig(fig1_path)
         plt.close(fig)
-    clustermetrics_trainingprocess.to_csv('%s/config%s/%s_%s_config%s_clustermetrics_duringtraining.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
+
     layers = {'layers': ['layer2'] + ['layer%s'%((k+1)*10-1) for k in range(int(trainer_vae_MI.adv_model.n_hidden_layers / 10))]}
     activation_mean_pd = pd.concat([pd.DataFrame.from_dict(layers),pd.DataFrame(data=activation_mean, columns=['epoch%s'%(i*10) for i in range(int((n_epochs-1)/10)+1)])],axis=1)
     activation_var_pd = pd.concat([pd.DataFrame.from_dict(layers),pd.DataFrame(data=activation_var, columns=['epoch%s'%(i*10) for i in range(int((n_epochs-1)/10)+1)])],axis=1)
@@ -194,7 +198,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     activation_var_pd.to_csv('%s/config%s/%s_%s_config%s_activationvar.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
 
     fig = plt.figure(figsize=(14, 7))
-    plt.plot([i for i in range(len(reconst_loss_list))], [np.mean(i) for i in reconst_loss_list])
+    plt.plot([i for i in range(len(ELBO_list))], [np.mean(i) for i in ELBO_list])
     plt.ylim(12000, 60000)
     plt.title("reconst_loss_%s_%s_config%s"%(dataset_name, nuisance_variable, config_id))
     fig1_path = '%s/config%s/reconst_loss_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
@@ -202,7 +206,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
     plt.close(fig)
 
     fig = plt.figure(figsize=(14, 7))
-    plt.plot([i for i in range(len(reconst_loss_list))], MI_loss_list)
+    plt.plot([i for i in range(len(ELBO_list))], penalty_loss_list)
     plt.title("MI_loss_%s_%s_config%s" % (dataset_name, nuisance_variable, config_id))
     fig1_path = '%s/config%s/MI_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
     fig.savefig(fig1_path)
@@ -270,7 +274,7 @@ def main(taskid, dataset_name, nuisance_variable, MI_estimator, config_id):
 
 # Run the actual program
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
 
 # In terminal type
 # python hypertuning.py taskid

@@ -351,7 +351,7 @@ class MINE_Net4_2(nn.Module):
 
 
 class MINE_Net4_3(nn.Module):
-    def __init__(self, input_dim, n_latents, activation_fun, unbiased_loss, initial, save_path, data_loader):
+    def __init__(self, input_dim, n_latents, activation_fun, unbiased_loss, initial, save_path, data_loader, drop_out, net_name):
         # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
         # unbiased_loss: True or False. Whether to use unbiased loss or not
         # initial: could be 'None','normal', 'xavier_uniform', 'kaiming'
@@ -361,6 +361,7 @@ class MINE_Net4_3(nn.Module):
         self.n_hidden_layers = len(n_latents)
         self.save_path = save_path
         self.data_loader = data_loader
+        self.name = net_name
 
         layers_dim = [input_dim] + n_latents + [1]
         self.layers = nn.Sequential(collections.OrderedDict(
@@ -393,6 +394,8 @@ class MINE_Net4_3(nn.Module):
                     nn.init.sparse_(self.layers[i].weight, sparsity=0.1)
                     nn.init.zeros_(self.layers[i].bias)
 
+        self.bn1 = nn.BatchNorm1d(num_features=n_latents[0])
+        self.dropout = nn.Dropout(p=drop_out)
         if self.unbiased_loss:
             self.ma_et = None
             self.ma_rate = 0.001
@@ -400,11 +403,11 @@ class MINE_Net4_3(nn.Module):
     def forward(self, input):
         for one_layer in self.layers[0:-1]:
             if self.activation_fun == 'ReLU':
-                input_next = F.relu(one_layer(input))
+                input_next = self.dropout(self.bn1(F.relu(one_layer(input))))
             elif self.activation_fun == "ELU":
-                input_next = F.elu(one_layer(input))
+                input_next = self.dropout(self.bn1(F.elu(one_layer(input))))
             elif self.activation_fun == 'Leaky_ReLU':
-                input_next = F.leaky_relu(one_layer(input),negative_slope=2e-1)
+                input_next = self.dropout(self.bn1(F.leaky_relu(one_layer(input),negative_slope=2e-1)))
             input = input_next
         output = self.layers[-1](input)
         return output
@@ -435,8 +438,8 @@ class MINE_Net5(nn.Module):
         x = F.leaky_relu(self.fc3(x), negative_slope=2e-1)
         return x
 
-class Distinguisher_Net(nn.Module):
-    def __init__(self, input_dim, n_latents, activation_fun, initial, save_path, data_loader):
+class Classifier_Net(nn.Module):
+    def __init__(self, input_dim, n_latents, activation_fun, initial, save_path, data_loader, drop_out):
         # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
         # initial: could be 'None','normal', 'xavier_uniform', 'kaiming'
         super().__init__()
@@ -451,7 +454,7 @@ class Distinguisher_Net(nn.Module):
                 nn.Linear(n_in, n_out)) for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))
              ]))
 
-        if initial in ['normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse']:
+        if initial in ['xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal']:
             for i in range(len(layers_dim)-1):
                 if initial == 'normal':
                     nn.init.normal_(self.layers[i].weight, std=0.02)
@@ -469,27 +472,20 @@ class Distinguisher_Net(nn.Module):
                     if isinstance(self.layers[i], nn.Linear):
                         nn.init.kaiming_normal_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
                         nn.init.constant_(self.layers[i].bias, 0.0)
-                elif initial == 'orthogonal':
-                    nn.init.orthogonal_(self.layers[i].weight)
-                    nn.init.zeros_(self.layers[i].bias)
-                elif initial == 'sparse':
-                    nn.init.sparse_(self.layers[i].weight, sparsity=0.1)
-                    nn.init.zeros_(self.layers[i].bias)
 
-        if self.unbiased_loss:
-            self.ma_et = None
-            self.ma_rate = 0.001
+        self.bn1 = nn.BatchNorm1d(num_features=n_latents[0])
+        self.dropout = nn.Dropout(p=drop_out)
 
     def forward(self, input):
         for one_layer in self.layers[0:-1]:
             if self.activation_fun == 'ReLU':
-                input_next = F.relu(one_layer(input))
+                input_next = self.dropout(self.bn1(F.relu(one_layer(input))))
             elif self.activation_fun == "ELU":
-                input_next = F.elu(one_layer(input))
+                input_next = self.dropout(self.bn1(F.elu(one_layer(input))))
             elif self.activation_fun == 'Leaky_ReLU':
-                input_next = F.leaky_relu(one_layer(input),negative_slope=2e-1)
+                input_next = self.dropout(self.bn1(F.leaky_relu(one_layer(input),negative_slope=2e-1)))
             input = input_next
-        output = self.layers[-1](input)
+        output = torch.sigmoid(self.layers[-1](input))
         return output
 
 

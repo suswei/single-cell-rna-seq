@@ -62,7 +62,7 @@ class VAE_MI(nn.Module):
                  n_hidden_z: int = 5, n_layers_z: int = 10,
                  MI_estimator: str = 'NN', Adv_MineNet4_architecture: list=[32,16], MIScale: int=1,
                  nsamples_z: int=200, adv: bool=False, adv_minibatch_MI: float=0, save_path: str='None',
-                 minibatch_index: int=0, mini_reconst_loss: int=10000, max_reconst_loss: int=1000000):
+                 minibatch_index: int=0, mini_ELBO: int=10000, max_ELBO: int=1000000):
         super().__init__()
         self.dispersion = dispersion
         self.log_variational = log_variational
@@ -83,8 +83,8 @@ class VAE_MI(nn.Module):
         self.adv_minibatch_MI = adv_minibatch_MI
         self.save_path = save_path
         self.minibatch_index = minibatch_index
-        self.mini_reconst_loss = mini_reconst_loss
-        self.max_reconst_loss = max_reconst_loss
+        self.mini_ELBO = mini_ELBO
+        self.max_ELBO = max_ELBO
 
         if self.dispersion == "gene":
             self.px_r = torch.nn.Parameter(torch.randn(n_input, ))
@@ -97,8 +97,7 @@ class VAE_MI(nn.Module):
 
         # z encoder goes from the n_input-dimensional data to an n_latent-d
         # latent space representation
-        self.z_encoder = Encoder(n_input, n_latent, n_layers=n_layers_encoder, n_hidden=n_hidden,
-                                 dropout_rate=dropout_rate)
+        self.z_encoder = Encoder(n_input, n_latent, n_layers=n_layers_encoder, n_hidden=n_hidden, dropout_rate=dropout_rate)
         # l encoder goes from n_input-dimensional data to 1-d library size
         self.l_encoder = Encoder(n_input, 1, n_layers=n_layers_encoder, n_hidden=n_hidden, dropout_rate=dropout_rate)
         # decoder goes from n_latent-dimensional space to n_input-d data
@@ -279,7 +278,7 @@ class VAE_MI(nn.Module):
         """
         # Parameters for z latent distribution
         if self.adv == False:
-            if self.MI_estimator in ['Mine_Net4','aggregated_posterior']:
+            if self.MI_estimator == 'MI':
                 px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z = self.inference(x, batch_index, y, nsamples_z=self.nsamples_z)
             elif self.MI_estimator=='NN':
                 px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, predicted_mutual_info = self.inference(x, batch_index, y, nsamples_z=self.nsamples_z)
@@ -297,7 +296,7 @@ class VAE_MI(nn.Module):
 
         if self.adv == False:
             # calculate Mutual information(MI) loss
-            if self.MI_estimator in ['Mine_Net4', 'aggregated_posterior']:
+            if self.MI_estimator == 'MI':
                 MIloss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z))) #MIloss: dimension: [1]
             elif self.MI_estimator=='NN':
                 MIloss = predicted_mutual_info  # MIloss: dimension: [1]
