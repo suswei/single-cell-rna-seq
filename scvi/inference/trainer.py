@@ -141,13 +141,17 @@ class Trainer:
                 #torch.manual_seed(0)
                 #torch.backends.cudnn.benchmark = False
                 #torch.backends.cudnn.deterministic = True
+
+
                 if self.model.adv==True:
                     self.adv_model.train()
                     for adv_epoch in tqdm(range(self.adv_epochs)):
                         activation_mean_oneepoch = list()
                         activation_var_oneepoch = list()
                         minibatch_index = 0
+
                         for tensor_adv in self.adv_model.data_loader.data_loaders_loop():
+                            activation_hidden = False
                             print(minibatch_index)
                             sample_batch_adv, local_l_mean_adv, local_l_var_adv, batch_index_adv, _ = tensor_adv[0]
                             x_ = sample_batch_adv
@@ -193,15 +197,22 @@ class Trainer:
                                 self.adv_optimizer.step()
                             elif self.adv_model.name == 'Classifier':
                                 z_l = torch.cat((library, z), dim=1)
-                                p_batch = self.adv_model(z_l)
-                                loss_adv2 = torch.nn.BCELoss(p_batch, batch_index_adv)
+                                batch_index_adv = Variable(torch.from_numpy(batch_index_adv.detach().numpy()).type(torch.FloatTensor), requires_grad=False)
+                                loss_adv2 = self.adv_model(z_l,batch_index_adv)
                                 self.model.adv_minibatch_loss = loss_adv2
                                 print('adv_minibatch_CrossEntropy: %s' % (loss_adv2))
                                 self.adv_optimizer.zero_grad()
                                 loss_adv2.backward()
                                 self.adv_optimizer.step()
 
-                            if (self.adv_model.save_path != 'None') and (l_z_batch0_tensor.shape[0] != 0) and (l_z_batch1_tensor.shape[0] != 0) and (self.epoch % 10 == 0) and (minibatch_index == len(list(self.adv_model.data_loader.data_loaders_loop())) - 2):
+                            if self.adv_model.name=='MI':
+                                if (self.adv_model.save_path != 'None') and (adv_epoch == self.adv_epochs-1) and (l_z_batch0_tensor.shape[0] != 0) and (l_z_batch1_tensor.shape[0] != 0) and (self.epoch % 10 == 0) and (minibatch_index == len(list(self.adv_model.data_loader.data_loaders_loop())) - 2):
+                                    activation_hidden = True
+                            elif self.adv_model.name=='Classifier':
+                                if (self.adv_model.save_path != 'None') and (adv_epoch == self.adv_epochs-1) and (self.epoch % 10 == 0) and (minibatch_index == len(list(self.adv_model.data_loader.data_loaders_loop())) - 2):
+                                    activation_hidden = True
+
+                            if activation_hidden == True:
                                 activation = {}
 
                                 def get_activation(name):
@@ -211,7 +222,10 @@ class Trainer:
                                     return hook
 
                                 self.adv_model.layers[2].register_forward_hook(get_activation('layer2'))
-                                output0 = self.adv_model(input=l_z_batch0_tensor)
+                                if self.adv_model.name == 'MI':
+                                    output0 = self.adv_model(input=l_z_batch0_tensor)
+                                elif self.adv_model.name == 'Classifier':
+                                    output0 = self.adv_model(z_l,batch_index_adv)
                                 '''
                                 fig = plt.figure(figsize=(14, 7))
                                 plt.hist(torch.mean(activation['layer2'],dim=0).squeeze(), density=True, facecolor='g')
@@ -224,7 +238,10 @@ class Trainer:
 
                                 for k in range(int(self.adv_model.n_hidden_layers / 10)):
                                     self.adv_model.layers[(k + 1) * 10-1].register_forward_hook(get_activation('layer%s' % ((k + 1) * 10-1)))
-                                    output0 = self.adv_model(input=l_z_batch0_tensor)
+                                    if self.adv_model.name == 'MI':
+                                        output0 = self.adv_model(input=l_z_batch0_tensor)
+                                    elif self.adv_model.name == 'Classifier':
+                                        output0 = self.adv_model(z_l, batch_index_adv)
                                     '''
                                     fig = plt.figure(figsize=(14, 7))
                                     plt.hist(torch.mean(activation['layer%s' % ((k + 1) * 10-1)],dim=0).squeeze(), density=True, facecolor='g')

@@ -38,17 +38,17 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [0.2, 0.5, 0.8],
+            'MIScale': [0.2, 0.5, 0.8], #0.2, 0.5, 0.8
             'train_size': [0.8],
-            'lr': [1e-3, 5e-3, 1e-4],
-            'adv_lr': [5e-4, 1e-8],
-            'n_epochs': [2500],
+            'lr': [1e-3, 5e-3, 1e-4], #1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4, 1e-8], #5e-4, 1e-8
+            'n_epochs': [2500], #2500
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
-            'adv_epochs': [100],
-            'change_adv_epochs': [5],
-            'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+            'adv_epochs': [100], #100
+            'change_adv_epochs': [5], #5
+            'activation_fun': ['ELU','Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
             'initial': ['xavier_normal1'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
             'adv_model' : ['MI','Classifier'],
@@ -152,8 +152,7 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
                                   data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model)
         elif adv_model == 'Classifier':
-            advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
-                                  activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
+            advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
                                   data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model)
         adv_optimizer = torch.optim.Adam(advnet.parameters(), lr=adv_lr)

@@ -439,7 +439,7 @@ class MINE_Net5(nn.Module):
         return x
 
 class Classifier_Net(nn.Module):
-    def __init__(self, input_dim, n_latents, activation_fun, initial, save_path, data_loader, drop_out):
+    def __init__(self, input_dim, n_latents, activation_fun, initial, save_path, data_loader, drop_out,net_name):
         # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
         # initial: could be 'None','normal', 'xavier_uniform', 'kaiming'
         super().__init__()
@@ -447,6 +447,7 @@ class Classifier_Net(nn.Module):
         self.n_hidden_layers = len(n_latents)
         self.save_path = save_path
         self.data_loader = data_loader
+        self.name = net_name
 
         layers_dim = [input_dim] + n_latents + [1]
         self.layers = nn.Sequential(collections.OrderedDict(
@@ -475,8 +476,9 @@ class Classifier_Net(nn.Module):
 
         self.bn1 = nn.BatchNorm1d(num_features=n_latents[0])
         self.dropout = nn.Dropout(p=drop_out)
+        self.loss = torch.nn.BCELoss(reduction='mean')
 
-    def forward(self, input):
+    def forward(self, input,labels):
         for one_layer in self.layers[0:-1]:
             if self.activation_fun == 'ReLU':
                 input_next = self.dropout(self.bn1(F.relu(one_layer(input))))
@@ -485,8 +487,9 @@ class Classifier_Net(nn.Module):
             elif self.activation_fun == 'Leaky_ReLU':
                 input_next = self.dropout(self.bn1(F.leaky_relu(one_layer(input),negative_slope=2e-1)))
             input = input_next
-        output = torch.sigmoid(self.layers[-1](input))
-        return output
+        logit = torch.sigmoid(self.layers[-1](input_next))
+        entropy = self.loss(logit, labels)
+        return entropy
 
 
 # discrete_continuous_info(d, c) estimates the mutual information between a

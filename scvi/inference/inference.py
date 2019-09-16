@@ -79,8 +79,8 @@ class UnsupervisedTrainer(Trainer):
                     penalty_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
             elif self.adv_model.name == 'Classifier':
                 z_l = torch.cat((library, z), dim=1)
-                p_batch = self.adv_model(z_l)
-                penalty_loss = torch.nn.BCELoss(p_batch, batch_index)
+                batch_index = Variable(torch.from_numpy(batch_index.detach().numpy()).type(torch.FloatTensor),requires_grad=False)
+                penalty_loss = self.adv_model(z_l,batch_index)
 
             #scaled_MI_loss = self.model.MIScale*MI_loss
             # loss = torch.mean(reconst_loss + kl_divergence+scaled_MI_loss) #why self.kl_weight * kl_divergence here? Why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
@@ -89,7 +89,11 @@ class UnsupervisedTrainer(Trainer):
             max_ELBO = Variable(torch.from_numpy(np.array([self.model.max_ELBO])).type(torch.FloatTensor), requires_grad=True)
             standardized_ELBO = (ELBO - mini_ELBO) / (max_ELBO - mini_ELBO)
             loss = max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*max(1e-7,penalty_loss))
-            print('ELBO:{}, MI_loss:{}'.format(ELBO, penalty_loss))
+            if self.adv_model.name == 'MI':
+                print('ELBO:{}, Standardized_ELBO:{}, MI_loss:{}'.format(ELBO, standardized_ELBO, penalty_loss))
+            elif self.adv_model.name == 'Classifier':
+                print('ELBO:{}, Standardized_ELBO:{}, Cross_Entropy:{}'.format(ELBO, standardized_ELBO, penalty_loss))
+
             if self.model.save_path != 'None':
                 asw, nmi, ari, uca = self.train_set.clustering_scores()
                 be = self.train_set.entropy_batch_mixing()
