@@ -124,7 +124,8 @@ class Trainer:
             activation_mean = np.empty((nrows,0),dtype=float)
             activation_var = np.empty((nrows,0),dtype=float)
         clustermetrics_trainingprocess = pd.DataFrame(columns=['asw', 'nmi', 'ari', 'uca', 'be'])
-
+        minibatch_number = len(list(self.data_loaders_loop()))
+        self.model.minibatch_number = minibatch_number
         with trange(n_epochs, desc="training", file=sys.stdout, disable=self.verbose) as pbar:
             # We have to use tqdm this way so it works in Jupyter notebook.
             # See https://stackoverflow.com/questions/42212810/tqdm-in-jupyter-notebook
@@ -198,7 +199,8 @@ class Trainer:
                             elif self.adv_model.name == 'Classifier':
                                 z_l = torch.cat((library, z), dim=1)
                                 batch_index_adv = Variable(torch.from_numpy(batch_index_adv.detach().numpy()).type(torch.FloatTensor), requires_grad=False)
-                                loss_adv2 = self.adv_model(z_l,batch_index_adv)
+                                logit = self.adv_model(z_l)
+                                loss_adv2 = self.adv_criterion(logit, batch_index_adv)
                                 self.model.adv_minibatch_loss = loss_adv2
                                 print('adv_minibatch_CrossEntropy: %s' % (loss_adv2))
                                 self.adv_optimizer.zero_grad()
@@ -225,7 +227,7 @@ class Trainer:
                                 if self.adv_model.name == 'MI':
                                     output0 = self.adv_model(input=l_z_batch0_tensor)
                                 elif self.adv_model.name == 'Classifier':
-                                    output0 = self.adv_model(z_l,batch_index_adv)
+                                    output0 = self.adv_model(z_l)
                                 '''
                                 fig = plt.figure(figsize=(14, 7))
                                 plt.hist(torch.mean(activation['layer2'],dim=0).squeeze(), density=True, facecolor='g')
@@ -241,7 +243,7 @@ class Trainer:
                                     if self.adv_model.name == 'MI':
                                         output0 = self.adv_model(input=l_z_batch0_tensor)
                                     elif self.adv_model.name == 'Classifier':
-                                        output0 = self.adv_model(z_l, batch_index_adv)
+                                        output0 = self.adv_model(z_l)
                                     '''
                                     fig = plt.figure(figsize=(14, 7))
                                     plt.hist(torch.mean(activation['layer%s' % ((k + 1) * 10-1)],dim=0).squeeze(), density=True, facecolor='g')
@@ -265,40 +267,41 @@ class Trainer:
                         activation_var = np.append(activation_var, np.array([activation_var_oneepoch]).transpose(), axis=1)
 
                 self.model.minibatch_index = 0
-                minibatch_number = len(list(self.data_loaders_loop()))
 
                 if self.model.adv == True:
                     for tensors_list in self.data_loaders_loop():
-                        pass
-                    if self.model.save_path != 'None':
-                        loss, ELBO, MI_loss, asw, nmi, ari, uca, be = self.loss(*tensors_list)
-                        ELBO_list.append(ELBO.detach().cpu().numpy())
-                        MI_loss_list.append(MI_loss.detach().cpu().numpy())
-                        clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
-                        clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
-                        clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv',index=None, header=True)
-                    else:
-                        loss, ELBO, MI_loss = self.loss(*tensors_list)
-                        ELBO_list.append(ELBO.detach().cpu().numpy())
-                        MI_loss_list.append(MI_loss.detach().cpu().numpy())
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+                        self.model.minibatch_index += 1
+                        if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,minibatch_number - 2]):
+                            loss, ELBO, MI_loss, asw, nmi, ari, uca, be = self.loss(*tensors_list)
+                            ELBO_list.append(ELBO.detach().cpu().numpy())
+                            MI_loss_list.append(MI_loss.detach().cpu().numpy())
+
+                            clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
+                            clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
+                            clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv',index=None, header=True)
+                        else:
+                            loss, ELBO, MI_loss = self.loss(*tensors_list)
+                            ELBO_list.append(ELBO.detach().cpu().numpy())
+                            MI_loss_list.append(MI_loss.detach().cpu().numpy())
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
                 else:
                     for tensors_list in self.data_loaders_loop():
-                        pass
-                    if self.model.save_path != 'None':
-                        loss, ELBO, asw, nmi, ari, uca, be = self.loss(*tensors_list)
-                        ELBO_list.append(ELBO.detach().cpu().numpy())
-                        clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
-                        clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
-                        clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv', index=None, header=True)
-                    else:
-                        loss, ELBO = self.loss(*tensors_list)
-                        ELBO_list.append(ELBO.detach().cpu().numpy())
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+                        self.model.minibatch_index += 1
+                        if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,minibatch_number - 2]):
+                            loss, ELBO, asw, nmi, ari, uca, be = self.loss(*tensors_list)
+                            ELBO_list.append(ELBO.detach().cpu().numpy())
+
+                            clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
+                            clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
+                            clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv', index=None, header=True)
+                        else:
+                            loss, ELBO = self.loss(*tensors_list)
+                            ELBO_list.append(ELBO.detach().cpu().numpy())
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
 
                 if not self.on_epoch_end():
                     break

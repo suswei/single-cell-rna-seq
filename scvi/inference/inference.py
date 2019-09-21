@@ -80,7 +80,8 @@ class UnsupervisedTrainer(Trainer):
             elif self.adv_model.name == 'Classifier':
                 z_l = torch.cat((library, z), dim=1)
                 batch_index = Variable(torch.from_numpy(batch_index.detach().numpy()).type(torch.FloatTensor),requires_grad=False)
-                penalty_loss = self.adv_model(z_l,batch_index)
+                logit = self.adv_model(z_l)
+                penalty_loss = self.adv_criterion(logit, batch_index)
 
             #scaled_MI_loss = self.model.MIScale*MI_loss
             # loss = torch.mean(reconst_loss + kl_divergence+scaled_MI_loss) #why self.kl_weight * kl_divergence here? Why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
@@ -88,15 +89,17 @@ class UnsupervisedTrainer(Trainer):
             mini_ELBO = Variable(torch.from_numpy(np.array([self.model.mini_ELBO])).type(torch.FloatTensor), requires_grad=True)
             max_ELBO = Variable(torch.from_numpy(np.array([self.model.max_ELBO])).type(torch.FloatTensor), requires_grad=True)
             standardized_ELBO = (ELBO - mini_ELBO) / (max_ELBO - mini_ELBO)
-            loss = max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*max(1e-7,penalty_loss))
+            loss = max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*penalty_loss)
+
             if self.adv_model.name == 'MI':
                 print('ELBO:{}, Standardized_ELBO:{}, MI_loss:{}'.format(ELBO, standardized_ELBO, penalty_loss))
             elif self.adv_model.name == 'Classifier':
                 print('ELBO:{}, Standardized_ELBO:{}, Cross_Entropy:{}'.format(ELBO, standardized_ELBO, penalty_loss))
 
-            if self.model.save_path != 'None':
+            if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,self.model.minibatch_number -2]):
                 asw, nmi, ari, uca = self.train_set.clustering_scores()
                 be = self.train_set.entropy_batch_mixing()
+                print(be)
                 return loss, ELBO, penalty_loss, asw, nmi, ari, uca, be
             else:
                 return loss, ELBO, penalty_loss
@@ -115,9 +118,10 @@ class UnsupervisedTrainer(Trainer):
             ELBO = torch.mean(reconst_loss + kl_divergence)
             print('ELBO:{}'.format(ELBO))
             loss = torch.mean(reconst_loss + kl_divergence)  # why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
-            if self.model.save_path != 'None':
+            if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,self.model.minibatch_number -2]):
                 asw, nmi, ari, uca = self.train_set.clustering_scores()
                 be = self.train_set.entropy_batch_mixing()
+                print(be)
                 return loss, ELBO, asw, nmi, ari, uca, be
             else:
                 return loss, ELBO

@@ -62,7 +62,7 @@ class VAE_MI(nn.Module):
                  n_hidden_z: int = 5, n_layers_z: int = 10,
                  MI_estimator: str = 'NN', Adv_MineNet4_architecture: list=[32,16], MIScale: int=1,
                  nsamples_z: int=200, adv: bool=False, adv_minibatch_MI: float=0, save_path: str='None',
-                 minibatch_index: int=0, mini_ELBO: int=10000, max_ELBO: int=1000000):
+                 minibatch_index: int=0, mini_ELBO: int=10000, max_ELBO: int=1000000, minibatch_number: int=60):
         super().__init__()
         self.dispersion = dispersion
         self.log_variational = log_variational
@@ -83,6 +83,7 @@ class VAE_MI(nn.Module):
         self.adv_minibatch_MI = adv_minibatch_MI
         self.save_path = save_path
         self.minibatch_index = minibatch_index
+        self.minibatch_number = minibatch_number
         self.mini_ELBO = mini_ELBO
         self.max_ELBO = max_ELBO
 

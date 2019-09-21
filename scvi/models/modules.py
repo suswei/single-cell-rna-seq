@@ -476,9 +476,8 @@ class Classifier_Net(nn.Module):
 
         self.bn1 = nn.BatchNorm1d(num_features=n_latents[0])
         self.dropout = nn.Dropout(p=drop_out)
-        self.loss = torch.nn.BCELoss(reduction='mean')
 
-    def forward(self, input,labels):
+    def forward(self, input):
         for one_layer in self.layers[0:-1]:
             if self.activation_fun == 'ReLU':
                 input_next = self.dropout(self.bn1(F.relu(one_layer(input))))
@@ -488,8 +487,7 @@ class Classifier_Net(nn.Module):
                 input_next = self.dropout(self.bn1(F.leaky_relu(one_layer(input),negative_slope=2e-1)))
             input = input_next
         logit = torch.sigmoid(self.layers[-1](input_next))
-        entropy = self.loss(logit, labels)
-        return entropy
+        return logit
 
 
 # discrete_continuous_info(d, c) estimates the mutual information between a
