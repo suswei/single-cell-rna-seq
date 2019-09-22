@@ -89,7 +89,10 @@ class UnsupervisedTrainer(Trainer):
             mini_ELBO = Variable(torch.from_numpy(np.array([self.model.mini_ELBO])).type(torch.FloatTensor), requires_grad=True)
             max_ELBO = Variable(torch.from_numpy(np.array([self.model.max_ELBO])).type(torch.FloatTensor), requires_grad=True)
             standardized_ELBO = (ELBO - mini_ELBO) / (max_ELBO - mini_ELBO)
-            loss = max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*penalty_loss)
+            if self.adv_model.name == 'MI':
+                loss = max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*penalty_loss)
+            elif self.adv_model.name == 'Classifier':
+                loss = (1 - self.model.MIScale) * standardized_ELBO - self.model.MIScale * penalty_loss
 
             if self.adv_model.name == 'MI':
                 print('ELBO:{}, Standardized_ELBO:{}, MI_loss:{}'.format(ELBO, standardized_ELBO, penalty_loss))
