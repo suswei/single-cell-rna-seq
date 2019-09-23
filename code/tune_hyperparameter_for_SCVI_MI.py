@@ -46,12 +46,12 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
-            'adv_epochs': [5], #100
-            'change_adv_epochs': [1], #5
+            'adv_epochs': [100], #100
+            'change_adv_epochs': [5], #5
             'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
             'initial': ['xavier_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
-            'adv_model' : ['Classifier'],
+            'adv_model' : ['MI'],
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
         }
