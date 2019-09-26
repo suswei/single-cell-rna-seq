@@ -23,10 +23,10 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
     # nuisance_variable could be 'batch'
     # MI_estimator could be 'Mine_Net4', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
 
-    if not os.path.exists('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
-    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
+    if not os.path.exists('../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
+        os.makedirs('../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
+    if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
+        os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
 
     if dataset_name == 'muris_tabula' and nuisance_variable == 'batch':
         hyperparameter_config = {
@@ -65,8 +65,8 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    data_save_path = './data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
-    result_save_path = './result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    data_save_path = '../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    result_save_path = '../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
 
     if dataset_name == 'muris_tabula':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
@@ -105,8 +105,8 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
     nsamples_z = value[11]
     adv = value[12]
 
-    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/scviconfig%s' % (dataset_name, config_id)):
-        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/scviconfig%s' % (dataset_name, config_id))
+    if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/scviconfig%s' % (dataset_name, config_id)):
+        os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/scviconfig%s' % (dataset_name, config_id))
 
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
               n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
@@ -120,7 +120,7 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
         trainer_vae.model.load_state_dict(torch.load(vae_file_path))
         trainer_vae.model.eval()
     else:
-        reconst_loss_list, clustermetrics_trainingprocess = trainer_vae.train(n_epochs=n_epochs, lr=lr)
+        ELBO_list = trainer_vae.train(n_epochs=n_epochs, lr=lr)
         torch.save(trainer_vae.model.state_dict(), vae_file_path)
         ll_train_set = trainer_vae.history["ll_train_set"]
         ll_test_set = trainer_vae.history["ll_test_set"]
@@ -138,10 +138,9 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
         fig1_path = '%s/scviconfig%s/training_testing_error_SCVI_%s_%s_config%s.png'%(result_save_path,config_id, dataset_name,nuisance_variable, config_id)
         fig.savefig(fig1_path)
         plt.close(fig)
-    clustermetrics_trainingprocess.to_csv('%s/scviconfig%s/%s_%s_config%s_clustermetrics_duringtraining.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
 
     fig = plt.figure(figsize=(14, 7))
-    plt.plot([i for i in range(len(reconst_loss_list))], [np.mean(i) for i in reconst_loss_list])
+    plt.plot([i for i in range(len(ELBO_list))], [np.mean(i) for i in ELBO_list])
     plt.ylim(12000, 60000)
     plt.title("reconst_loss_%s_%s_config%s"%(dataset_name, nuisance_variable, config_id))
     fig1_path = '%s/scviconfig%s/reconst_loss_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)

@@ -117,14 +117,15 @@ class Trainer:
         self.n_epochs = n_epochs
         self.compute_metrics()
 
-        reconst_loss_list = list()
+        ELBO_list = list()
         if self.model.adv==True:
             MI_loss_list = list()
             nrows = int(self.adv_model.n_hidden_layers / 10) + 1
             activation_mean = np.empty((nrows,0),dtype=float)
             activation_var = np.empty((nrows,0),dtype=float)
         clustermetrics_trainingprocess = pd.DataFrame(columns=['asw', 'nmi', 'ari', 'uca', 'be'])
-
+        minibatch_number = len(list(self.data_loaders_loop()))
+        self.model.minibatch_number = minibatch_number
         with trange(n_epochs, desc="training", file=sys.stdout, disable=self.verbose) as pbar:
             # We have to use tqdm this way so it works in Jupyter notebook.
             # See https://stackoverflow.com/questions/42212810/tqdm-in-jupyter-notebook
@@ -141,12 +142,17 @@ class Trainer:
                 #torch.manual_seed(0)
                 #torch.backends.cudnn.benchmark = False
                 #torch.backends.cudnn.deterministic = True
+
+
                 if self.model.adv==True:
+                    self.adv_model.train()
                     for adv_epoch in tqdm(range(self.adv_epochs)):
                         activation_mean_oneepoch = list()
                         activation_var_oneepoch = list()
                         minibatch_index = 0
+
                         for tensor_adv in self.adv_model.data_loader.data_loaders_loop():
+                            activation_hidden = False
                             print(minibatch_index)
                             sample_batch_adv, local_l_mean_adv, local_l_var_adv, batch_index_adv, _ = tensor_adv[0]
                             x_ = sample_batch_adv
@@ -158,39 +164,57 @@ class Trainer:
                             # z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v,batch_index_adv,self.model.nsamples_z)
                             # z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
                             # z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
-                            batch_index_adv_list = np.ndarray.tolist(batch_index_adv.detach().numpy())
-                            z_batch0_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]],:]
-                            z_batch1_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]],:]
-                            l_batch0_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]],:]
-                            l_batch1_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]],:]
-                            l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
-                            l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
+                            if self.adv_model.name == 'MI':
+                                batch_index_adv_list = np.ndarray.tolist(batch_index_adv.detach().numpy())
+                                z_batch0_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]],:]
+                                z_batch1_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]],:]
+                                l_batch0_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]],:]
+                                l_batch1_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]],:]
+                                l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
+                                l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
 
-                            if (l_z_batch0_tensor.shape[0] == 0) or (l_z_batch1_tensor.shape[0] == 0):
-                                continue
+                                if (l_z_batch0_tensor.shape[0] == 0) or (l_z_batch1_tensor.shape[0] == 0):
+                                    continue
 
-                            pred_xz = self.adv_model(input=l_z_batch0_tensor)
-                            pred_x_z = self.adv_model(input=l_z_batch1_tensor)
+                                pred_xz = self.adv_model(input=l_z_batch0_tensor)
+                                pred_x_z = self.adv_model(input=l_z_batch1_tensor)
 
-                            if self.adv_model.unbiased_loss:
-                                t = pred_xz
-                                et = torch.exp(pred_x_z)
-                                if self.adv_model.ma_et is None:
-                                    self.adv_model.ma_et = torch.mean(et).detach().item()
-                                self.adv_model.ma_et += self.adv_model.ma_rate * (torch.mean(et).detach().item() - self.adv_model.ma_et)
-                                # unbiasing use moving average
-                                loss_adv2 = -(torch.mean(t) - (torch.log(torch.mean(et))*torch.mean(et).detach()/ self.adv_model.ma_et))
-                            else:
-                                loss_adv = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
-                                loss_adv2 = -loss_adv  # maximizing loss_adv equals minimizing -loss_adv
+                                if self.adv_model.unbiased_loss:
+                                    t = pred_xz
+                                    et = torch.exp(pred_x_z)
+                                    if self.adv_model.ma_et is None:
+                                        self.adv_model.ma_et = torch.mean(et).detach().item()
+                                    self.adv_model.ma_et += self.adv_model.ma_rate * (torch.mean(et).detach().item() - self.adv_model.ma_et)
+                                    # unbiasing use moving average
+                                    loss_adv2 = -(torch.mean(t) - (torch.log(torch.mean(et))*torch.mean(et).detach()/ self.adv_model.ma_et))
+                                else:
+                                    loss_adv = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+                                    loss_adv2 = -loss_adv  # maximizing loss_adv equals minimizing -loss_adv
 
-                            self.model.adv_minibatch_MI = -loss_adv2
-                            print('adv_minibatch_MI: %s' % (-loss_adv2))
-                            self.adv_optimizer.zero_grad()
-                            loss_adv2.backward()
-                            self.adv_optimizer.step()
+                                self.model.adv_minibatch_loss = -loss_adv2
+                                print('adv_minibatch_MI: %s' % (-loss_adv2))
+                                self.adv_optimizer.zero_grad()
+                                loss_adv2.backward()
+                                self.adv_optimizer.step()
+                            elif self.adv_model.name == 'Classifier':
+                                z_l = torch.cat((library, z), dim=1)
+                                batch_index_adv = Variable(torch.from_numpy(batch_index_adv.detach().numpy()).type(torch.FloatTensor), requires_grad=False)
+                                logit = self.adv_model(z_l)
+                                loss_adv2 = self.adv_criterion(logit, batch_index_adv)
+                                self.model.adv_minibatch_loss = loss_adv2
+                                print('adv_minibatch_CrossEntropy: %s' % (loss_adv2))
+                                self.adv_optimizer.zero_grad()
+                                loss_adv2.backward()
+                                self.adv_optimizer.step()
 
-                            if (self.adv_model.save_path != 'None') and (l_z_batch0_tensor.shape[0] != 0) and (l_z_batch1_tensor.shape[0] != 0) and (self.epoch % 10 == 0) and (minibatch_index == len(list(self.adv_model.data_loader.data_loaders_loop())) - 2):
+                            if self.adv_model.name=='MI':
+                                if (self.adv_model.save_path != 'None') and (adv_epoch == self.adv_epochs-1) and (l_z_batch0_tensor.shape[0] != 0) and (l_z_batch1_tensor.shape[0] != 0) and (self.epoch % 10 == 0) and (minibatch_index == len(list(self.adv_model.data_loader.data_loaders_loop())) - 2):
+                                    activation_hidden = True
+                            elif self.adv_model.name=='Classifier':
+                                if (self.adv_model.save_path != 'None') and (adv_epoch == self.adv_epochs-1) and (self.epoch % 10 == 0) and (minibatch_index == len(list(self.adv_model.data_loader.data_loaders_loop())) - 2):
+                                    activation_hidden = True
+
+                            if activation_hidden == True:
                                 activation = {}
 
                                 def get_activation(name):
@@ -200,7 +224,10 @@ class Trainer:
                                     return hook
 
                                 self.adv_model.layers[2].register_forward_hook(get_activation('layer2'))
-                                output0 = self.adv_model(input=l_z_batch0_tensor)
+                                if self.adv_model.name == 'MI':
+                                    output0 = self.adv_model(input=l_z_batch0_tensor)
+                                elif self.adv_model.name == 'Classifier':
+                                    output0 = self.adv_model(z_l)
                                 '''
                                 fig = plt.figure(figsize=(14, 7))
                                 plt.hist(torch.mean(activation['layer2'],dim=0).squeeze(), density=True, facecolor='g')
@@ -213,7 +240,10 @@ class Trainer:
 
                                 for k in range(int(self.adv_model.n_hidden_layers / 10)):
                                     self.adv_model.layers[(k + 1) * 10-1].register_forward_hook(get_activation('layer%s' % ((k + 1) * 10-1)))
-                                    output0 = self.adv_model(input=l_z_batch0_tensor)
+                                    if self.adv_model.name == 'MI':
+                                        output0 = self.adv_model(input=l_z_batch0_tensor)
+                                    elif self.adv_model.name == 'Classifier':
+                                        output0 = self.adv_model(z_l)
                                     '''
                                     fig = plt.figure(figsize=(14, 7))
                                     plt.hist(torch.mean(activation['layer%s' % ((k + 1) * 10-1)],dim=0).squeeze(), density=True, facecolor='g')
@@ -226,6 +256,7 @@ class Trainer:
                                     print(activation_mean_oneepoch)
                             minibatch_index += 1
 
+                    self.adv_model.eval()
                     self.change_adv_epochs_index = 1
                     self.adv_epochs = self.change_adv_epochs
 
@@ -236,31 +267,41 @@ class Trainer:
                         activation_var = np.append(activation_var, np.array([activation_var_oneepoch]).transpose(), axis=1)
 
                 self.model.minibatch_index = 0
-                minibatch_number = len(list(self.data_loaders_loop()))
-                for tensors_list in self.data_loaders_loop():
-                    self.model.minibatch_index += 1
-                    if (self.model.minibatch_index != minibatch_number) and (self.model.adv == True):
-                       loss, reconst_loss, MI_loss = self.loss(*tensors_list)
-                       reconst_loss_list.append(reconst_loss.detach().cpu().numpy())
-                       MI_loss_list.append(MI_loss.detach().cpu().numpy())
-                    elif (self.model.minibatch_index != minibatch_number) and (self.model.adv == False):
-                        loss = self.loss(*tensors_list)
-                    elif (self.model.minibatch_index == minibatch_number) and (self.model.adv == True):
-                       loss, reconst_loss, MI_loss, asw, nmi, ari, uca, be = self.loss(*tensors_list)
-                       reconst_loss_list.append(reconst_loss.detach().cpu().numpy())
-                       MI_loss_list.append(MI_loss.detach().cpu().numpy())
-                       clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
-                       clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
-                       clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv',index=None, header=True)
-                    elif (self.model.minibatch_index == minibatch_number) and (self.model.adv == False):
-                       loss, asw, nmi, ari, uca, be = self.loss(*tensors_list)
-                       clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
-                       clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
-                       clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv',index=None, header=True)
 
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+                if self.model.adv == True:
+                    for tensors_list in self.data_loaders_loop():
+                        self.model.minibatch_index += 1
+                        if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,minibatch_number - 2]):
+                            loss, ELBO, MI_loss, asw, nmi, ari, uca, be = self.loss(*tensors_list)
+                            ELBO_list.append(ELBO.detach().cpu().numpy())
+                            MI_loss_list.append(MI_loss.detach().cpu().numpy())
+
+                            clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
+                            clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
+                            clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv',index=None, header=True)
+                        else:
+                            loss, ELBO, MI_loss = self.loss(*tensors_list)
+                            ELBO_list.append(ELBO.detach().cpu().numpy())
+                            MI_loss_list.append(MI_loss.detach().cpu().numpy())
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
+                else:
+                    for tensors_list in self.data_loaders_loop():
+                        self.model.minibatch_index += 1
+                        if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,minibatch_number - 2]):
+                            loss, ELBO, asw, nmi, ari, uca, be = self.loss(*tensors_list)
+                            ELBO_list.append(ELBO.detach().cpu().numpy())
+
+                            clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
+                            clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
+                            clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv', index=None, header=True)
+                        else:
+                            loss, ELBO = self.loss(*tensors_list)
+                            ELBO_list.append(ELBO.detach().cpu().numpy())
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
 
                 if not self.on_epoch_end():
                     break
@@ -275,9 +316,9 @@ class Trainer:
             print("\nTraining time:  %i s. / %i epochs" % (int(self.training_time), self.n_epochs))
 
         if self.model.adv==True:
-            return reconst_loss_list, MI_loss_list, activation_mean, activation_var, clustermetrics_trainingprocess
+            return ELBO_list, MI_loss_list, activation_mean, activation_var
         else:
-            return reconst_loss_list, clustermetrics_trainingprocess
+            return ELBO_list
 
     def on_epoch_begin(self):
         pass

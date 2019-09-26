@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 from . import Trainer
 import numpy as np
+from torch.autograd import Variable
 from tqdm import tqdm
 
 plt.switch_backend('agg')
@@ -61,43 +62,83 @@ class UnsupervisedTrainer(Trainer):
             #z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index_adv, self.model.nsamples_z)
             #z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             #z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
-            batch_index_list = np.ndarray.tolist(batch_index.detach().numpy())
-            z_batch0_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]], :]
-            z_batch1_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]], :]
-            l_batch0_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]],:]
-            l_batch1_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]],:]
-            l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
-            l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
+            if self.adv_model.name == 'MI':
+                batch_index_list = np.ndarray.tolist(batch_index.detach().numpy())
+                z_batch0_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]], :]
+                z_batch1_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]], :]
+                l_batch0_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]],:]
+                l_batch1_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]],:]
+                l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
+                l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
 
-            if (l_z_batch0_tensor.shape[0] == 0) or (l_z_batch1_tensor.shape[0] == 0):
-                MI_loss = self.model.adv_minibatch_MI
+                if (l_z_batch0_tensor.shape[0] == 0) or (l_z_batch1_tensor.shape[0] == 0):
+                    penalty_loss = self.model.adv_minibatch_loss
+                else:
+                    pred_xz = self.adv_model(input=l_z_batch0_tensor)
+                    pred_x_z = self.adv_model(input=l_z_batch1_tensor)
+                    penalty_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+            elif self.adv_model.name == 'Classifier':
+                z_l = torch.cat((library, z), dim=1)
+                batch_index = Variable(torch.from_numpy(batch_index.detach().numpy()).type(torch.FloatTensor),requires_grad=False)
+                logit = self.adv_model(z_l)
+                penalty_loss = self.adv_criterion(logit, batch_index)
+
+            #scaled_MI_loss = self.model.MIScale*MI_loss
+            # loss = torch.mean(reconst_loss + kl_divergence+scaled_MI_loss) #why self.kl_weight * kl_divergence here? Why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
+            ELBO = torch.mean(reconst_loss + kl_divergence)
+            mini_ELBO = Variable(torch.from_numpy(np.array([self.model.mini_ELBO])).type(torch.FloatTensor), requires_grad=True)
+            max_ELBO = Variable(torch.from_numpy(np.array([self.model.max_ELBO])).type(torch.FloatTensor), requires_grad=True)
+            standardized_ELBO = (ELBO - mini_ELBO) / (max_ELBO - mini_ELBO)
+            if self.adv_model.name == 'MI':
+                standardized_penalty = (penalty_loss-self.adv_model.min)/(self.adv_model.max - self.adv_model.min)
+                loss = max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*standardized_penalty)
+            elif self.adv_model.name == 'Classifier':
+                standardized_penalty = (-penalty_loss-(-self.adv_model.max))/(-self.adv_model.min-(-self.adv_model.max))
+                loss = max((1 - self.model.MIScale) * standardized_ELBO, self.model.MIScale * standardized_penalty)
+
+            if self.adv_model.name == 'MI':
+                print('ELBO:{}, Standardized_ELBO:{}, MI_loss:{}, standardized_MI: {}'.format(ELBO, standardized_ELBO, penalty_loss, standardized_penalty))
+            elif self.adv_model.name == 'Classifier':
+                print('ELBO:{}, Standardized_ELBO:{}, Cross_Entropy:{}, standardized_cross_entropy: {}'.format(ELBO, standardized_ELBO, penalty_loss, standardized_penalty))
+
+            if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,self.model.minibatch_number -2]):
+                asw, nmi, ari, uca = self.train_set.clustering_scores()
+                be = self.train_set.entropy_batch_mixing()
+                print(be)
+                return loss, ELBO, penalty_loss, asw, nmi, ari, uca, be
             else:
-                pred_xz = self.adv_model(input=l_z_batch0_tensor)
-                pred_x_z = self.adv_model(input=l_z_batch1_tensor)
-                MI_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
-            scaled_MI_loss = self.model.MIScale*MI_loss
-            print('reconst_loss:{}, MI_loss:{}, scaled_MI_loss:{}'.format(reconst_loss.mean(), MI_loss, scaled_MI_loss))
-            loss = torch.mean(reconst_loss + kl_divergence+scaled_MI_loss) #why self.kl_weight * kl_divergence here? Why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
+                return loss, ELBO, penalty_loss
+            '''
             if self.model.minibatch_index == len(list(self.data_loaders_loop())):
                 print(self.train_set.gene_dataset.n_labels)
                 asw, nmi, ari, uca = self.train_set.clustering_scores()
                 be = self.train_set.entropy_batch_mixing()
-                return loss, reconst_loss, MI_loss, asw, nmi, ari, uca, be
+                return loss, ELBO, MI_loss, asw, nmi, ari, uca, be
             else:
-                return loss, reconst_loss, MI_loss
+                return loss, ELBO, MI_loss
+            '''
         else:
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
             reconst_loss, kl_divergence = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
-            print('penalty:{}'.format(kl_divergence))
+            ELBO = torch.mean(reconst_loss + kl_divergence)
+            print('ELBO:{}'.format(ELBO))
             loss = torch.mean(reconst_loss + kl_divergence)  # why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
+            if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,self.model.minibatch_number -2]):
+                asw, nmi, ari, uca = self.train_set.clustering_scores()
+                be = self.train_set.entropy_batch_mixing()
+                print(be)
+                return loss, ELBO, asw, nmi, ari, uca, be
+            else:
+                return loss, ELBO
+            '''
             if self.model.minibatch_index == len(list(self.data_loaders_loop())):
                 print(self.train_set.gene_dataset.n_labels)
                 asw, nmi, ari, uca = self.train_set.clustering_scores()
                 be = self.train_set.entropy_batch_mixing()
-                return loss, asw, nmi, ari, uca, be
+                return loss, ELBO, asw, nmi, ari, uca, be
             else:
-                return loss
-
+                return loss, ELBO
+            '''
     def on_epoch_begin(self):
         self.kl_weight = self.kl if self.kl is not None else min(1, self.epoch / 400)  # self.n_epochs)
 
