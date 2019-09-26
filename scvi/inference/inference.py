@@ -90,14 +90,16 @@ class UnsupervisedTrainer(Trainer):
             max_ELBO = Variable(torch.from_numpy(np.array([self.model.max_ELBO])).type(torch.FloatTensor), requires_grad=True)
             standardized_ELBO = (ELBO - mini_ELBO) / (max_ELBO - mini_ELBO)
             if self.adv_model.name == 'MI':
-                loss = max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*penalty_loss)
+                standardized_penalty = (penalty_loss-self.adv_model.min)/(self.adv_model.max - self.adv_model.min)
+                loss = max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*standardized_penalty)
             elif self.adv_model.name == 'Classifier':
-                loss = (1 - self.model.MIScale) * standardized_ELBO - self.model.MIScale * penalty_loss
+                standardized_penalty = (-penalty_loss-(-self.adv_model.max))/(-self.adv_model.min-(-self.adv_model.max))
+                loss = max((1 - self.model.MIScale) * standardized_ELBO, self.model.MIScale * standardized_penalty)
 
             if self.adv_model.name == 'MI':
-                print('ELBO:{}, Standardized_ELBO:{}, MI_loss:{}'.format(ELBO, standardized_ELBO, penalty_loss))
+                print('ELBO:{}, Standardized_ELBO:{}, MI_loss:{}, standardized_MI: {}'.format(ELBO, standardized_ELBO, penalty_loss, standardized_penalty))
             elif self.adv_model.name == 'Classifier':
-                print('ELBO:{}, Standardized_ELBO:{}, Cross_Entropy:{}'.format(ELBO, standardized_ELBO, penalty_loss))
+                print('ELBO:{}, Standardized_ELBO:{}, Cross_Entropy:{}, standardized_cross_entropy: {}'.format(ELBO, standardized_ELBO, penalty_loss, standardized_penalty))
 
             if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,self.model.minibatch_number -2]):
                 asw, nmi, ari, uca = self.train_set.clustering_scores()

@@ -17,7 +17,7 @@ import torch
 from torch.autograd import Variable
 import itertools
 
-def main(taskid, dataset_name, nuisance_variable, config_id):
+def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
     # taskid is just any integer from 0 to 99
     # dataset_name could be 'muris_tabula', 'pbmc'
     # nuisance_variable could be 'batch'
@@ -28,7 +28,7 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
     if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
         os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
 
-    if dataset_name == 'muris_tabula' and nuisance_variable == 'batch':
+    if dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'MI':
         hyperparameter_config = {
             'n_layers_encoder': [10],
             'n_layers_decoder': [10],
@@ -40,7 +40,7 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
             'use_cuda': [False],
             'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],
             'train_size': [0.8],
-            'lr': [1e-3], #1e-3, 5e-3, 1e-4
+            'lr': [1, 1e-1, 1e-2, 1e-3], #1e-3, 5e-3, 1e-4
             'adv_lr': [5e-4], #5e-4, 1e-8
             'n_epochs': [350], #2500
             'nsamples_z': [200],
@@ -52,6 +52,33 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
             'initial': ['xavier_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
             'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
+    elif dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'Classifier':
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'train_size': [0.8],
+            'lr': [1, 1e-1, 1e-2, 1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [350],  # 2500
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
         }
@@ -154,11 +181,11 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
             advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model)
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.03)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model)
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
         adv_optimizer = torch.optim.Adam(advnet.parameters(), lr=adv_lr)
         trainer_vae_MI.adv_model = advnet
         trainer_vae_MI.adv_criterion = torch.nn.BCELoss(reduction='mean')
@@ -331,7 +358,7 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
 
 # Run the actual program
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
 
 # In terminal type
 # python hypertuning.py taskid

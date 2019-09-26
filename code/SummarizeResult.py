@@ -264,7 +264,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
                   dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset', 'testset'], config_numbers: int=107,
                   activation_config_list: list=['None'], hyperparameter_config_index: int=2, cross_entropy_reconstloss: bool=False, adv: str='MI'):
     if adv=='MI':
-        clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'MILoss'])
+        clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'MILoss', 'ELBO'])
     elif adv=='Classifier':
         clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'CrossEntropy','ELBO'])
     valid_config = []
@@ -294,20 +294,26 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
         plt.title('%s, %s, %s, %s, clusteringmetrics' % (dataset_name, nuisance_variable, 'configs', Label), fontsize=18)
         fig.savefig(results_dict + '%s_%s_%s_%s_clusteringmetrics.png' % (dataset_name, nuisance_variable, 'configs', Label))
         plt.close(fig)
-    scale_list = [0, 0.1, 0.2, 0.3, 0.4, 0.8]
+    scale_list = [i/10 for i in range(10)]
     if cross_entropy_reconstloss == True:
         for Label in Label_list:
             fig = plt.figure(figsize=(10, 7))
             ELBO = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:,['ELBO']].values[0:-1]
-            cross_entropy = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:,['CrossEntropy']].values[0:-1]
-
-            lines1 = plt.plot(ELBO, cross_entropy)
+            if adv == 'Classifier':
+                penalty = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:,['CrossEntropy']].values[0:-1]
+            elif adv == 'MI':
+                penalty = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:,['MILoss']].values[0:-1]
+            lines1 = plt.plot(ELBO, penalty)
             for i in range(len(scale_list)):
-                plt.text(ELBO[i], cross_entropy[i], '%s'%(scale_list[i]), horizontalalignment='right')
+                plt.text(ELBO[i], penalty[i], '%s'%(scale_list[i]), horizontalalignment='right')
             plt.xlabel('ELBO', fontsize=16)
             # plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
-            plt.title('%s, %s, %s, relationship between cross entropy and reconstloss' % (dataset_name, nuisance_variable, Label), fontsize=18)
-            fig.savefig(results_dict + '%s_%s_%s_relationship_between_crossentropy_reconstloss.png' % (dataset_name, nuisance_variable, Label))
+            if adv == 'Classifier':
+                plt.title('%s, %s, %s, relationship between cross entropy and reconstloss' % (dataset_name, nuisance_variable, Label), fontsize=18)
+                fig.savefig(results_dict + '%s_%s_%s_relationship_between_crossentropy_reconstloss.png' % (dataset_name, nuisance_variable, Label))
+            elif adv == 'MI':
+                plt.title('%s, %s, %s, relationship between MI and reconstloss' % (dataset_name, nuisance_variable, Label), fontsize=18)
+                fig.savefig(results_dict + '%s_%s_%s_relationship_between_MI_reconstloss.png' % (dataset_name, nuisance_variable, Label))
             plt.close(fig)
     '''
     if activation_config_list != ['None']:
@@ -527,6 +533,33 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             'unbiased_loss': [True],
             'initial': ['xavier_normal'],
             'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
+    elif hyperparameter_config_index == 8:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'train_size': [0.8],
+            'lr': [1e-3],
+            'adv_lr': [5e-4],
+            'n_epochs': [350],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [100],
+            'change_adv_epochs': [5],
+            'activation_fun': ['ELU'],
+            'unbiased_loss': [True],
+            'initial': ['xavier_normal'],
+            'adv_model': ['MI'],
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
         }
