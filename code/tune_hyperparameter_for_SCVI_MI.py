@@ -38,11 +38,11 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],
+            'MIScale': [0, 500, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000],
             'train_size': [0.8],
-            'lr': [1, 1e-1, 1e-2, 1e-3], #1e-3, 5e-3, 1e-4
+            'lr': [1e-3], #1e-3, 5e-3, 1e-4
             'adv_lr': [5e-4], #5e-4, 1e-8
-            'n_epochs': [350], #2500
+            'n_epochs': [350], #350
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
@@ -65,11 +65,11 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'MIScale': [0, 500, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000],
             'train_size': [0.8],
-            'lr': [1, 1e-1, 1e-2, 1e-3],  # 1e-3, 5e-3, 1e-4
+            'lr': [1e-3],  # 1e-3, 5e-3, 1e-4
             'adv_lr': [5e-4],  # 5e-4, 1e-8
-            'n_epochs': [350],  # 2500
+            'n_epochs': [350],  # 350
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],

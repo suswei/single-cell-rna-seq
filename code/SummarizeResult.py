@@ -294,6 +294,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
         plt.title('%s, %s, %s, %s, clusteringmetrics' % (dataset_name, nuisance_variable, 'configs', Label), fontsize=18)
         fig.savefig(results_dict + '%s_%s_%s_%s_clusteringmetrics.png' % (dataset_name, nuisance_variable, 'configs', Label))
         plt.close(fig)
+    '''
     scale_list = [i/10 for i in range(10)]
     if cross_entropy_reconstloss == True:
         for Label in Label_list:
@@ -315,7 +316,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
                 plt.title('%s, %s, %s, relationship between MI and reconstloss' % (dataset_name, nuisance_variable, Label), fontsize=18)
                 fig.savefig(results_dict + '%s_%s_%s_relationship_between_MI_reconstloss.png' % (dataset_name, nuisance_variable, Label))
             plt.close(fig)
-    '''
+    
     if activation_config_list != ['None']:
         for k in activation_config_list:
             activationmean_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_activationmean.csv'%(k, k)
@@ -559,6 +560,61 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             'activation_fun': ['ELU'],
             'unbiased_loss': [True],
             'initial': ['xavier_normal'],
+            'adv_model': ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
+    elif hyperparameter_config_index == 9:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'train_size': [0.8],
+            'lr': [1, 1e-1, 1e-2, 1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [350],  # 2500
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
+    elif hyperparameter_config_index == 10:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'train_size': [0.8],
+            'lr': [1, 1e-1, 1e-2, 1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [350],  # 2500
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [100],  # 100
+            'change_adv_epochs': [5],  # 5
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
             'adv_model': ['MI'],
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
