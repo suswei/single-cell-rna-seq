@@ -86,22 +86,22 @@ class UnsupervisedTrainer(Trainer):
             #scaled_MI_loss = self.model.MIScale*MI_loss
             # loss = torch.mean(reconst_loss + kl_divergence+scaled_MI_loss) #why self.kl_weight * kl_divergence here? Why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
             ELBO = torch.mean(reconst_loss + kl_divergence)
-            #mini_ELBO = Variable(torch.from_numpy(np.array([self.model.mini_ELBO])).type(torch.FloatTensor), requires_grad=True)
-            #max_ELBO = Variable(torch.from_numpy(np.array([self.model.max_ELBO])).type(torch.FloatTensor), requires_grad=True)
-            #standardized_ELBO = (ELBO - mini_ELBO) / (max_ELBO - mini_ELBO)
+            mini_ELBO = Variable(torch.from_numpy(np.array([self.model.mini_ELBO])).type(torch.FloatTensor), requires_grad=True)
+            max_ELBO = Variable(torch.from_numpy(np.array([self.model.max_ELBO])).type(torch.FloatTensor), requires_grad=True)
+            standardized_ELBO = (ELBO - mini_ELBO) / (max_ELBO - mini_ELBO)
             if self.adv_model.name == 'MI':
                 #standardized_penalty = (penalty_loss-self.adv_model.min)/(self.adv_model.max - self.adv_model.min)
-                #loss = max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*standardized_penalty)
-                loss = ELBO + self.model.MIScale * penalty_loss
+                loss = max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*penalty_loss)
+                #loss = ELBO + self.model.MIScale * penalty_loss
             elif self.adv_model.name == 'Classifier':
                 #standardized_penalty = (-penalty_loss-(-self.adv_model.max))/(-self.adv_model.min-(-self.adv_model.max))
-                #loss = max((1 - self.model.MIScale) * standardized_ELBO, self.model.MIScale * standardized_penalty)
-                loss = ELBO - self.model.MIScale * penalty_loss
+                loss = (1 - self.model.MIScale) * standardized_ELBO - self.model.MIScale * penalty_loss
+                #loss = ELBO - self.model.MIScale * penalty_loss
 
             if self.adv_model.name == 'MI':
-                print('ELBO:{},  MI_loss:{}'.format(ELBO, penalty_loss))
+                print('ELBO:{}, standardized_ELBO:{}, MI_loss:{}'.format(ELBO, standardized_ELBO, penalty_loss))
             elif self.adv_model.name == 'Classifier':
-                print('ELBO:{}, Cross_Entropy:{}'.format(ELBO, penalty_loss))
+                print('ELBO:{}, standardized_ELBO: {}, Cross_Entropy:{}'.format(ELBO, standardized_ELBO, penalty_loss))
 
             if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,self.model.minibatch_number -2]):
                 asw, nmi, ari, uca = self.train_set.clustering_scores()

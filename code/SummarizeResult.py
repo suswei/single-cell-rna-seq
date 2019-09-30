@@ -619,6 +619,33 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
         }
+    elif hyperparameter_config_index == 11:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 500, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000],
+            'train_size': [0.8],
+            'lr': [1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [350],  # 350
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
