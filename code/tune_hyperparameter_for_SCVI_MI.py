@@ -42,7 +42,7 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
             'train_size': [0.8],
             'lr': [1e-2,1e-3], #1e-3, 5e-3, 1e-4
             'adv_lr': [5e-4], #5e-4, 1e-8
-            'n_epochs': [250], #350
+            'n_epochs': [350], #350
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
@@ -69,7 +69,7 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
             'train_size': [0.8],
             'lr': [1e-2,1e-3],  # 1e-3, 5e-3, 1e-4
             'adv_lr': [5e-4],  # 5e-4, 1e-8
-            'n_epochs': [250],  # 350
+            'n_epochs': [350],  # 350
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
