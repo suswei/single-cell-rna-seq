@@ -31,16 +31,16 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
     if dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'MI':
         hyperparameter_config = {
             'n_layers_encoder': [10],
-            'n_layers_decoder': [10],
+            'n_layers_decoder': [2],
             'n_hidden': [128],
             'n_latent': [10],
             'dropout_rate': [0.1],
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [0, 500, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
             'train_size': [0.8],
-            'lr': [1e-3], #1e-3, 5e-3, 1e-4
+            'lr': [1e-2,1e-3], #1e-3, 5e-3, 1e-4
             'adv_lr': [5e-4], #5e-4, 1e-8
             'n_epochs': [350], #350
             'nsamples_z': [200],
@@ -58,16 +58,16 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
     elif dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'Classifier':
         hyperparameter_config = {
             'n_layers_encoder': [10],
-            'n_layers_decoder': [10],
+            'n_layers_decoder': [2],
             'n_hidden': [128],
             'n_latent': [10],
             'dropout_rate': [0.1],
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [0, 500, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
             'train_size': [0.8],
-            'lr': [1e-3],  # 1e-3, 5e-3, 1e-4
+            'lr': [1e-2, 1e-3],  # 1e-3, 5e-3, 1e-4
             'adv_lr': [5e-4],  # 5e-4, 1e-8
             'n_epochs': [350],  # 350
             'nsamples_z': [200],
@@ -153,10 +153,9 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
     optimiser = value[22]
     adv_drop_out = value[23]
 
-    if adv_model == 'MI':
-        clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'MILoss','ELBO'])
-    elif adv_model == 'Classifier':
-        clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'CrossEntropy','ELBO'])
+
+    clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty','std_ELBO'])
+
 
     if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id)):
         os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id))
@@ -203,7 +202,7 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
         trainer_vae_MI.adv_model.eval()
     else:
     '''
-    ELBO_list, penalty_loss_list, activation_mean, activation_var = trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
+    ELBO_list, std_ELBO_list, penalty_list, std_penalty_list = trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
     torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
     torch.save(trainer_vae_MI.adv_model.state_dict(), adv_MI_file_path)
     ll_train_set = trainer_vae_MI.history["ll_train_set"]
@@ -222,13 +221,13 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
     fig1_path = '%s/config%s/training_testing_error_SCVI+MI_%s_%s_config%s.png'%(result_save_path,config_id, dataset_name,nuisance_variable, config_id)
     fig.savefig(fig1_path)
     plt.close(fig)
-
+    '''
     layers = {'layers': ['layer2'] + ['layer%s'%((k+1)*10-1) for k in range(int(trainer_vae_MI.adv_model.n_hidden_layers / 10))]}
     activation_mean_pd = pd.concat([pd.DataFrame.from_dict(layers),pd.DataFrame(data=activation_mean, columns=['epoch%s'%(i*10) for i in range(int((n_epochs-1)/10)+1)])],axis=1)
     activation_var_pd = pd.concat([pd.DataFrame.from_dict(layers),pd.DataFrame(data=activation_var, columns=['epoch%s'%(i*10) for i in range(int((n_epochs-1)/10)+1)])],axis=1)
     activation_mean_pd.to_csv('%s/config%s/%s_%s_config%s_activationmean.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
     activation_var_pd.to_csv('%s/config%s/%s_%s_config%s_activationvar.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
-
+    '''
     fig = plt.figure(figsize=(14, 7))
     plt.plot([i for i in range(len(ELBO_list))], [np.mean(i) for i in ELBO_list])
     plt.ylim(12000, 60000)
@@ -238,9 +237,23 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
     plt.close(fig)
 
     fig = plt.figure(figsize=(14, 7))
-    plt.plot([i for i in range(len(ELBO_list))], penalty_loss_list)
-    plt.title("MI_loss_%s_%s_config%s" % (dataset_name, nuisance_variable, config_id))
-    fig1_path = '%s/config%s/MI_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
+    plt.plot([i for i in range(len(std_ELBO_list))], [np.mean(i) for i in std_ELBO_list])
+    plt.title("std_reconst_loss_%s_%s_config%s" % (dataset_name, nuisance_variable, config_id))
+    fig1_path = '%s/config%s/std_reconst_loss_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
+    fig.savefig(fig1_path)
+    plt.close(fig)
+
+    fig = plt.figure(figsize=(14, 7))
+    plt.plot([i for i in range(len(penalty_list))], penalty_list)
+    plt.title("penaltt_%s_%s_config%s" % (dataset_name, nuisance_variable, config_id))
+    fig1_path = '%s/config%s/penalty_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
+    fig.savefig(fig1_path)
+    plt.close(fig)
+
+    fig = plt.figure(figsize=(14, 7))
+    plt.plot([i for i in range(len(std_penalty_list))], std_penalty_list)
+    plt.title("std_penalty_%s_%s_config%s" % (dataset_name, nuisance_variable, config_id))
+    fig1_path = '%s/config%s/std_penalty_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
     fig.savefig(fig1_path)
     plt.close(fig)
 
@@ -284,25 +297,29 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
         pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
         pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
         predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.02))/(0.03-(-0.02))
     elif adv_model == 'Classifier':
         z_l_train = torch.cat((library_tensor_train, z_tensor_train), dim=1)
         batch_indices_tensor_train = Variable(torch.from_numpy(batch_indices_array_train).type(torch.FloatTensor),requires_grad=False)
         logit = trainer_vae_MI.adv_model(z_l_train)
         cross_entropy = trainer_vae_MI.adv_criterion(logit, batch_indices_tensor_train).detach().cpu().numpy()
+        std_cross_entropy = (-cross_entropy - (-6))/(-0.2- (-6))
     ELBO_list_train = []
+    number_samples = 0
     for tensors in trainer_vae_MI.train_set:
         sample_batch, local_l_mean, local_l_var, batch_index, label = tensors
         reconst_loss, kl_divergence = trainer_vae_MI.model(sample_batch, local_l_mean, local_l_var, batch_index)
         ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
-        ELBO_list_train += [ELBO]
-    ELBO_train = sum(ELBO_list_train)/len(ELBO_list_train)
+        ELBO_list_train += [ELBO*sample_batch.shape[0]]
+        number_samples += sample_batch.shape[0]
+    std_ELBO_train = (sum(ELBO_list_train)/number_samples - 10000)/(30000 - 10000)
 
     label = '%s_%s_config%s_VaeMI_trainset' % (dataset_name, nuisance_variable, config_id)
 
     if adv_model == 'MI':
-        intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be], 'MILoss': [predicted_mutual_info], 'ELBO':[ELBO_train]})
+        intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be], 'std_penalty': [std_predicted_mutual_info], 'std_ELBO':[std_ELBO_train]})
     elif adv_model == 'Classifier':
-        intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be], 'CrossEntropy': [cross_entropy], 'ELBO':[ELBO_train]})
+        intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be], 'std_penalty': [std_cross_entropy], 'std_ELBO':[std_ELBO_train]})
     clustering_metric = pd.concat([clustering_metric, intermediate_dataframe1], axis=0)
 
     asw, nmi, ari, uca = trainer_vae_MI.test_set.clustering_scores()
@@ -334,25 +351,29 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
         pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
         pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
         predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.02)) / (0.03 - (-0.02))
     elif adv_model == 'Classifier':
         z_l_test = torch.cat((library_tensor_test, z_tensor_test), dim=1)
         batch_indices_tensor_test = Variable(torch.from_numpy(batch_indices_array_test).type(torch.FloatTensor), requires_grad=False)
         logit = trainer_vae_MI.adv_model(z_l_test)
         cross_entropy = trainer_vae_MI.adv_criterion(logit, batch_indices_tensor_test).detach().cpu().numpy()
+        std_cross_entropy = (-cross_entropy - (-6)) / (-0.2 - (-6))
 
     ELBO_list_test = []
+    number_samples = 0
     for tensors in trainer_vae_MI.test_set:
         sample_batch, local_l_mean, local_l_var, batch_index, label = tensors
         reconst_loss, kl_divergence = trainer_vae_MI.model(sample_batch, local_l_mean, local_l_var, batch_index)
         ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
-        ELBO_list_test += [ELBO]
-    ELBO_test = sum(ELBO_list_test) / len(ELBO_list_test)
+        ELBO_list_test += [ELBO* sample_batch.shape[0]]
+        number_samples += sample_batch.shape[0]
+    std_ELBO_test = (sum(ELBO_list_test) / number_samples - 10000) / (30000 - 10000)
 
     label = '%s_%s_config%s_VaeMI_testset' % (dataset_name, nuisance_variable, config_id)
     if adv_model == 'MI':
-        intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'MILoss': [predicted_mutual_info], 'ELBO': [ELBO_test]})
+        intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'std_penalty': [std_predicted_mutual_info], 'std_ELBO': [std_ELBO_test]})
     elif adv_model == 'Classifier':
-        intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be], 'CrossEntropy': [cross_entropy], 'ELBO':[ELBO_test]})
+        intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be], 'std_penalty': [std_cross_entropy], 'std_ELBO':[std_ELBO_test]})
     clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
     clustering_metric.to_csv('%s/config%s/%s_%s_config%s_ClusterMetric.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id), index=None, header=True)
 
