@@ -88,59 +88,31 @@ class UnsupervisedTrainer(Trainer):
             ELBO = torch.mean(reconst_loss + kl_divergence)
             mini_ELBO = Variable(torch.from_numpy(np.array([self.model.mini_ELBO])).type(torch.FloatTensor), requires_grad=True)
             max_ELBO = Variable(torch.from_numpy(np.array([self.model.max_ELBO])).type(torch.FloatTensor), requires_grad=True)
+            adv_min = Variable(torch.from_numpy(np.array([self.adv_model.min])).type(torch.FloatTensor), requires_grad=True)
+            adv_max = Variable(torch.from_numpy(np.array([self.adv_model.max])).type(torch.FloatTensor),requires_grad=True)
             standardized_ELBO = (ELBO - mini_ELBO) / (max_ELBO - mini_ELBO)
             if self.adv_model.name == 'MI':
-                #standardized_penalty = (penalty_loss-self.adv_model.min)/(self.adv_model.max - self.adv_model.min)
-                loss = max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*penalty_loss)
+                standardized_penalty = (penalty_loss-adv_min)/(adv_max - adv_min)
+                loss = torch.max((1-self.model.MIScale)*standardized_ELBO, self.model.MIScale*standardized_penalty)
                 #loss = ELBO + self.model.MIScale * penalty_loss
             elif self.adv_model.name == 'Classifier':
-                #standardized_penalty = (-penalty_loss-(-self.adv_model.max))/(-self.adv_model.min-(-self.adv_model.max))
-                loss = (1 - self.model.MIScale) * standardized_ELBO - self.model.MIScale * penalty_loss
+                standardized_penalty = (-penalty_loss-(-adv_max))/(-adv_min-(-adv_max))
+                loss = torch.max((1 - self.model.MIScale) * standardized_ELBO, self.model.MIScale * standardized_penalty)
                 #loss = ELBO - self.model.MIScale * penalty_loss
 
             if self.adv_model.name == 'MI':
-                print('ELBO:{}, standardized_ELBO:{}, MI_loss:{}'.format(ELBO, standardized_ELBO, penalty_loss))
+                print('ELBO:{}, standardized_ELBO:{}, MI_loss:{}, standardized_MI: {}'.format(ELBO, standardized_ELBO, penalty_loss, standardized_penalty))
             elif self.adv_model.name == 'Classifier':
-                print('ELBO:{}, standardized_ELBO: {}, Cross_Entropy:{}'.format(ELBO, standardized_ELBO, penalty_loss))
-
-            if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,self.model.minibatch_number -2]):
-                asw, nmi, ari, uca = self.train_set.clustering_scores()
-                be = self.train_set.entropy_batch_mixing()
-                print(be)
-                return loss, ELBO, penalty_loss, asw, nmi, ari, uca, be
-            else:
-                return loss, ELBO, penalty_loss
-            '''
-            if self.model.minibatch_index == len(list(self.data_loaders_loop())):
-                print(self.train_set.gene_dataset.n_labels)
-                asw, nmi, ari, uca = self.train_set.clustering_scores()
-                be = self.train_set.entropy_batch_mixing()
-                return loss, ELBO, MI_loss, asw, nmi, ari, uca, be
-            else:
-                return loss, ELBO, MI_loss
-            '''
+                print('ELBO:{}, standardized_ELBO: {}, Cross_Entropy:{}, standardized_Cross_Entropy: {}'.format(ELBO, standardized_ELBO, penalty_loss, standardized_penalty))
+            return loss, ELBO, standardized_ELBO, penalty_loss, standardized_penalty
         else:
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
             reconst_loss, kl_divergence = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
             ELBO = torch.mean(reconst_loss + kl_divergence)
             print('ELBO:{}'.format(ELBO))
             loss = torch.mean(reconst_loss + kl_divergence)  # why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
-            if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,self.model.minibatch_number -2]):
-                asw, nmi, ari, uca = self.train_set.clustering_scores()
-                be = self.train_set.entropy_batch_mixing()
-                print(be)
-                return loss, ELBO, asw, nmi, ari, uca, be
-            else:
-                return loss, ELBO
-            '''
-            if self.model.minibatch_index == len(list(self.data_loaders_loop())):
-                print(self.train_set.gene_dataset.n_labels)
-                asw, nmi, ari, uca = self.train_set.clustering_scores()
-                be = self.train_set.entropy_batch_mixing()
-                return loss, ELBO, asw, nmi, ari, uca, be
-            else:
-                return loss, ELBO
-            '''
+            return loss, ELBO
+
     def on_epoch_begin(self):
         self.kl_weight = self.kl if self.kl is not None else min(1, self.epoch / 400)  # self.n_epochs)
 

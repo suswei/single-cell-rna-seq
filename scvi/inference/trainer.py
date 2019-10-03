@@ -118,8 +118,10 @@ class Trainer:
         self.compute_metrics()
 
         ELBO_list = list()
+        std_ELBO_list = list()
         if self.model.adv==True:
-            MI_loss_list = list()
+            penalty_list = list()
+            std_penalty_list = list()
             nrows = int(self.adv_model.n_hidden_layers / 10) + 1
             activation_mean = np.empty((nrows,0),dtype=float)
             activation_var = np.empty((nrows,0),dtype=float)
@@ -145,15 +147,15 @@ class Trainer:
 
 
                 if self.model.adv==True:
-                    self.adv_model.train()
                     for adv_epoch in tqdm(range(self.adv_epochs)):
-                        activation_mean_oneepoch = list()
-                        activation_var_oneepoch = list()
-                        minibatch_index = 0
+                        self.adv_model.train()
+                        #activation_mean_oneepoch = list()
+                        #activation_var_oneepoch = list()
+                        #minibatch_index = 0
 
                         for tensor_adv in self.adv_model.data_loader.data_loaders_loop():
-                            activation_hidden = False
-                            print(minibatch_index)
+                            #activation_hidden = False
+                            #print(minibatch_index)
                             sample_batch_adv, local_l_mean_adv, local_l_var_adv, batch_index_adv, _ = tensor_adv[0]
                             x_ = sample_batch_adv
                             if self.model.log_variational:
@@ -206,7 +208,7 @@ class Trainer:
                                 self.adv_optimizer.zero_grad()
                                 loss_adv2.backward()
                                 self.adv_optimizer.step()
-
+                            '''
                             if self.adv_model.name=='MI':
                                 if (self.adv_model.save_path != 'None') and (adv_epoch == self.adv_epochs-1) and (l_z_batch0_tensor.shape[0] != 0) and (l_z_batch1_tensor.shape[0] != 0) and (self.epoch % 10 == 0) and (minibatch_index == len(list(self.adv_model.data_loader.data_loaders_loop())) - 2):
                                     activation_hidden = True
@@ -228,13 +230,13 @@ class Trainer:
                                     output0 = self.adv_model(input=l_z_batch0_tensor)
                                 elif self.adv_model.name == 'Classifier':
                                     output0 = self.adv_model(z_l)
-                                '''
+                                
                                 fig = plt.figure(figsize=(14, 7))
                                 plt.hist(torch.mean(activation['layer2'],dim=0).squeeze(), density=True, facecolor='g')
                                 plt.title("Distribution of activations of nodes in hidden layer2 for the second last minibatch in epoch%s" % (self.epoch))
                                 fig.savefig(self.adv_model.save_path + 'Dist_of_activations_layer2_epoch%s.png' % (self.epoch))
                                 plt.close(fig)
-                                '''
+                                
                                 activation_mean_oneepoch = activation_mean_oneepoch + [statistics.mean(torch.mean(activation['layer2'],dim=0).squeeze().tolist())]
                                 activation_var_oneepoch = activation_var_oneepoch + [statistics.stdev(torch.mean(activation['layer2'],dim=0).squeeze().tolist())]
 
@@ -244,64 +246,57 @@ class Trainer:
                                         output0 = self.adv_model(input=l_z_batch0_tensor)
                                     elif self.adv_model.name == 'Classifier':
                                         output0 = self.adv_model(z_l)
-                                    '''
+                                    
                                     fig = plt.figure(figsize=(14, 7))
                                     plt.hist(torch.mean(activation['layer%s' % ((k + 1) * 10-1)],dim=0).squeeze(), density=True, facecolor='g')
                                     plt.title("Distribution of activations of nodes in hidden layer%s for the second last minibatch in epoch%s" % ((k + 1) * 10-1, self.epoch))
                                     fig.savefig(self.adv_model.save_path + 'Dist_of_activations_layer%s_epoch%s.png' % ((k + 1) * 10-1, self.epoch))
                                     plt.close(fig)
-                                    '''
+                                    
                                     activation_mean_oneepoch = activation_mean_oneepoch + [statistics.mean(torch.mean(activation['layer%s' % ((k + 1) * 10-1)],dim=0).squeeze().tolist())]
                                     activation_var_oneepoch = activation_var_oneepoch + [statistics.mean(torch.mean(activation['layer%s' % ((k + 1) * 10-1)],dim=0).squeeze().tolist())]
                                     print(activation_mean_oneepoch)
                             minibatch_index += 1
-
+                            '''
                     self.adv_model.eval()
                     self.change_adv_epochs_index = 1
                     self.adv_epochs = self.change_adv_epochs
-
+                    '''
                     if len(activation_mean_oneepoch) > 0:
                         activation_mean = np.append(activation_mean, np.array([activation_mean_oneepoch]).transpose(), axis=1)
                         print(activation_mean)
                         print(activation_mean.shape)
                         activation_var = np.append(activation_var, np.array([activation_var_oneepoch]).transpose(), axis=1)
-
-                self.model.minibatch_index = 0
-
+                    '''
+                self.model.train()
                 if self.model.adv == True:
                     for tensors_list in self.data_loaders_loop():
-                        self.model.minibatch_index += 1
-                        if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,minibatch_number - 2]):
-                            loss, ELBO, MI_loss, asw, nmi, ari, uca, be = self.loss(*tensors_list)
-                            ELBO_list.append(ELBO.detach().cpu().numpy())
-                            MI_loss_list.append(MI_loss.detach().cpu().numpy())
-
-                            clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
-                            clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
-                            clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv',index=None, header=True)
-                        else:
-                            loss, ELBO, MI_loss = self.loss(*tensors_list)
-                            ELBO_list.append(ELBO.detach().cpu().numpy())
-                            MI_loss_list.append(MI_loss.detach().cpu().numpy())
+                        loss, ELBO, std_ELBO, penalty, std_penalty = self.loss(*tensors_list)
                         optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
+
+                        ELBO_list.append(ELBO.detach().cpu().numpy())
+                        std_ELBO_list.append(std_ELBO.detach().cpu().numpy())
+                        penalty_list.append(penalty.detach().cpu().numpy())
+                        std_penalty_list.append(std_penalty.detach().cpu().numpy())
                 else:
                     for tensors_list in self.data_loaders_loop():
-                        self.model.minibatch_index += 1
-                        if (self.model.save_path != 'None') and (self.model.minibatch_index in [1,minibatch_number - 2]):
-                            loss, ELBO, asw, nmi, ari, uca, be = self.loss(*tensors_list)
-                            ELBO_list.append(ELBO.detach().cpu().numpy())
-
-                            clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
-                            clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
-                            clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv', index=None, header=True)
-                        else:
-                            loss, ELBO = self.loss(*tensors_list)
-                            ELBO_list.append(ELBO.detach().cpu().numpy())
+                        loss, ELBO = self.loss(*tensors_list)
                         optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
+
+                        ELBO_list.append(ELBO.detach().cpu().numpy())
+
+                if (self.model.save_path != 'None') and (self.epoch%2 == 0):
+                    self.model.eval()
+                    with torch.no_grad():
+                        asw, nmi, ari, uca = self.train_set.clustering_scores()
+                        be = self.train_set.entropy_batch_mixing()
+                        clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
+                        clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
+                        clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv',index=None, header=True)
 
                 if not self.on_epoch_end():
                     break
@@ -316,7 +311,7 @@ class Trainer:
             print("\nTraining time:  %i s. / %i epochs" % (int(self.training_time), self.n_epochs))
 
         if self.model.adv==True:
-            return ELBO_list, MI_loss_list, activation_mean, activation_var
+            return ELBO_list, std_ELBO_list, penalty_list, std_penalty_list
         else:
             return ELBO_list
 
