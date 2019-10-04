@@ -1,7 +1,7 @@
 ---
 jupyter:
   jupytext:
-    formats: ipynb,md
+    formats: md,ipynb
     text_representation:
       extension: .md
       format_name: markdown
@@ -43,7 +43,7 @@ Deep learning has been widely used in many pattern recognition tasks, like image
 
 One aspect to achieve invariability is to increase the amount of training data. Le et al.([2013](http://static.googleusercontent.com/media/research.google.com/en//archive/unsupervised_icml2012.pdf)) devoted enormous unlabeled image data and computation power to train a large neuron network with billions of parameters. The face feature detector learnt from the neuron network without labeling images as containing a face or not is robust not only to translation but also to scaling and out-of-plane rotation. Small training dataset can be expanded by generating new samples in the way of applying small random deformations to the original training examples, using deformations like rotations, scaling, translation or shearing, which are known not to change the target variables of interest. Ciresan et al. ([2010](https://arxiv.org/pdf/1003.0358.pdf)) applied large deep neural network on deformed MNIST digits and reached 0.35% classification error rate. Simard et al. ([2003](http://cognitivemedium.com/assets/rmnist/Simard.pdf)) trained convolutional neural network on MNIST English digit images with both affine and elastic deformations, and reached a record of 0.32% classification error rate. The other aspect to achieve invariability is to model general (e.g. a hierarchical organization of explanatory factors as the depth of neural network grows) or domain-specific prior information (e.g. the topological 2D structure of image data in computer vision, penalty) into deep learning network in the form of network structures before any data is fed in ([Bengio, Courville, & Vincent, 2012](https://arxiv.org/pdf/1206.5538.pdf)). <font color=red>can we learn nuisance factor effect from house keeping genes, and delete these effects for other genes???</font>
 
-Although imposing invariance to the patterns identified by deep learning is extremely investigated in computer vision, it is also a general, or even more important problem in biology research when data is relatively expensive to obtain and difficult to deform to generate new data. scRNA-seq data analysis has gained enormous attention recently and is contributing significantly to diverse research areas such as cancer(Patel et al., [2014](https://science-sciencemag-org.ezp.lib.unimelb.edu.au/content/344/6190/1396)), development (Semrau et al., [2017](https://www.nature.com/articles/s41467-017-01076-4)), autoimmunity (Gaublomme et al., [2015](https://www-sciencedirect-com.ezp.lib.unimelb.edu.au/science/article/pii/S0092867415014890)). One major interest is to represent the single-cell RNA sequencing (scRNA-seq) data in a way invariant to diverse confounding factors including transcriptional noise (Wagner et al., [2016](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nbt.3711), capture efficiency and sequnencing depth (Vallejos et al., [2017](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nmeth.4292)), amplication bias, and batch effects (Shaham et al., [2017](https://academic-oup-com.ezp.lib.unimelb.edu.au/bioinformatics/article/33/16/2539/3611270)), such that only true biological variance is left for downstream analysises including imputation of missing data in the scRNA-seq datasets with highly abundant 'drop-out' events, visualization and clustering, differential gene expression analysis. Although deep learning, especially generative deep network for unsupervised learning (<font color=red>(are there other neural network used in single cell rna seq for unsupervised learning?)</font>), has been used recently to analyze single-cell RNA seq data in several researches (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5), Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X), Eraslan, et al. [2018](https://www.nature.com/articles/s41467-018-07931-2), Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3), Lopez et al. [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)), some of them only focus on dimension reduction (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5),Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X)) and clustering cell types (Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3)). Among those that do investigate about removing the technical variations from the data (Deep Count Autoencoder network (DCA) developed by Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2), Single-cell Variational Inference (scVI) developed by Lopez et al. [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)), the correction effect is limited because it only comes from the basic nature of generative deep learning network that compression forces the autoencoder to learn only the essential latent features and the reconstruction ignores non-essential sources of variation. As scVI is superior than DCA in the sense that library size and batch labels are explicitly modeled in the deep neural network architecture, our research starts from scVI and investigate how to increase the correction effect for specific nuisance factors, library size and batch labels.
+Although imposing invariance to the patterns identified by deep learning is extremely investigated in computer vision, it is also a general, or even more important problem in biology research when data is relatively expensive to obtain and difficult to deform to generate new data. scRNA-seq data analysis has gained enormous attention recently and is contributing significantly to diverse research areas such as cancer(Patel et al., [2014](https://science-sciencemag-org.ezp.lib.unimelb.edu.au/content/344/6190/1396)), development (Semrau et al., [2017](https://www.nature.com/articles/s41467-017-01076-4)), autoimmunity (Gaublomme et al., [2015](https://www-sciencedirect-com.ezp.lib.unimelb.edu.au/science/article/pii/S0092867415014890)). One major interest is to represent the single-cell RNA sequencing (scRNA-seq) data in a way invariant to diverse confounding factors including transcriptional noise (Wagner et al., [2016](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nbt.3711), capture efficiency and sequnencing depth (Vallejos et al., [2017](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nmeth.4292)), amplication bias, and batch effects (Shaham et al., [2017](https://academic-oup-com.ezp.lib.unimelb.edu.au/bioinformatics/article/33/16/2539/3611270)), such that only true biological variance is left for downstream analysises including imputation of missing data in the scRNA-seq datasets with highly abundant 'drop-out' events, visualization and clustering, differential gene expression analysis. Although deep learning, especially generative deep network for unsupervised learning (<font color=red>(are there other neural network used in single cell rna seq for unsupervised learning?)</font>), has been used recently to analyze single-cell RNA seq data in several researches (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5), Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X), Eraslan, et al. [2018](https://www.nature.com/articles/s41467-018-07931-2), Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3), Lopez et al. [2018](https://www.nature.com/articles/s41592-018-0229-2)), some of them only focus on dimension reduction (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5),Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X)) and clustering cell types (Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3)). Among those that do investigate about removing the technical variations from the data (Deep Count Autoencoder network (DCA) developed by Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2), Single-cell Variational Inference (scVI) developed by Lopez et al. [2018](https://www.nature.com/articles/s41592-018-0229-2)), the correction effect is limited because it only comes from the basic nature of generative deep learning network that compression forces the autoencoder to learn only the essential latent features and the reconstruction ignores non-essential sources of variation. As scVI is superior than DCA in the sense that library size and batch labels are explicitly modeled in the deep neural network architecture, our research starts from scVI and investigate how to increase the correction effect for specific nuisance factors, library size and batch labels.
 
 <!-- #region -->
 <a id='section4'></a>
@@ -719,9 +719,203 @@ The result is stored in lrchange2 directory. Although the reconstruction loss de
             'change_adv_epochs': [1,60],
             'activation_fun': ['ELU', 'Leaky_ReLU'],  
             'unbiased_loss': [True],
-            'initial': ['xavier_normal1'], 
+            'initial': ['xavier_normal'], 
             'optimiser': ['Adam']
-The result is stored in lrchange3
+The result is stored in lrchange3. The plots are shown in Figure13. None of all the configurations is satisfactory. Five configurations with different learning rate for SCVI alone is provided, compared with SCVI + MI penalty.
+
+Then I tried the scaled reconstruction loss (ELBO-min(ELBO)/(90percentile of ELBO-min(ELBO)) (scalarization scheme. I do not use max(ELBO)-min(ELBO) because the max(ELBO) could be several millions, the 90percentile is 30000, minimal ELBO is 16000. If use the maximum ELBO, most standardized ELBO will be 0.00*. I only standardize the ELBO to 0.*), and use the max((1-MIScale)*standardized_ELBO, MIScale*max(1e-7, penalty_loss)) for multi-objective optimization as the scvi backward loss. For the penalty_loss estimation, use two ways, one is mutual information estimation, the other is cross-entropy from binary classifier neural network (predict batches from latent vector z). And for the scvi training, only train one minibatch for each epoch, so the n_epochs are relatively large.
+
+            'n_layers_encoder': [2],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0.2, 0.5, 0.8],
+            'train_size': [0.8],
+            'lr': [1e-3, 5e-3, 1e-4],
+            'adv_lr': [5e-4, 1e-8],
+            'n_epochs': [2500],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [100],
+            'change_adv_epochs': [5],
+            'activation_fun': ['ELU', 'Leaky_ReLU'],
+            'unbiased_loss': [True],
+            'initial': ['xavier_normal'],
+            'adv_model': ['MI', 'Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2]
+The result is stored in std_reconstloss_classifier. The plots are shown in Figure14 and 15. Figure 14 is for all MI_loss penalty configurations, Figure15 is for all cross entropy penalty configurations. In both Figure 14 and figure 15, some configurations are missing because of code errors. Later I found that there is something wrong for the cross entropy, I use the wrong loss function: max((1-MIScale)*standardized_-ELBO, MIScale*cross_entropy), which is an alternative for (1-MIScale)*standardized_-ELBO + MIScale*cross_entropy, but actually the correct loss function should be (1-MIScale)*standardized_-ELBO - MIScale*cross_entropy.
+
+I try to get a plot with cross entropy as y-axis, -ELBO as x-axis for different penalty scale for cross entropy from 0 to 1. I tried the following hyperparameter configurations:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],
+            'train_size': [0.8],
+            'lr': [1e-3], 
+            'adv_lr': [5e-4], 
+            'n_epochs': [350], 
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5], 
+            'change_adv_epochs': [1], 
+            'activation_fun': ['ELU'],  
+            'unbiased_loss': [True],  
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2]
+The result is stored in cross_entropy_reconstloss2. The result in cross_entropy_reconstloss is for the same experiment except that the loss function is the wrong version max((1-MIScale)*standardized_-ELBO, MIScale*cross_entropy). So I run it again with the right loss function (1-MIScale)*standardized_-ELBO - MIScale*cross_entropy, and store the result in cross_entropy_reconstloss2. The plots are shown in Figure17. To standardize the -ELBO, the minimum value I use is 10000, the maximum value I use is 30000.   
+
+Then I try to get a plot with MI as y-axis, -ELBO as x-axis for different penalty scale for MI from 0 to 1. I tried the following hyperparameter configurations:
+       
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],
+            'train_size': [0.8],
+            'lr': [1e-3], 
+            'adv_lr': [5e-4], 
+            'n_epochs': [350],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [100], 
+            'change_adv_epochs': [5], 
+            'activation_fun': ['ELU'],  
+            'unbiased_loss': [True],  
+            'initial': ['xavier_normal'],
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+The result is stored in MI_reconstloss. The loss function is max((1-MIScale)*standardized_-ELBO, MIScale*MI_entropy),The plots are shown in Figure18.  To standardize the -ELBO, the minimum value I use is 10000, the maximum value I use is 30000. 
+
+Then I try to standardize both -ELBO and penalty(cross-entropy or MI_loss), the loss function for cross entropy is max((1-MIScale)*standardized_-ELBO, MIScale*standardized_-cross_entropy)), and the loss function for MI is max((1-MIScale)*standardized_-ELBO, MIScale*standardized_MI)). Secondly, as the cell clustering metrics are very bad even when MI_scale=0, maybe it is because the -ELBO is standardized by dividing by a real large value, this will result in the derivative to scale by the same factor when updating weights during training, therefore I try to increase the learning rate for SCVI. And if adv_model is MI, the adv_epochs is 100, otherwise it is 5. If adv_model is MI, the change_adv_epochs is 5, otherwise it is 1. Based on results in Figure 17, to standardize -cross_entropy, the maximum value is chosen to be -0.2, the minimum value is chosen to be -6. Based on results in Figure 18, to standardize MI_loss, the maximum value is chosen to be 0.03, the minimum value is chosen to be -0.02. For both classifier and MI, To standardize the -ELBO, the minimum value I use is 10000, the maximum value I use is 30000.:
+       
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],
+            'train_size': [0.8],
+            'lr': [1, 1e-1, 1e-2, 1e-3], 
+            'adv_lr': [5e-4], 
+            'n_epochs': [350],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [100 or 5], 
+            'change_adv_epochs': [5 or 1], 
+            'activation_fun': ['ELU'],  
+            'unbiased_loss': [True],  
+            'initial': ['xavier_normal'],
+            'adv_model' : ['MI' or 'Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+The result for cross_entropy is stored in cross_entropy_reconstloss3 and plot in Figure19, and the result for MI is stored in MI_reconstloss2 and plot in Figure20.
+
+Because in the above, when scale=0, that is scvi alone with standardized -ELBO as the loss, it is much worse than scvi alone with -ELBO as the loss when n_layer_encoder=10. Therefore, I tried the following:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 500, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000],
+            'train_size': [0.8],
+            'lr': [1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [350],  # 350
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier', 'MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+Using the -ELBO instead of the standardized -ELBO as the loss. The result for classifier is stored in scvi_crossentropy, and the result for MI is stored in scvi_MI. The plot is in Figure21, and Figure 22 respectively. When scale=0, it should be the same as scvi alone when n_layer_encoder=10. However, when I checked the clustering metrics on training and testing dataset for config0, the asw is only 0.05, much smaller than what we get formerly. The reason lies in the number for n_layer_decoder, formerly, n_layer_decoder=2, however, here n_layer_decoder=10. Therefore, I run 
+            
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0],
+            'train_size': [0.8],
+            'lr': [1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [250,350],  # 350
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+Here I try two n_epochs, which are 250, 350. The loss is -ELBO instead of standardized -ELBO. The result is stored in scvi_encoder10_decoder2. The plot is in Figure23.
+
+As n_layer_decoder=10 will produce worse clustering metrics, and I have only tried the standardized -ELBO when n_layer_decoder=10, therefore I tried the standardized -ELBO when n_layer_decoder=2, the hyperparameter is below:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'train_size': [0.8],
+            'lr': [1e-2, 1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [350],  # 350
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2]
+The result is stored in cross_entropy_reconstloss4. The plot is in Figure24.
 
 <b><font size="3">2.4.3 Code</font></b>
 
@@ -809,11 +1003,11 @@ import itertools
 exec(open('code\\SummarizeResult.py').read())
 choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange2/',
               results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange2/',
-              dataset_name='muris_tabula', nuisance_variable='batch', Label='muris_tabula_batch_config.*._VaeMI_trainset',config_numbers=40,activation_config_list=[16,17,24,25,32,33]
+              dataset_name='muris_tabula', nuisance_variable='batch', Label='muris_tabula_batch_config.*._VaeMI_trainset',config_numbers=40,activation_config_list=[13,15,16,17,24,25,27,32,33]
              ,hyperparameter_config_index=4)
 
 file_paths = ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange2\\muris_tabula_batch_configs_clusteringmetrics.png']
-for config in [16,17,24,25,32,33]:
+for config in [13,15,16,17,24,25,27,32,33]:
    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange2\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange2\\config%s\\reconst_loss_muris_tabula_batch_config%s.png'%(config,config)]
    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange2\\config%s\\muris_tabula_batch_configs_activationmean.png'%(config)]
@@ -833,20 +1027,345 @@ exec(open('code\\SummarizeResult.py').read())
 
 
 choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange3/',
-                  results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange3/',
-                  dataset_name='muris_tabula', nuisance_variable='batch', Label='muris_tabula_batch_config.*._VaeMI_trainset',config_numbers=40, activation_config_list=[16,17]
-             ,hyperparameter_config_index=5)
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'],config_numbers=40, activation_config_list=['None']
+            ,hyperparameter_config_index=5)
 
 file_paths = []
 
 for config in range(40):
-    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange3\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
-    if (config+1)%8==0:
+    if config%8==0:
       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange3\\scviconfig%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(int(config/8),int(config/8))]
-
-SummarizeResult('image',file_paths,subfile_titles,'Fig10: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\lrchange3\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+    
+SummarizeResult('image',file_paths,'Fig13: Clustering metrics of trainset and MI estimators for minibatch for different configs')
 hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/lrchange3/muris_tabula_batch_configs_hyperparameters.csv')
 print(hyperparameters_dataframe)
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+
+
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/std_reconstloss_classifier/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/std_reconstloss_classifier/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label='muris_tabula_batch_config.*._VaeMI_trainset',config_numbers=66, activation_config_list=['None']
+             ,hyperparameter_config_index=6)
+
+file_paths = ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\std_reconstloss_classifier\\muris_tabula_batch_configs_clusteringmetrics.png']
+
+for config in [i*2 for i in range(33)]:
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\std_reconstloss_classifier\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+    if config not in [21,22,32,38,45,47,52,56,62,65]:
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\std_reconstloss_classifier\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\std_reconstloss_classifier\\config%s\\reconst_loss_muris_tabula_batch_config%s.png'%(config,config)]
+
+SummarizeResult('image',file_paths,'Fig14: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/std_reconstloss_classifier/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+file_paths = []
+for config in [i*2+1 for i in range(33)]:
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\std_reconstloss_classifier\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+    if config not in [21,22,32,38,45,47,52,56,62,65]:
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\std_reconstloss_classifier\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\std_reconstloss_classifier\\config%s\\reconst_loss_muris_tabula_batch_config%s.png'%(config,config)]
+
+SummarizeResult('image',file_paths,'Fig15: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+
+
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label='muris_tabula_batch_config.*._VaeMI_trainset',config_numbers=2, activation_config_list=['None']
+             ,hyperparameter_config_index=6)
+
+file_paths = []
+
+for config in [0,1]:
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+    
+SummarizeResult('image',file_paths,'Fig16: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss2/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss2/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=11, activation_config_list=['None'], 
+            hyperparameter_config_index=7,cross_entropy_reconstloss=True, adv='Classifier')
+
+file_paths = ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss2\\muris_tabula_batch_trainset_relationship_between_crossentropy_reconstloss.png',
+             'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss2\\muris_tabula_batch_testset_relationship_between_crossentropy_reconstloss.png']
+for config in [0,1,2,3,4,8,10]:
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss2\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss2\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+    #file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss2\\config%s\\reconst_loss_muris_tabula_batch_config%s.png'%(config,config)]
+  
+SummarizeResult('image',file_paths,'Fig17: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss2/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/MI_reconstloss/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/MI_reconstloss/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=11, activation_config_list=['None'], 
+            hyperparameter_config_index=8,cross_entropy_reconstloss=True, adv='MI')
+
+file_paths = ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\MI_reconstloss\\muris_tabula_batch_trainset_relationship_between_MI_reconstloss.png',
+             'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\MI_reconstloss\\muris_tabula_batch_testset_relationship_between_MI_reconstloss.png']
+for config in range(11):
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\MI_reconstloss\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\MI_reconstloss\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\MI_reconstloss\\config%s\\reconst_loss_muris_tabula_batch_config%s.png'%(config,config)]
+  
+SummarizeResult('image',file_paths,'Fig18: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/MI_reconstloss/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+For fig17 and fig18, there is a problem, although in most cases, like the batch entropy for minibatch for config8 during the training process is large, however the batch entropy for the final training set and testing set after the model is trained is only 0.15 and 0.24, respectively.
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss3/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=40, activation_config_list=['None'], 
+            hyperparameter_config_index=9,cross_entropy_reconstloss=True, adv='Classifier')
+
+file_paths = []
+for config in range(40):
+    one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss3\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)
+    if os.path.isfile(one_file_path):
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss3\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss3\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss3\\config%s\\reconst_loss_muris_tabula_batch_config%s.png'%(config,config)]
+  
+SummarizeResult('image',file_paths,'Fig19: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss3/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/MI_reconstloss2/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/MI_reconstloss2/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=40, activation_config_list=['None'], 
+            hyperparameter_config_index=10,cross_entropy_reconstloss=False, adv='MI')
+
+file_paths = []
+for config in range(40):
+    one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\MI_reconstloss2\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)
+    if os.path.isfile(one_file_path):
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\MI_reconstloss2\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\MI_reconstloss2\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+       #file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\MI_reconstloss2\\config%s\\reconst_loss_muris_tabula_batch_config%s.png'%(config,config)]
+  
+SummarizeResult('image',file_paths,'Fig20: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/MI_reconstloss2/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/scvi_crossentropy/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/scvi_crossentropy/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=13, activation_config_list=['None'], 
+            hyperparameter_config_index=11,cross_entropy_reconstloss=True, adv='Classifier')
+
+file_paths = []
+for config in range(13):
+    one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\scvi_crossentropy\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)
+    if os.path.isfile(one_file_path):
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\scvi_crossentropy\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\scvi_crossentropy\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+       
+SummarizeResult('image',file_paths,'Fig21: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/scvi_crossentropy/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/scvi_MI/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/scvi_MI/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=13, activation_config_list=['None'], 
+            hyperparameter_config_index=12,cross_entropy_reconstloss=False, adv='MI')
+
+file_paths = []
+for config in range(13):
+    one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\scvi_MI\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)
+    if os.path.isfile(one_file_path):
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\scvi_MI\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\scvi_MI\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+       
+SummarizeResult('image',file_paths,'Fig22: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/scvi_MI/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+Compare Figure 21, 22 with Figure 17, 18. The only difference is that in Figure 21, 22, scvi is using -ELBO as loss, the scale for cross_entropy in Figure 22 and MI in Figure 23 is large, while in Figure 17, 18, using standardized -ELBO as loss, the scale for cross_entropy in Figure 17 and MI in Figure 18 is from 0 to 1. For all, n_layer_encoder=n_layer_decoder=10. Generally, for the penalty, standardized -ELBO as the loss has a stable penalty effect than using -ELBO. And when using -ELBO as the loss, cross_entropy is a better penalty than MI.
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/scvi_encoder10_decoder2/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/scvi_encoder10_decoder2/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=2, activation_config_list=['None'], 
+            hyperparameter_config_index=13,cross_entropy_reconstloss=False, adv='Classifier')
+
+file_paths = []
+for config in range(22):
+    one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\scvi_encoder10_decoder2\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)
+    if os.path.isfile(one_file_path):
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\scvi_encoder10_decoder2\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+       
+SummarizeResult('image',file_paths,'Fig23: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/scvi_encoder10_decoder2/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+Compare config1 in Figure 23, config 0 in Figure 21 and config0 in Figure 22. All of them are scvi alone using -ELBO as loss, the only difference is that for config 0 in both Figure 21 and Figure 22, the n_layer_encoder=n_layer_decoder=10, however, for config1 in Figure 23, the n_layer_encoder=10, n_layer_decoder=2. It seems that when n_layer_decoder=2, the BE will be worse, but the clustering metrics especially asw will be better. Check asw for the training set and test set after the model is trained completely. 
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss4/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss4/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=22, activation_config_list=['None'], 
+            hyperparameter_config_index=14,cross_entropy_reconstloss=True, adv='Classifier')
+
+file_paths = []
+for config in range(22):
+    one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss4\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)
+    if os.path.isfile(one_file_path):
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss4\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss4\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)]
+         
+SummarizeResult('image',file_paths,'Fig24: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss4/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+Compare config1 in Figure24, config0 in both figure17 and figure18, config3 in Figure19 and Figure20, for all of them, they are scvi alone using standardized -ELBO as the loss, the learning rate is 1e-3. However for config1 in Figure24, n_layer_encoder=10, n_layer_decoder=2. For all the others, n_layer_encoder=n_layer_decoder=10. I could not observe better clustering metrics, when compare config1 in Figure24 with config0 in both figure17 and figure18, although I can observe worse batch entropy, but that could be variation, because the batch entropy is different between config0 in figure17 and config0 in figure18 when they have completely the same hyperparameters. The other problem is why config3 in figure19 and Figure20 are so different from config0 in figure17 and figure18? Run it again to find out the problem. 
+
+Another phenomenon is that for config0 and config1 in figure24, the only difference is the learning rate. When the learning rate is larger, 1e-2, there is chance that we can get a better clustering metrics compared with config0 in figure17 and figure18, and config3 in Figure19 and Figure20. However, when we compare config 2, 6, 10 with config0 in figure24, when there is penalty, the clustering metric plateaus at a low level. Maybe the penalty makes the equilibrium reaches much earlier before the clustering metrics turn better. Is it possible that we first train scvi alone, and after it reaches a best state, use that best state as the initial state, and add penalty to reach a new equilibrium state?
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/std_scvi_encoder10_decoder2/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/std_scvi_encoder10_decoder2/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=1, activation_config_list=['None'], 
+            hyperparameter_config_index=15,cross_entropy_reconstloss=False, adv='Classifier')
+
+file_paths = []
+for config in range(22):
+    one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\std_scvi_encoder10_decoder2\\config%s\\MI_muris_tabula_batch_config%s.png'%(config,config)
+    if os.path.isfile(one_file_path):
+       file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\std_scvi_encoder10_decoder2\\config%s\\muris_tabula_batch_config%s_clusteringmetrics.png'%(config,config)]
+       
+SummarizeResult('image',file_paths,'Fig25: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/std_scvi_encoder10_decoder2/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+Compare config0 in figure25 and config0 in figure24, the only difference is n_epochs for config0 in figure25=550, however, n_epochs for config0 in figure24 is 350. When compare the 0-700 (twich for each epoch), it can be observed that there is large variation in the changing trend especially for asw.
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss5/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss5/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=22, activation_config_list=['None'], 
+            hyperparameter_config_index=14,cross_entropy_reconstloss=True, adv='Classifier',scales_include=['all','-1','-2'])
+
+file_paths = []
+for Label in ['trainset','testset']:
+   for dir in ['all_valid_scales', 'no_last_scale','no_last_twoscales']:        
+        for lr in ['high_lr','low_lr']:
+            one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\cross_entropy_reconstloss5\\%s\\muris_tabula_batch_%s_%s_stdcrossentropy_stdreconstloss.png'%(dir,Label,lr)
+            if os.path.isfile(one_file_path):
+               file_paths += [one_file_path]
+       
+SummarizeResult('image',file_paths,'Fig26: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/cross_entropy_reconstloss5/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/MI_reconstloss3/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/MI_reconstloss3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=22, activation_config_list=['None'], 
+            hyperparameter_config_index=14,cross_entropy_reconstloss=False, adv='MI',scales_include=['all','-1','-2'])
+
+file_paths = []
+for Label in ['trainset','testset']:
+    for dir in ['all_valid_scales', 'no_last_scale','no_last_twoscales']:        
+        for lr in ['high_lr','low_lr']:
+            one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\MI_reconstloss3\\%s\\muris_tabula_batch_%s_%s_stdMI_stdreconstloss.png'%(dir,Label,lr)
+            if os.path.isfile(one_file_path):
+               file_paths += [one_file_path]
+       
+SummarizeResult('image',file_paths,'Fig26: Clustering metrics of trainset and MI estimators for minibatch for different configs')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/MI_reconstloss3/muris_tabula_batch_configs_hyperparameters.csv')
 ```
 
 <a id='section9'></a>

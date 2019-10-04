@@ -261,10 +261,18 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
 
 def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
-                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label: str='muris_tabula_batch_config.*._VaeMI_trainset', config_numbers: int=107,
-                  activation_config_list: list=['None'], hyperparameter_config_index: int=2):
-    '''
-    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be','MILoss'])
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset', 'testset'], config_numbers: int=107,
+                  activation_config_list: list=['None'], hyperparameter_config_index: int=2, cross_entropy_reconstloss: bool=False, adv: str='MI', scales_include: list=['all']):
+
+    if not os.path.exists(results_dict + 'all_valid_scales'):
+        os.makedirs(results_dict + 'all_valid_scales')
+    if not os.path.exists(results_dict + 'no_last_scale'):
+        os.makedirs(results_dict + 'no_last_scale')
+    if not os.path.exists(results_dict + 'no_last_twoscales'):
+        os.makedirs(results_dict + 'no_last_twoscales')
+
+    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
+
     valid_config = []
     valid_config_index = []
     for i in range(config_numbers):
@@ -276,21 +284,101 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             clustermetric = pd.concat([clustermetric, clustermetric_oneconfig], axis=0)
         else:
             continue
+    for Label in Label_list:
+        xaxis_index = list(range(1, len(valid_config) + 1))
+        xtick_labels = valid_config
+        fig = plt.figure(figsize=(10, 7))
+        lines1=plt.plot(xaxis_index, clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['asw']].values,
+                        xaxis_index, clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['nmi']].values,
+                        xaxis_index, clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['ari']].values,
+                        xaxis_index, clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['uca']].values,
+                        xaxis_index, clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['be']].values)
+        plt.legend(('asw', 'nmi','ari','uca','be'),loc='upper right', fontsize=16)
+        plt.xticks(xaxis_index, xtick_labels, rotation='vertical', fontsize=14)
+        plt.xlabel('config index', fontsize=16)
+        #plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
+        plt.title('%s, %s, %s, %s, clusteringmetrics' % (dataset_name, nuisance_variable, 'configs', Label), fontsize=18)
+        fig.savefig(results_dict + '%s_%s_%s_%s_clusteringmetrics.png' % (dataset_name, nuisance_variable, 'configs', Label))
+        plt.close(fig)
 
-    xaxis_index = list(range(1, len(valid_config) + 1))
-    xtick_labels = valid_config
-    fig = plt.figure(figsize=(10, 7))
-    lines1=plt.plot(xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['asw']].values, xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['nmi']].values,
-             xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['ari']].values, xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['uca']].values,
-             xaxis_index, clustermetric[clustermetric['Label'].str.match(Label)].loc[:, ['be']].values)
-    plt.legend(('asw', 'nmi','ari','uca','be'),loc='upper right', fontsize=16)
-    plt.xticks(xaxis_index, xtick_labels, rotation='vertical', fontsize=14)
-    plt.xlabel('config index', fontsize=16)
-    #plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
-    plt.title('%s, %s, %s, clusteringmetrics' % (dataset_name, nuisance_variable, 'configs'), fontsize=18)
-    fig.savefig(results_dict + '%s_%s_%s_clusteringmetrics.png' % (dataset_name, nuisance_variable, 'configs'))
-    plt.close(fig)
+    valid_config_index_rep = []
+    for i in valid_config_index:
+        valid_config_index_rep.append(i)
+        valid_config_index_rep.append(i)
 
+    clustermetric = pd.concat([pd.DataFrame.from_dict({'configs':valid_config_index_rep}),clustermetric.reset_index(drop=True)],axis=1)
+
+    high_lr_list = []
+    low_lr_list = []
+    for k in valid_config_index_rep:
+        if (k%2==0):
+            high_lr_list.append(k)
+        else:
+            low_lr_list.append(k)
+    for scale_include in scales_include:
+        for Label in Label_list:
+            for high_low in ['high_lr', 'low_lr']:
+                if high_low == 'high_lr':
+                    clustermetric_half = clustermetric.loc[clustermetric['configs'].isin(high_lr_list)]
+                elif high_low == 'low_lr':
+                    clustermetric_half = clustermetric.loc[clustermetric['configs'].isin(low_lr_list)]
+
+                if scale_include == 'all':
+                    std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:,['std_ELBO']].values[0:]
+                    std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:,['std_penalty']].values[0:]
+                elif scale_include == '-1':
+                    std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:-1]
+                    std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:-1]
+                elif scale_include == '-2':
+                    std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:-2]
+                    std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:-2]
+
+                fig = plt.figure(figsize=(10, 7))
+                lines1 = plt.plot(std_ELBO, std_penalty)
+
+                if high_low == 'high_lr':
+                    unique_list = []
+                    for m in high_lr_list:
+                        if m not in unique_list:
+                            unique_list.append(m)
+                    scale_list = [i/20 for i in unique_list]
+                elif high_low == 'low_lr':
+                    unique_list = []
+                    for q in low_lr_list:
+                        if q not in unique_list:
+                            unique_list.append(q)
+                    scale_list = [(i-1) / 20 for i in unique_list]
+                if scale_include == 'all':
+                    for i in range(len(scale_list[0:])):
+                        plt.text(std_ELBO[i], std_penalty[i], '%s'%(scale_list[0:][i]), horizontalalignment='right')
+                elif scale_include == '-1':
+                    for i in range(len(scale_list[0:-1])):
+                        plt.text(std_ELBO[i], std_penalty[i], '%s'%(scale_list[0:-1][i]), horizontalalignment='right')
+                elif scale_include == '-2':
+                    for i in range(len(scale_list[0:-2])):
+                        plt.text(std_ELBO[i], std_penalty[i], '%s'%(scale_list[0:-2][i]), horizontalalignment='right')
+
+                plt.xlabel('std_ELBO', fontsize=16)
+                plt.ylabel('std_penalty', fontsize=16)
+                # plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
+                if adv == 'Classifier':
+                    plt.title('%s, %s, %s, %s, stdcrossentropy and stdreconstloss' % (dataset_name, nuisance_variable, Label, high_low), fontsize=18)
+                    if scale_include == 'all':
+                        fig.savefig(results_dict +'all_valid_scales/' + '%s_%s_%s_%s_stdcrossentropy_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                    elif scale_include == '-1':
+                        fig.savefig(results_dict +'no_last_scale/' + '%s_%s_%s_%s_stdcrossentropy_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                    elif scale_include == '-2':
+                        fig.savefig(results_dict +'no_last_twoscales/' + '%s_%s_%s_%s_stdcrossentropy_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                elif adv == 'MI':
+                    plt.title('%s, %s, %s, %s, stdMI and stdreconstloss' % (dataset_name, nuisance_variable, Label, high_low), fontsize=18)
+                    if scale_include == 'all':
+                        fig.savefig(results_dict +'all_valid_scales/' + '%s_%s_%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                    elif scale_include == '-1':
+                        fig.savefig(results_dict +'no_last_scale/' + '%s_%s_%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                    elif scale_include == '-2':
+                        fig.savefig(results_dict +'no_last_twoscales/' + '%s_%s_%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                plt.close(fig)
+    '''
     if activation_config_list != ['None']:
         for k in activation_config_list:
             activationmean_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_activationmean.csv'%(k, k)
@@ -349,7 +437,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             plt.close(fig)
 
     valid_config = list(range(0, config_numbers))
-    hyperparameter_dataframe = pd.DataFrame(columns=['lr','adv_lr','n_epochs','Adv_MineNet4_architecture','change_adv_epochs','activation_fun','unbiased_loss','initial'])
+    hyperparameter_dataframe = pd.DataFrame(columns=['lr','adv_lr','n_epochs','Adv_MineNet4_architecture','change_adv_epochs','activation_fun','unbiased_loss','initial','adv_model'])
     configs = pd.DataFrame.from_dict({'configs':valid_config})
 
     if hyperparameter_config_index == 2:
@@ -372,10 +460,10 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             'Adv_MineNet4_architecture': [[256] * 50, [256] * 100],
             'adv_epochs': [250],
             'change_adv_epochs': [1],
-            'activation_fun': ['ReLU', 'ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
-            'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'activation_fun': ['ReLU', 'ELU', 'Leaky_ReLU'],
+            'unbiased_loss': [False, True],
             'initial': ['xavier_uniform', 'xavier_normal', 'kaiming_normal'],
-            # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+            'adv_model': ['MI'],
             'optimiser': ['Adam']
         }
     elif hyperparameter_config_index == 3:
@@ -401,6 +489,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
             'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
             'initial': ['xavier_normal'],
+            'adv_model': ['MI'],
             # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
             'optimiser': ['Adam']
         }
@@ -427,7 +516,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
             'unbiased_loss': [False, True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
             'initial': ['xavier_normal'],
-            # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+            'adv_model': ['MI'],
             'optimiser': ['Adam']
         }
     elif hyperparameter_config_index == 5:
@@ -440,7 +529,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [100000],  # 500, 1000, 5000, 10000, 100000,
+            'MIScale': [100000],
             'train_size': [0.8],
             'lr': [5e-3, 1e-4, 1e-5, 5e-6, 1e-6],
             'adv_lr': [1e-8, 1e-10],
@@ -450,20 +539,290 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             'Adv_MineNet4_architecture': [[256] * 50],
             'adv_epochs': [250],
             'change_adv_epochs': [1, 60],
-            'activation_fun': ['ELU', 'Leaky_ReLU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
-            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'activation_fun': ['ELU', 'Leaky_ReLU'],
+            'unbiased_loss': [True],
             'initial': ['xavier_normal1'],
-            # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+            'adv_model': ['MI'],
             'optimiser': ['Adam']
         }
-
+    elif hyperparameter_config_index == 6:
+        hyperparameter_config = {
+            'n_layers_encoder': [2],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0.2, 0.5, 0.8],
+            'train_size': [0.8],
+            'lr': [1e-3, 5e-3, 1e-4],
+            'adv_lr': [5e-4, 1e-8],
+            'n_epochs': [2500],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [100],
+            'change_adv_epochs': [5],
+            'activation_fun': ['ELU', 'Leaky_ReLU'],
+            'unbiased_loss': [True],
+            'initial': ['xavier_normal1'],
+            'adv_model': ['MI', 'Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2]
+        }
+    elif hyperparameter_config_index == 7:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'train_size': [0.8],
+            'lr': [1e-3],
+            'adv_lr': [5e-4],
+            'n_epochs': [350],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],
+            'unbiased_loss': [True],
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
+    elif hyperparameter_config_index == 8:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'train_size': [0.8],
+            'lr': [1e-3],
+            'adv_lr': [5e-4],
+            'n_epochs': [350],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [100],
+            'change_adv_epochs': [5],
+            'activation_fun': ['ELU'],
+            'unbiased_loss': [True],
+            'initial': ['xavier_normal'],
+            'adv_model': ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
+    elif hyperparameter_config_index == 9:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'train_size': [0.8],
+            'lr': [1, 1e-1, 1e-2, 1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [350],  # 2500
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
+    elif hyperparameter_config_index == 10:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'train_size': [0.8],
+            'lr': [1, 1e-1, 1e-2, 1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [350],  # 2500
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [100],  # 100
+            'change_adv_epochs': [5],  # 5
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+            'adv_model': ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
+    elif hyperparameter_config_index == 11:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 500, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000],
+            'train_size': [0.8],
+            'lr': [1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [350],  # 350
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
+    elif hyperparameter_config_index == 12:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [10],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 500, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000],
+            'train_size': [0.8],
+            'lr': [1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [350],  # 350
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2]
+        }
+    elif hyperparameter_config_index == 13:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0],
+            'train_size': [0.8],
+            'lr': [1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [250, 350],  # 350
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
+    elif hyperparameter_config_index == 14:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'train_size': [0.8],
+            'lr': [1e-2, 1e-3],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [350],  # 350
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2]
+        }
+    elif hyperparameter_config_index == 15:
+        hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0],
+            'train_size': [0.8],
+            'lr': [1e-2],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [5e-4],  # 5e-4, 1e-8
+            'n_epochs': [550, 750],  # 350
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'adv_epochs': [5],
+            'change_adv_epochs': [1],
+            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+            'initial': ['xavier_normal'],
+            'adv_model': ['Classifier'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+        }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     valid_config_index = valid_config
     for m in valid_config_index:
         key, value = zip(*hyperparameter_experiments[m].items())
-        intermediate_dataframe = pd.DataFrame.from_dict({'lr': [value[10]],'adv_lr': [value[11]],'n_epochs': [value[12]],'Adv_MineNet4_architecture': [len(value[15])],'change_adv_epochs': [value[17]],'activation_fun':[value[18]],'unbiased_loss':[value[19]],'initial':[value[20]]})
+        intermediate_dataframe = pd.DataFrame.from_dict({'lr': [value[10]],'adv_lr': [value[11]],'n_epochs': [value[12]],'Adv_MineNet4_architecture': [len(value[15])],'change_adv_epochs': [value[17]],'activation_fun':[value[18]],'unbiased_loss':[value[19]],'initial':[value[20]],'adv_model':[value[21]]})
         hyperparameter_dataframe = pd.concat([hyperparameter_dataframe, intermediate_dataframe], axis=0)
 
     hyperparameter_dataframe.index = range(0, len(valid_config_index))

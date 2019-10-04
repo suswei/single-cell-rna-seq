@@ -120,7 +120,7 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
         trainer_vae.model.load_state_dict(torch.load(vae_file_path))
         trainer_vae.model.eval()
     else:
-        reconst_loss_list, clustermetrics_trainingprocess = trainer_vae.train(n_epochs=n_epochs, lr=lr)
+        ELBO_list = trainer_vae.train(n_epochs=n_epochs, lr=lr)
         torch.save(trainer_vae.model.state_dict(), vae_file_path)
         ll_train_set = trainer_vae.history["ll_train_set"]
         ll_test_set = trainer_vae.history["ll_test_set"]
@@ -138,18 +138,17 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
         fig1_path = '%s/scviconfig%s/training_testing_error_SCVI_%s_%s_config%s.png'%(result_save_path,config_id, dataset_name,nuisance_variable, config_id)
         fig.savefig(fig1_path)
         plt.close(fig)
-    clustermetrics_trainingprocess.to_csv('%s/scviconfig%s/%s_%s_config%s_clustermetrics_duringtraining.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
 
     fig = plt.figure(figsize=(14, 7))
-    plt.plot([i for i in range(len(reconst_loss_list))], [np.mean(i) for i in reconst_loss_list])
+    plt.plot([i for i in range(len(ELBO_list))], [np.mean(i) for i in ELBO_list])
     plt.ylim(12000, 60000)
     plt.title("reconst_loss_%s_%s_config%s"%(dataset_name, nuisance_variable, config_id))
     fig1_path = '%s/scviconfig%s/reconst_loss_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
     fig.savefig(fig1_path)
     plt.close(fig)
 
-    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/trainset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
-    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/testset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
+    trainer_vae.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/scviconfig%s/trainset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
+    trainer_vae.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/scviconfig%s/testset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
 
     asw, nmi, ari, uca = trainer_vae.train_set.clustering_scores()
     be = trainer_vae.train_set.entropy_batch_mixing()
