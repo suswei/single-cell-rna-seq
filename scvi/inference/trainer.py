@@ -42,7 +42,7 @@ class Trainer:
 
     def __init__(self, model, gene_dataset, use_cuda=True, metrics_to_monitor=None, benchmark=False,
                  verbose=False, frequency=None, weight_decay=1e-6, early_stopping_kwargs=dict(),
-                 data_loader_kwargs=dict(), batch_size=128, adv_model=None, adv_optimizer=None, adv_epochs=1, change_adv_epochs_index=0, change_adv_epochs=1):
+                 data_loader_kwargs=dict(), batch_size=128, adv_model=None, adv_optimizer=None, adv_epochs=1):
 
         self.model = model
         self.gene_dataset = gene_dataset
@@ -50,8 +50,6 @@ class Trainer:
         self.adv_model = adv_model
         self.adv_optimizer = adv_optimizer
         self.adv_epochs = adv_epochs
-        self.change_adv_epochs_index = change_adv_epochs_index
-        self.change_adv_epochs = change_adv_epochs
 
         self.data_loader_kwargs = {
             "batch_size": batch_size,
@@ -162,7 +160,9 @@ class Trainer:
                                 x_ = torch.log(1 + x_)
                             # Sampling
                             qz_m, qz_v, z = self.model.z_encoder(x_, None)
+                            #z = z.detach()
                             ql_m, ql_v, library = self.model.l_encoder(x_)
+                            #library = library.detach()
                             # z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v,batch_index_adv,self.model.nsamples_z)
                             # z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
                             # z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
@@ -259,7 +259,6 @@ class Trainer:
                             minibatch_index += 1
                             '''
                     self.adv_model.eval()
-                    self.change_adv_epochs_index = 1
                     self.adv_epochs = self.change_adv_epochs
                     '''
                     if len(activation_mean_oneepoch) > 0:
@@ -282,12 +281,12 @@ class Trainer:
                         std_penalty_list.append(std_penalty.detach().cpu().numpy())
                 else:
                     for tensors_list in self.data_loaders_loop():
-                        loss, ELBO = self.loss(*tensors_list)
+                        loss, ELBO, std_ELBO = self.loss(*tensors_list)
                         optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
-
                         ELBO_list.append(ELBO.detach().cpu().numpy())
+                        std_ELBO_list.append(std_ELBO.detach().cpu().numpy())
 
                 if (self.model.save_path != 'None') and (self.epoch%2 == 0):
                     self.model.eval()
@@ -312,8 +311,6 @@ class Trainer:
 
         if self.model.adv==True:
             return ELBO_list, std_ELBO_list, penalty_list, std_penalty_list
-        else:
-            return ELBO_list
 
     def on_epoch_begin(self):
         pass

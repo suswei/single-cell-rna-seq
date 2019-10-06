@@ -262,11 +262,17 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
 def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset', 'testset'], config_numbers: int=107,
-                  activation_config_list: list=['None'], hyperparameter_config_index: int=2, cross_entropy_reconstloss: bool=False, adv: str='MI'):
-    if adv=='MI':
-        clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'MILoss', 'ELBO'])
-    elif adv=='Classifier':
-        clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'CrossEntropy','ELBO'])
+                  activation_config_list: list=['None'], hyperparameter_config_index: int=2, cross_entropy_reconstloss: bool=False, adv: str='MI', scales_include: list=['all']):
+
+    if not os.path.exists(results_dict + 'all_valid_scales'):
+        os.makedirs(results_dict + 'all_valid_scales')
+    if not os.path.exists(results_dict + 'no_last_scale'):
+        os.makedirs(results_dict + 'no_last_scale')
+    if not os.path.exists(results_dict + 'no_last_twoscales'):
+        os.makedirs(results_dict + 'no_last_twoscales')
+
+    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
+
     valid_config = []
     valid_config_index = []
     for i in range(config_numbers):
@@ -294,29 +300,85 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
         plt.title('%s, %s, %s, %s, clusteringmetrics' % (dataset_name, nuisance_variable, 'configs', Label), fontsize=18)
         fig.savefig(results_dict + '%s_%s_%s_%s_clusteringmetrics.png' % (dataset_name, nuisance_variable, 'configs', Label))
         plt.close(fig)
-    '''
-    scale_list = [i/10 for i in range(10)]
-    if cross_entropy_reconstloss == True:
+
+    valid_config_index_rep = []
+    for i in valid_config_index:
+        valid_config_index_rep.append(i)
+        valid_config_index_rep.append(i)
+
+    clustermetric = pd.concat([pd.DataFrame.from_dict({'configs':valid_config_index_rep}),clustermetric.reset_index(drop=True)],axis=1)
+
+    high_lr_list = []
+    low_lr_list = []
+    for k in valid_config_index_rep:
+        if (k%2==0):
+            high_lr_list.append(k)
+        else:
+            low_lr_list.append(k)
+    for scale_include in scales_include:
         for Label in Label_list:
-            fig = plt.figure(figsize=(10, 7))
-            ELBO = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:,['ELBO']].values[0:-1]
-            if adv == 'Classifier':
-                penalty = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:,['CrossEntropy']].values[0:-1]
-            elif adv == 'MI':
-                penalty = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:,['MILoss']].values[0:-1]
-            lines1 = plt.plot(ELBO, penalty)
-            for i in range(len(scale_list)):
-                plt.text(ELBO[i], penalty[i], '%s'%(scale_list[i]), horizontalalignment='right')
-            plt.xlabel('ELBO', fontsize=16)
-            # plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
-            if adv == 'Classifier':
-                plt.title('%s, %s, %s, relationship between cross entropy and reconstloss' % (dataset_name, nuisance_variable, Label), fontsize=18)
-                fig.savefig(results_dict + '%s_%s_%s_relationship_between_crossentropy_reconstloss.png' % (dataset_name, nuisance_variable, Label))
-            elif adv == 'MI':
-                plt.title('%s, %s, %s, relationship between MI and reconstloss' % (dataset_name, nuisance_variable, Label), fontsize=18)
-                fig.savefig(results_dict + '%s_%s_%s_relationship_between_MI_reconstloss.png' % (dataset_name, nuisance_variable, Label))
-            plt.close(fig)
-    
+            for high_low in ['high_lr', 'low_lr']:
+                if high_low == 'high_lr':
+                    clustermetric_half = clustermetric.loc[clustermetric['configs'].isin(high_lr_list)]
+                elif high_low == 'low_lr':
+                    clustermetric_half = clustermetric.loc[clustermetric['configs'].isin(low_lr_list)]
+
+                if scale_include == 'all':
+                    std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:,['std_ELBO']].values[0:]
+                    std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:,['std_penalty']].values[0:]
+                elif scale_include == '-1':
+                    std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:-1]
+                    std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:-1]
+                elif scale_include == '-2':
+                    std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:-2]
+                    std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:-2]
+
+                fig = plt.figure(figsize=(10, 7))
+                lines1 = plt.plot(std_ELBO, std_penalty)
+
+                if high_low == 'high_lr':
+                    unique_list = []
+                    for m in high_lr_list:
+                        if m not in unique_list:
+                            unique_list.append(m)
+                    scale_list = [i/20 for i in unique_list]
+                elif high_low == 'low_lr':
+                    unique_list = []
+                    for q in low_lr_list:
+                        if q not in unique_list:
+                            unique_list.append(q)
+                    scale_list = [(i-1) / 20 for i in unique_list]
+                if scale_include == 'all':
+                    for i in range(len(scale_list[0:])):
+                        plt.text(std_ELBO[i], std_penalty[i], '%s'%(scale_list[0:][i]), horizontalalignment='right')
+                elif scale_include == '-1':
+                    for i in range(len(scale_list[0:-1])):
+                        plt.text(std_ELBO[i], std_penalty[i], '%s'%(scale_list[0:-1][i]), horizontalalignment='right')
+                elif scale_include == '-2':
+                    for i in range(len(scale_list[0:-2])):
+                        plt.text(std_ELBO[i], std_penalty[i], '%s'%(scale_list[0:-2][i]), horizontalalignment='right')
+
+                plt.xlabel('std_ELBO', fontsize=16)
+                plt.ylabel('std_penalty', fontsize=16)
+                # plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
+                if adv == 'Classifier':
+                    plt.title('%s, %s, %s, %s, stdcrossentropy and stdreconstloss' % (dataset_name, nuisance_variable, Label, high_low), fontsize=18)
+                    if scale_include == 'all':
+                        fig.savefig(results_dict +'all_valid_scales/' + '%s_%s_%s_%s_stdcrossentropy_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                    elif scale_include == '-1':
+                        fig.savefig(results_dict +'no_last_scale/' + '%s_%s_%s_%s_stdcrossentropy_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                    elif scale_include == '-2':
+                        fig.savefig(results_dict +'no_last_twoscales/' + '%s_%s_%s_%s_stdcrossentropy_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                elif adv == 'MI':
+                    plt.title('%s, %s, %s, %s, stdMI and stdreconstloss' % (dataset_name, nuisance_variable, Label, high_low), fontsize=18)
+                    if scale_include == 'all':
+                        fig.savefig(results_dict +'all_valid_scales/' + '%s_%s_%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                    elif scale_include == '-1':
+                        fig.savefig(results_dict +'no_last_scale/' + '%s_%s_%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                    elif scale_include == '-2':
+                        fig.savefig(results_dict +'no_last_twoscales/' + '%s_%s_%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
+                plt.close(fig)
+    '''
     if activation_config_list != ['None']:
         for k in activation_config_list:
             activationmean_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_activationmean.csv'%(k, k)
