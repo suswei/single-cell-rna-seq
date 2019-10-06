@@ -223,7 +223,7 @@ class VAE_MI(nn.Module):
         #minenet = MINE_Net(n_input_nuisance,n_input_z,self.n_hidden_z,self.n_layers_z)
         #pred_xz = minenet(batch_index, z) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
         #pred_x_z = minenet(batch_index, z_shuffle) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
-
+        '''
         if self.adv == False:
             #z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.nsamples_z)
             #batch0_indices = np.array([[0] * (z_batch0.shape[0])])
@@ -261,8 +261,8 @@ class VAE_MI(nn.Module):
                 return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z
             elif self.MI_estimator=='NN':
                 return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, predicted_mutual_info
-        else:
-            return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library
+        '''
+        return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library
 
     def forward(self, x, local_l_mean, local_l_var, batch_index=None, y=None):
         r""" Returns the reconstruction loss and the Kullback divergences
@@ -278,13 +278,14 @@ class VAE_MI(nn.Module):
         :rtype: 2-tuple of :py:class:`torch.FloatTensor`
         """
         # Parameters for z latent distribution
+        '''
         if self.adv == False:
             if self.MI_estimator == 'MI':
                 px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z = self.inference(x, batch_index, y, nsamples_z=self.nsamples_z)
             elif self.MI_estimator=='NN':
                 px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, predicted_mutual_info = self.inference(x, batch_index, y, nsamples_z=self.nsamples_z)
-        else:
-            px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library = self.inference(x, batch_index, y, nsamples_z=self.nsamples_z)
+        '''
+        px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library = self.inference(x, batch_index, y, nsamples_z=self.nsamples_z)
 
         # KL Divergence
         mean = torch.zeros_like(qz_m)
@@ -294,7 +295,7 @@ class VAE_MI(nn.Module):
         kl_divergence_l = kl(Normal(ql_m, torch.sqrt(ql_v)), Normal(local_l_mean, torch.sqrt(local_l_var))).sum(dim=1)#kl_divergence_l: dimension [128]
 
         reconst_loss = self._reconstruction_loss(x, px_rate, px_r, px_dropout) # reconst_loss: dimension [128]
-
+        '''
         if self.adv == False:
             # calculate Mutual information(MI) loss
             if self.MI_estimator == 'MI':
@@ -306,5 +307,6 @@ class VAE_MI(nn.Module):
 
             # TODO: should return kl_divergence_z and MIloss separately, in current state same penalty term is applied to them
             return reconst_loss + kl_divergence_l+ kl_divergence_z, self.MIScale*MIloss
-        else:
-            return reconst_loss + kl_divergence_l, kl_divergence_z
+        '''
+
+        return reconst_loss + kl_divergence_l, kl_divergence_z
