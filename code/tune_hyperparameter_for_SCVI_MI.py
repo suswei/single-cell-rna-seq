@@ -181,18 +181,18 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
     trainer_vae_MI.train(n_epochs=pre_n_epochs, lr=lr)
     trainer_vae_MI.model.adv = adv
 
-    #trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
+    trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
 
     if adv == True:
         if adv_model == 'MI':
             advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.03)
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.03)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
         trainer_vae_MI.adv_model = advnet
         trainer_vae_MI.adv_criterion = torch.nn.BCELoss(reduction='mean')
         trainer_vae_MI.adv_optimizer = torch.optim.Adam(advnet.parameters(), lr=adv_lr)
