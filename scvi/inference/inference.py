@@ -50,7 +50,7 @@ class UnsupervisedTrainer(Trainer):
         return ['train_set']
 
     def loss(self, tensors):
-        if self.model.adv == True:
+        if self.model.adv == True and self.model.std==True:
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
             reconst_loss, kl_divergence = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
             x_ = sample_batch
@@ -105,15 +105,20 @@ class UnsupervisedTrainer(Trainer):
             elif self.adv_model.name == 'Classifier':
                 print('ELBO:{}, std_ELBO: {}, Cross_Entropy:{}, std_Cross_Entropy: {}'.format(ELBO, std_ELBO, penalty_loss, std_penalty))
             return loss, ELBO, std_ELBO, penalty_loss, std_penalty
-        else:
+        elif self.model.adv==False:
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
             reconst_loss, kl_divergence = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
             ELBO = torch.mean(reconst_loss + kl_divergence) # why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
             mini_ELBO = Variable(torch.from_numpy(np.array([self.model.mini_ELBO])).type(torch.FloatTensor),requires_grad=True)
             max_ELBO = Variable(torch.from_numpy(np.array([self.model.max_ELBO])).type(torch.FloatTensor),requires_grad=True)
-            loss = (ELBO - mini_ELBO) / (max_ELBO - mini_ELBO)
-            print('ELBO:{}, std_ELBO:{}'.format(ELBO,loss))
-            return loss, ELBO, loss
+            if self.model.std == True:
+               loss = (ELBO - mini_ELBO) / (max_ELBO - mini_ELBO)
+               print('ELBO:{}, std_ELBO:{}'.format(ELBO, loss))
+               return loss, ELBO, loss
+            else:
+                loss = ELBO
+                print('ELBO:{}'.format(ELBO))
+                return loss, ELBO
 
     def on_epoch_begin(self):
         self.kl_weight = self.kl if self.kl is not None else min(1, self.epoch / 400)  # self.n_epochs)
