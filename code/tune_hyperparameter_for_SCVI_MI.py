@@ -56,7 +56,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
             'std': [True],
-            'taskid': [2, 100, 600]
+            'taskid': [2, 50, 80]
         }
     elif dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'Classifier':
         hyperparameter_config = {
