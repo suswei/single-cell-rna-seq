@@ -117,13 +117,14 @@ class Trainer:
 
         ELBO_list = list()
         std_ELBO_list = list()
+
         if self.model.adv==True:
             penalty_list = list()
             std_penalty_list = list()
             nrows = int(self.adv_model.n_hidden_layers / 10) + 1
             activation_mean = np.empty((nrows,0),dtype=float)
             activation_var = np.empty((nrows,0),dtype=float)
-        clustermetrics_trainingprocess = pd.DataFrame(columns=['asw', 'nmi', 'ari', 'uca', 'be'])
+        clustermetrics_trainingprocess = pd.DataFrame(columns=['nth_epochs', 'Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'ELBO'])
         minibatch_number = len(list(self.data_loaders_loop()))
         self.model.minibatch_number = minibatch_number
         with trange(n_epochs, desc="training", file=sys.stdout, disable=self.verbose) as pbar:
@@ -268,7 +269,7 @@ class Trainer:
                         activation_var = np.append(activation_var, np.array([activation_var_oneepoch]).transpose(), axis=1)
                     '''
                 self.model.train()
-                if self.model.adv == True:
+                if self.model.adv == True and self.model.std == True:
                     for tensors_list in self.data_loaders_loop():
                         loss, ELBO, std_ELBO, penalty, std_penalty = self.loss(*tensors_list)
                         optimizer.zero_grad()
@@ -279,23 +280,53 @@ class Trainer:
                         std_ELBO_list.append(std_ELBO.detach().cpu().numpy())
                         penalty_list.append(penalty.detach().cpu().numpy())
                         std_penalty_list.append(std_penalty.detach().cpu().numpy())
-                else:
+                elif self.model.adv == False:
                     for tensors_list in self.data_loaders_loop():
-                        loss, ELBO, std_ELBO = self.loss(*tensors_list)
+                        if self.model.std == True:
+                            loss, ELBO, std_ELBO = self.loss(*tensors_list)
+                            ELBO_list.append(ELBO.detach().cpu().numpy())
+                            std_ELBO_list.append(std_ELBO.detach().cpu().numpy())
+                        else:
+                            loss, ELBO = self.loss(*tensors_list)
+                            ELBO_list.append(ELBO.detach().cpu().numpy())
                         optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
-                        ELBO_list.append(ELBO.detach().cpu().numpy())
-                        std_ELBO_list.append(std_ELBO.detach().cpu().numpy())
 
-                if (self.model.save_path != 'None') and (self.epoch%2 == 0):
+                if (self.model.save_path != 'None') and (self.epoch%10 == 0):
                     self.model.eval()
                     with torch.no_grad():
-                        asw, nmi, ari, uca = self.train_set.clustering_scores()
-                        be = self.train_set.entropy_batch_mixing()
-                        clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
+                        asw_train, nmi_train, ari_train, uca_train = self.train_set.clustering_scores()
+                        be_train = self.train_set.entropy_batch_mixing()
+
+                        ELBO_train_oneepoch = []
+                        number_samples_train = 0
+                        for tensors in self.train_set:
+                            sample_batch, local_l_mean, local_l_var, batch_index, label = tensors
+                            reconst_loss, kl_divergence = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
+                            ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
+                            ELBO_train_oneepoch += [ELBO * sample_batch.shape[0]]
+                            number_samples_train += sample_batch.shape[0]
+                            ELBO_train = sum(ELBO_train_oneepoch) / number_samples_train
+
+                        asw_test, nmi_test, ari_test, uca_test = self.test_set.clustering_scores()
+                        be_test = self.test_set.entropy_batch_mixing()
+
+                        ELBO_test_oneepoch = []
+                        number_samples_test = 0
+                        for tensors in self.test_set:
+                            sample_batch, local_l_mean, local_l_var, batch_index, label = tensors
+                            reconst_loss, kl_divergence = self.model(sample_batch, local_l_mean, local_l_var,batch_index)
+                            ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
+                            ELBO_test_oneepoch += [ELBO * sample_batch.shape[0]]
+                            number_samples_test += sample_batch.shape[0]
+                            ELBO_test = sum(ELBO_test_oneepoch) / number_samples_test
+                        print(self.epoch)
+                        print(type(self.epoch))
+                        clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'nth_epochs':[self.epoch, self.epoch], 'Label':['trainset','testset'], 'asw': [asw_train, asw_test], 'nmi': [nmi_train, nmi_test], 'ari': [ari_train, ari_test], 'uca': [uca_train, uca_test], 'be': [be_train, be_test], 'ELBO': [ELBO_train, ELBO_test]})
                         clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
                         clustermetrics_trainingprocess.to_csv(self.model.save_path + 'clustermetrics_duringtraining.csv',index=None, header=True)
+
 
                 if not self.on_epoch_end():
                     break
@@ -309,8 +340,12 @@ class Trainer:
         if self.verbose and self.frequency:
             print("\nTraining time:  %i s. / %i epochs" % (int(self.training_time), self.n_epochs))
 
-        if self.model.adv==True:
+        if self.model.adv==True and self.model.std==True:
             return ELBO_list, std_ELBO_list, penalty_list, std_penalty_list
+        if self.model.adv==False and self.model.std==True:
+            return ELBO_list, std_ELBO_list
+        if self.model.adv==False and self.model.std==False:
+            return ELBO_list
 
     def on_epoch_begin(self):
         pass
