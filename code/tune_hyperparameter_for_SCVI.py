@@ -40,7 +40,7 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
             'use_cuda': [False],
             'train_size': [0.8],
             'lr': [1e-2, 1e-3],
-            'n_epochs': [2],
+            'n_epochs': [350],
             'nsamples_z': [200],
             'adv': [False],
             'std': [True, False]
