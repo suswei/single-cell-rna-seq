@@ -116,9 +116,9 @@ class UnsupervisedTrainer(Trainer):
                print('ELBO:{}, std_ELBO:{}'.format(ELBO, loss))
                return loss, ELBO, loss
             else:
-                loss = ELBO
-                print('ELBO:{}'.format(ELBO))
-                return loss, ELBO
+               loss = ELBO
+               print('ELBO:{}'.format(ELBO))
+               return loss, ELBO
 
     def on_epoch_begin(self):
         self.kl_weight = self.kl if self.kl is not None else min(1, self.epoch / 400)  # self.n_epochs)
