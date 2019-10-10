@@ -17,16 +17,16 @@ import torch
 from torch.autograd import Variable
 import itertools
 
-def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
+def main(dataset_name, nuisance_variable, adv_model, config_id):
     # taskid is just any integer from 0 to 99
     # dataset_name could be 'muris_tabula', 'pbmc'
     # nuisance_variable could be 'batch'
     # MI_estimator could be 'Mine_Net4', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
 
-    if not os.path.exists('../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
-    if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
+    if not os.path.exists('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
+        os.makedirs('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
+    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
+        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
 
     if dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'MI':
         hyperparameter_config = {
@@ -40,7 +40,7 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
             'use_cuda': [False],
             'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
             'train_size': [0.8],
-            'lr': [1e-2, 1e-3], #1e-3, 5e-3, 1e-4
+            'lr': [1e-3], #1e-3, 5e-3, 1e-4
             'adv_lr': [5e-4], #5e-4, 1e-8
             'pre_n_epochs': [50],
             'n_epochs': [350], #350
@@ -55,6 +55,8 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
             'adv_model' : ['MI'],
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
+            'std': [True],
+            'taskid': [2, 50, 80]
         }
     elif dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'Classifier':
         hyperparameter_config = {
@@ -105,8 +107,8 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    data_save_path = '../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
-    result_save_path = '../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    data_save_path = './data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    result_save_path = './result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
 
     if dataset_name == 'muris_tabula':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
@@ -118,12 +120,6 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
         gene_dataset = PbmcDataset(save_path=data_save_path)
     elif dataset_name == 'retina':
         gene_dataset = RetinaDataset(save_path=data_save_path)
-
-    np.random.seed(1011)
-    desired_seeds = np.random.randint(0, 2 ** 32, size=(1, 100), dtype=np.uint32)
-
-    taskid = int(taskid)
-    desired_seed = int(desired_seeds[0, taskid])
 
     n_samples_tsne = 1000
 
@@ -155,13 +151,20 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
     adv_model = value[22]
     optimiser = value[23]
     adv_drop_out = value[24]
+    std = value[25]
+    taskid = value[26]
 
+    np.random.seed(1011)
+    desired_seeds = np.random.randint(0, 2 ** 32, size=(1, 100), dtype=np.uint32)
+
+    taskid = int(taskid)
+    desired_seed = int(desired_seeds[0, taskid])
 
     clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty','std_ELBO'])
 
 
-    if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id)):
-        os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id))
+    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id)):
+        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id))
 
     #vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
     #          n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z, adv=False,
@@ -174,7 +177,7 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
                     n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate, reconstruction_loss=reconstruction_loss,
                     MI_estimator=adv_model, MIScale=MIScale, nsamples_z=nsamples_z, adv=False,
                     Adv_MineNet4_architecture=Adv_Net_architecture, save_path=result_save_path+'/config%s/'%(config_id),
-                    mini_ELBO=10000, max_ELBO=30000) #np.percentile(vae_ELBO_list, 90)
+                    std=std, mini_ELBO=10000, max_ELBO=30000) #np.percentile(vae_ELBO_list, 90)
     trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
 
     #Pretrain trainer_vae_MI.vae_MI when adv=False
@@ -187,11 +190,11 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
         if adv_model == 'MI':
             advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
-                                  save_path='../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
+                                  save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
                                   data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.03)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
-                                  save_path='../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
+                                  save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
                                   data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
         trainer_vae_MI.adv_model = advnet
         trainer_vae_MI.adv_criterion = torch.nn.BCELoss(reduction='mean')
@@ -386,7 +389,7 @@ def main(taskid, dataset_name, nuisance_variable, adv_model, config_id):
 
 # Run the actual program
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
 
 # In terminal type
 # python hypertuning.py taskid
