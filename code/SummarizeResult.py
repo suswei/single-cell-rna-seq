@@ -259,6 +259,71 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
                 fig.savefig(result_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method, distribution, gaussian_dimension,type))
                 plt.close(fig)
 
+def clustermetric_vs_ELBO(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset', 'testset'], config_numbers: int=107):
+
+    for i in range(config_numbers):
+        clustermetric_filepath_oneconfig = input_dir_path + 'scviconfig%s/clustermetrics_duringtraining.csv'%(i)
+        if os.path.isfile(clustermetric_filepath_oneconfig):
+            clustermetric_oneconfig = pd.read_csv(clustermetric_filepath_oneconfig)
+
+            for Label in Label_list:
+                clustermetric_oneconfig_subset = clustermetric_oneconfig[clustermetric_oneconfig['Label'].str.match(Label)]
+                for k in [0,7]:
+                    fig = plt.figure(figsize=(10, 7))
+                    lines1 = plt.plot(clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:], clustermetric_oneconfig_subset.loc[:, ['asw']].values[k:],
+                                      clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:], clustermetric_oneconfig_subset.loc[:, ['nmi']].values[k:],
+                                      clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:], clustermetric_oneconfig_subset.loc[:, ['ari']].values[k:],
+                                      clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:], clustermetric_oneconfig_subset.loc[:, ['uca']].values[k:],
+                                      clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:], clustermetric_oneconfig_subset.loc[:, ['be']].values[k:])
+                    plt.legend(('asw', 'nmi', 'ari', 'uca', 'be'), loc='upper right', fontsize=16)
+                    epochs_list = np.ndarray.tolist(clustermetric_oneconfig_subset.loc[:, ['nth_epochs']].values[k:])
+                    for j in range(len(epochs_list)):
+                        plt.text(clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:][j], clustermetric_oneconfig_subset.loc[:, ['asw']].values[k:][j], '%s' % (epochs_list[j]), horizontalalignment='right')
+                        plt.text(clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:][j], clustermetric_oneconfig_subset.loc[:, ['nmi']].values[k:][j], '%s' % (epochs_list[j]),horizontalalignment='right')
+                        plt.text(clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:][j],clustermetric_oneconfig_subset.loc[:, ['ari']].values[k:][j], '%s' % (epochs_list[j]),horizontalalignment='right')
+                        plt.text(clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:][j],clustermetric_oneconfig_subset.loc[:, ['uca']].values[k:][j], '%s' % (epochs_list[j]),horizontalalignment='right')
+                        plt.text(clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:][j],clustermetric_oneconfig_subset.loc[:, ['be']].values[k:][j], '%s' % (epochs_list[j]),horizontalalignment='right')
+
+                    plt.title('config%s, %s, clusteringmetrics vs ELBO from epoch%s' % (i, Label, k*10),fontsize=18)
+                    fig.savefig(results_dict + 'scviconfig%s/%s_%s_config%s_%s_clustervsELBO_epoch%s.png' % (i, dataset_name, nuisance_variable, i, Label, k*10))
+                    plt.close(fig)
+        else:
+            continue
+
+    hyperparameter_config = {
+        'n_layers_encoder': [2, 10],
+        'n_layers_decoder': [10, 2],
+        'n_hidden': [128],
+        'n_latent': [10],
+        'dropout_rate': [0.1],
+        'reconstruction_loss': ['zinb'],
+        'use_batches': [True],
+        'use_cuda': [False],
+        'train_size': [0.8],
+        'lr': [1e-2, 1e-3],
+        'n_epochs': [350],
+        'nsamples_z': [200],
+        'adv': [False],
+        'std': [True, False]
+    }
+    keys, values = zip(*hyperparameter_config.items())
+    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+    hyperparameter_dataframe = pd.DataFrame( columns=['n_layers_encoder', 'n_layers_decoder', 'lr', 'std'])
+
+    for m in range(config_numbers):
+        key, value = zip(*hyperparameter_experiments[m].items())
+        intermediate_dataframe = pd.DataFrame.from_dict({'n_layers_encoder': [value[0]], 'n_layers_decoder': [value[1]],'lr': [value[9]], 'std': [value[13]]})
+        hyperparameter_dataframe = pd.concat([hyperparameter_dataframe, intermediate_dataframe], axis=0)
+
+    hyperparameter_dataframe.index = range(0, config_numbers)
+    configs = pd.DataFrame.from_dict({'configs': list(range(0, config_numbers))})
+    hyperparameter_dataframe = pd.concat([configs, hyperparameter_dataframe], axis=1)
+    hyperparameter_dataframe.to_csv(results_dict + '%s_%s_%s_hyperparameters.csv' % (dataset_name, nuisance_variable, 'configs'), index=None,header=True)
+
+
 def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset', 'testset'], config_numbers: int=107,
