@@ -40,7 +40,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'use_cuda': [False],
             'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
             'train_size': [0.8],
-            'lr': [1e-3], #1e-3, 5e-3, 1e-4
+            'lr': [1e-2], #1e-3, 5e-3, 1e-4
             'adv_lr': [5e-4], #5e-4, 1e-8
             'pre_n_epochs': [50],
             'n_epochs': [350], #350
