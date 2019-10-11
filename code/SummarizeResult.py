@@ -261,7 +261,8 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
 
 def clustermetric_vs_ELBO(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
-                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset', 'testset'], config_numbers: int=107):
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset', 'testset'], config_numbers: int=107, hyperparameter_index: int=1,
+                  starting_epoch: int=7):
 
     for i in range(config_numbers):
         clustermetric_filepath_oneconfig = input_dir_path + 'scviconfig%s/clustermetrics_duringtraining.csv'%(i)
@@ -270,7 +271,7 @@ def clustermetric_vs_ELBO(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Mo
 
             for Label in Label_list:
                 clustermetric_oneconfig_subset = clustermetric_oneconfig[clustermetric_oneconfig['Label'].str.match(Label)]
-                for k in [0,7]:
+                for k in [starting_epoch]:
                     fig = plt.figure(figsize=(10, 7))
                     lines1 = plt.plot(clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:], clustermetric_oneconfig_subset.loc[:, ['asw']].values[k:],
                                       clustermetric_oneconfig_subset.loc[:, ['ELBO']].values[k:], clustermetric_oneconfig_subset.loc[:, ['nmi']].values[k:],
@@ -291,23 +292,40 @@ def clustermetric_vs_ELBO(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Mo
                     plt.close(fig)
         else:
             continue
-
-    hyperparameter_config = {
-        'n_layers_encoder': [2, 10],
-        'n_layers_decoder': [10, 2],
-        'n_hidden': [128],
-        'n_latent': [10],
-        'dropout_rate': [0.1],
-        'reconstruction_loss': ['zinb'],
-        'use_batches': [True],
-        'use_cuda': [False],
-        'train_size': [0.8],
-        'lr': [1e-2, 1e-3],
-        'n_epochs': [350],
-        'nsamples_z': [200],
-        'adv': [False],
-        'std': [True, False]
-    }
+    if hyperparameter_index==1:
+        hyperparameter_config = {
+            'n_layers_encoder': [2, 10],
+            'n_layers_decoder': [10, 2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'train_size': [0.8],
+            'lr': [1e-2, 1e-3],
+            'n_epochs': [350],
+            'nsamples_z': [200],
+            'adv': [False],
+            'std': [True, False]
+        }
+    elif hyperparameter_index==2:
+        hyperparameter_config = {
+            'n_layers_encoder': [2, 10],
+            'n_layers_decoder': [10, 2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'train_size': [0.8],
+            'lr': [1, 1e-1, 1e-2, 1e-3],
+            'n_epochs': [350, 800],
+            'nsamples_z': [200],
+            'adv': [False],
+            'std': [True]
+        }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
@@ -327,7 +345,8 @@ def clustermetric_vs_ELBO(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Mo
 def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset', 'testset'], config_numbers: int=107,
-                  activation_config_list: list=['None'], hyperparameter_config_index: int=2, cross_entropy_reconstloss: bool=False, adv: str='MI', scales_include: list=['all']):
+                  activation_config_list: list=['None'], hyperparameter_config_index: int=2, cross_entropy_reconstloss: bool=False, adv: str='MI', scales_include: list=['all'],
+                  repetition_number=3):
 
     if not os.path.exists(results_dict + 'all_valid_scales'):
         os.makedirs(results_dict + 'all_valid_scales')
@@ -373,6 +392,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
 
     clustermetric = pd.concat([pd.DataFrame.from_dict({'configs':valid_config_index_rep}),clustermetric.reset_index(drop=True)],axis=1)
 
+    '''
     high_lr_list = []
     low_lr_list = []
     for k in valid_config_index_rep:
@@ -444,44 +464,71 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
                         fig.savefig(results_dict +'no_last_twoscales/' + '%s_%s_%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, high_low))
                 plt.close(fig)
     '''
-    if activation_config_list != ['None']:
-        for k in activation_config_list:
-            activationmean_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_activationmean.csv'%(k, k)
-            activationvar_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_activationvar.csv'%(k, k)
-            activationmean_oneconfig = pd.read_csv(activationmean_filepath_oneconfig)
-            activationvar_oneconfig = pd.read_csv(activationvar_filepath_oneconfig)
-            xaxis_index = list(range(1, activationmean_oneconfig.shape[-1]))
-            xtick_labels = list(activationmean_oneconfig.columns)[1:]
-            fig = plt.figure(figsize=(10, 7))
-            lines1 = plt.plot(xaxis_index, activationmean_oneconfig[activationmean_oneconfig['layers'].str.match('layer9')].iloc[:, 1:].values.transpose(),
-                              xaxis_index, activationmean_oneconfig[activationmean_oneconfig['layers'].str.match('layer19')].iloc[:, 1:].values.transpose(),
-                              xaxis_index, activationmean_oneconfig[activationmean_oneconfig['layers'].str.match('layer29')].iloc[:, 1:].values.transpose(),
-                              xaxis_index, activationmean_oneconfig[activationmean_oneconfig['layers'].str.match('layer39')].iloc[:, 1:].values.transpose(),
-                              xaxis_index, activationmean_oneconfig[activationmean_oneconfig['layers'].str.match('layer49')].iloc[:, 1:].values.transpose())
-            plt.legend(('layer9','layer19','layer29','layer39','layer49'), loc='upper right', fontsize=16)
-            plt.xticks(xaxis_index, xtick_labels, rotation='vertical', fontsize=14)
-            plt.xlabel('epoch', fontsize=16)
-            # plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
-            plt.title('%s, %s, %s, activationmean' % (dataset_name, nuisance_variable, 'configs'), fontsize=18)
-            fig.savefig(results_dict + 'config%s/%s_%s_%s_activationmean.png' % (k,dataset_name, nuisance_variable, 'configs'))
-            plt.close(fig)
 
-            xaxis_index = list(range(1, activationvar_oneconfig.shape[-1]))
-            xtick_labels = list(activationvar_oneconfig.columns)[1:]
-            fig = plt.figure(figsize=(10, 7))
-            lines1 = plt.plot(xaxis_index, activationvar_oneconfig[activationvar_oneconfig['layers'].str.match('layer9')].iloc[:, 1:].transpose(),
-                              xaxis_index, activationvar_oneconfig[activationvar_oneconfig['layers'].str.match('layer19')].iloc[:, 1:].transpose(),
-                              xaxis_index, activationvar_oneconfig[activationvar_oneconfig['layers'].str.match('layer29')].iloc[:, 1:].transpose(),
-                              xaxis_index, activationvar_oneconfig[activationvar_oneconfig['layers'].str.match('layer39')].iloc[:, 1:].transpose(),
-                              xaxis_index, activationvar_oneconfig[activationvar_oneconfig['layers'].str.match('layer49')].iloc[:, 1:].transpose())
-            plt.legend(('layer9', 'layer19', 'layer29', 'layer39', 'layer49'), loc='upper right', fontsize=16)
-            plt.xticks(xaxis_index, xtick_labels, rotation='vertical', fontsize=14)
-            plt.xlabel('epoch', fontsize=16)
-            # plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
-            plt.title('%s, %s, %s, activationvar' % (dataset_name, nuisance_variable, 'configs'), fontsize=18)
-            fig.savefig(results_dict + 'config%s/%s_%s_%s_activationvar.png' % (k, dataset_name, nuisance_variable, 'configs'))
-            plt.close(fig)
-    '''
+    for u in range(repetition_number):
+        config_list = []
+        for k in valid_config_index_rep:
+            if (k % 3 == u):
+                config_list.append(k)
+
+        for scale_include in scales_include:
+            for Label in Label_list:
+                    clustermetric_half = clustermetric.loc[clustermetric['configs'].isin(config_list)]
+                    if scale_include == 'all':
+                        std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:]
+                        std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:]
+                    elif scale_include == '-1':
+                        std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:-1]
+                        std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:-1]
+                    elif scale_include == '-2':
+                        std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:-2]
+                        std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:-2]
+
+                    fig = plt.figure(figsize=(10, 7))
+                    lines1 = plt.plot(std_ELBO, std_penalty)
+
+                    unique_list = []
+                    for m in config_list:
+                        if m not in unique_list:
+                            unique_list.append(m)
+                    if u == 0:
+                        scale_list = [i / 30 for i in unique_list]
+                    elif u == 1:
+                        scale_list = [(i-1) / 30 for i in unique_list]
+                    elif u == 2:
+                        scale_list = [(i-2) / 30 for i in unique_list]
+
+                    if scale_include == 'all':
+                        for i in range(len(scale_list[0:])):
+                            plt.text(std_ELBO[i], std_penalty[i], '%s' % (scale_list[0:][i]), horizontalalignment='right')
+                    elif scale_include == '-1':
+                        for i in range(len(scale_list[0:-1])):
+                            plt.text(std_ELBO[i], std_penalty[i], '%s' % (scale_list[0:-1][i]), horizontalalignment='right')
+                    elif scale_include == '-2':
+                        for i in range(len(scale_list[0:-2])):
+                            plt.text(std_ELBO[i], std_penalty[i], '%s' % (scale_list[0:-2][i]), horizontalalignment='right')
+
+                    plt.xlabel('std_ELBO', fontsize=16)
+                    plt.ylabel('std_penalty', fontsize=16)
+                    # plt.yticks([k / 10 for k in range(13)], [str(n) for n in [k / 10 for k in range(13)]], rotation='horizontal', fontsize=14)
+                    if adv == 'Classifier':
+                        plt.title('%s, %s, %s, rep%s, stdcrossentropy and stdreconstloss' % (dataset_name, nuisance_variable, Label, u), fontsize=18)
+                        if scale_include == 'all':
+                            fig.savefig(results_dict + 'all_valid_scales/' + '%s_%s_%s_rep%s_stdcrossentropy_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, u))
+                        elif scale_include == '-1':
+                            fig.savefig(results_dict + 'no_last_scale/' + '%s_%s_%s_rep%s_stdcrossentropy_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, u))
+                        elif scale_include == '-2':
+                            fig.savefig(results_dict + 'no_last_twoscales/' + '%s_%s_%s_rep%s_stdcrossentropy_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, u))
+                    elif adv == 'MI':
+                        plt.title('%s, %s, %s, rep%s, stdMI and stdreconstloss' % (dataset_name, nuisance_variable, Label, u),fontsize=18)
+                        if scale_include == 'all':
+                            fig.savefig(results_dict + 'all_valid_scales/' + '%s_%s_%s_rep%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, u))
+                        elif scale_include == '-1':
+                            fig.savefig(results_dict + 'no_last_scale/' + '%s_%s_%s_rep%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, u))
+                        elif scale_include == '-2':
+                            fig.savefig(results_dict + 'no_last_twoscales/' + '%s_%s_%s_rep%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, Label, u))
+                    plt.close(fig)
+
     for p in range(config_numbers):
         clustermetric_trainingprocess_filepath = input_dir_path + 'config%s/clustermetrics_duringtraining.csv'%(p)
         if os.path.isfile(clustermetric_trainingprocess_filepath):
@@ -500,7 +547,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             plt.title('%s, %s, config%s, clusteringmetrics' % (dataset_name, nuisance_variable, p), fontsize=18)
             fig.savefig(results_dict + 'config%s/%s_%s_config%s_clusteringmetrics.png' % (p, dataset_name, nuisance_variable, p))
             plt.close(fig)
-
+    '''
     valid_config = list(range(0, config_numbers))
     hyperparameter_dataframe = pd.DataFrame(columns=['lr','adv_lr','n_epochs','Adv_MineNet4_architecture','change_adv_epochs','activation_fun','unbiased_loss','initial','adv_model'])
     configs = pd.DataFrame.from_dict({'configs':valid_config})
@@ -893,3 +940,4 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
     hyperparameter_dataframe.index = range(0, len(valid_config_index))
     hyperparameter_dataframe = pd.concat([configs, hyperparameter_dataframe], axis=1)
     hyperparameter_dataframe.to_csv(results_dict + '%s_%s_%s_hyperparameters.csv' % (dataset_name, nuisance_variable, 'configs'), index=None, header=True)
+    '''
