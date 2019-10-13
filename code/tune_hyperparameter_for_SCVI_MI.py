@@ -38,10 +38,10 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+            'MIScale': [0.2],
             'train_size': [0.8],
             'lr': [1e-2], #1e-3, 5e-3, 1e-4
-            'adv_lr': [5e-4], #5e-4, 1e-8
+            'adv_lr': [1e-2, 5e-3, 5e-4], #5e-4, 1e-8
             'pre_n_epochs': [50],
             'n_epochs': [350], #350
             'nsamples_z': [200],
@@ -56,7 +56,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
             'std': [True],
-            'taskid': [2, 50, 80]
+            'taskid': [0]
         }
     elif dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'Classifier':
         hyperparameter_config = {
@@ -68,12 +68,12 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [0.5, 0.6],
+            'MIScale': [0.2],
             'train_size': [0.8],
-            'lr': [1e-3],  # 1e-3, 5e-3, 1e-4
-            'adv_lr': [5e-4],  # 5e-4, 1e-8
-            'pre_n_epochs' : [10],
-            'n_epochs': [2],  # 350
+            'lr': [1e-2],  # 1e-3, 5e-3, 1e-4
+            'adv_lr': [1e-2, 5e-3, 5e-4],  # 5e-4, 1e-8
+            'pre_n_epochs' : [50],
+            'n_epochs': [350],  # 350
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
@@ -85,6 +85,8 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'adv_model': ['Classifier'],
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
+            'std': [True],
+            'taskid': [0]
         }
     elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
         hyperparameter_config = {
@@ -184,18 +186,16 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
     trainer_vae_MI.train(n_epochs=pre_n_epochs, lr=lr)
     trainer_vae_MI.model.adv = adv
 
-    trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
-
     if adv == True:
         if adv_model == 'MI':
             advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.03)
+                                  data_loader=trainer_vae_MI, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.03)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
+                                  data_loader=trainer_vae_MI, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
         trainer_vae_MI.adv_model = advnet
         trainer_vae_MI.adv_criterion = torch.nn.BCELoss(reduction='mean')
         trainer_vae_MI.adv_optimizer = torch.optim.Adam(advnet.parameters(), lr=adv_lr)
@@ -313,7 +313,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         batch_indices_tensor_train = Variable(torch.from_numpy(batch_indices_array_train).type(torch.FloatTensor),requires_grad=False)
         logit = trainer_vae_MI.adv_model(z_l_train)
         cross_entropy = trainer_vae_MI.adv_criterion(logit, batch_indices_tensor_train).detach().cpu().numpy()
-        std_cross_entropy = (-cross_entropy - (-6))/(-0.2- (-6))
+        std_cross_entropy = (-cross_entropy - (-6))/(-0.2 - (-6))
     ELBO_list_train = []
     number_samples = 0
     for tensors in trainer_vae_MI.train_set:
