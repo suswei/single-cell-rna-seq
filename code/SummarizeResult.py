@@ -326,6 +326,23 @@ def clustermetric_vs_ELBO(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Mo
             'adv': [False],
             'std': [True]
         }
+    elif hyperparameter_index==3:
+        hyperparameter_config = {
+            'n_layers_encoder': [2, 10],
+            'n_layers_decoder': [10, 2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'n_epochs': [1200],
+            'nsamples_z': [200],
+            'adv': [False],
+            'std': [True]
+        }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 

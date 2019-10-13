@@ -23,15 +23,15 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
     # nuisance_variable could be 'batch'
     # MI_estimator could be 'Mine_Net4', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
 
-    if not os.path.exists('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
-    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
+    if not os.path.exists('../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
+        os.makedirs('../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
+    if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
+        os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
 
     if dataset_name == 'muris_tabula' and nuisance_variable == 'batch':
         hyperparameter_config = {
-            'n_layers_encoder': [2, 10],
-            'n_layers_decoder': [10, 2],
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
             'n_hidden': [128],
             'n_latent': [10],
             'dropout_rate': [0.1],
@@ -39,11 +39,11 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
             'use_batches': [True],
             'use_cuda': [False],
             'train_size': [0.8],
-            'lr': [1e-2],
-            'n_epochs': [1200],
+            'lr': [1e-3],
+            'n_epochs': [250],
             'nsamples_z': [200],
             'adv': [False],
-            'std': [True]
+            'std': [False]
         }
     elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
         hyperparameter_config = {
@@ -66,8 +66,8 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    data_save_path = './data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
-    result_save_path = './result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    data_save_path = '../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    result_save_path = '../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
 
     if dataset_name == 'muris_tabula':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
@@ -107,14 +107,14 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
     adv = value[12]
     std = value[13]
 
-    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/scviconfig%s' % (dataset_name, config_id)):
-        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/scviconfig%s' % (dataset_name, config_id))
+    if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/scviconfig%s' % (dataset_name, config_id)):
+        os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/scviconfig%s' % (dataset_name, config_id))
 
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
               n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,
               reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z, adv=adv, save_path=result_save_path+'/scviconfig%s/'%(config_id), std=std,
               mini_ELBO=10000, max_ELBO=30000)
-    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed,use_cuda=use_cuda, frequency=5, kl=1)
+    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed,use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
 
     vae_file_path = '%s/%s_%s_config%s_Vae.pk1' % (data_save_path, dataset_name, nuisance_variable, config_id)
 
