@@ -39,11 +39,11 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
             'use_batches': [True],
             'use_cuda': [False],
             'train_size': [0.8],
-            'lr': [1e-3],
-            'n_epochs': [250],
+            'lr': [5e-2],
+            'n_epochs': [800],
             'nsamples_z': [200],
             'adv': [False],
-            'std': [False]
+            'std': [True]
         }
     elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
         hyperparameter_config = {
