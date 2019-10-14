@@ -97,7 +97,7 @@ class UnsupervisedTrainer(Trainer):
                 #loss = ELBO + self.model.MIScale * penalty_loss
             elif self.adv_model.name == 'Classifier':
                 std_penalty = (-penalty_loss-(-adv_max))/(-adv_min-(-adv_max))
-                loss = torch.max((1 - self.model.MIScale) * std_ELBO, self.model.MIScale * penalty_loss)
+                loss = torch.max((1 - self.model.MIScale) * std_ELBO, -self.model.MIScale * penalty_loss)
                 #loss = ELBO - self.model.MIScale * penalty_loss
 
             if self.adv_model.name == 'MI':

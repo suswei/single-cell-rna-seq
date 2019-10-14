@@ -30,7 +30,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
 
     if dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'MI':
         hyperparameter_config = {
-            'n_layers_encoder': [10],
+            'n_layers_encoder': [2,10],
             'n_layers_decoder': [2],
             'n_hidden': [128],
             'n_latent': [10],
@@ -38,17 +38,17 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [0.2],
+            'MIScale': [0, 0.9],
             'train_size': [0.8],
-            'lr': [1e-2], #1e-3, 5e-3, 1e-4
-            'adv_lr': [1e-2, 5e-3, 5e-4], #5e-4, 1e-8
-            'pre_n_epochs': [50],
-            'n_epochs': [350], #350
+            'lr': [1e-2],
+            'adv_lr': [1, 1e-1, 1e-2, 5e-3, 1e-3, 5e-4],
+            'pre_n_epochs': [100], #100
+            'n_epochs': [700],
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
-            'pre_adv_epochs': [100],
-            'adv_epochs': [5],
+            'pre_adv_epochs': [350],
+            'adv_epochs': [3],
             'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
             'initial': ['xavier_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
@@ -60,7 +60,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         }
     elif dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'Classifier':
         hyperparameter_config = {
-            'n_layers_encoder': [10],
+            'n_layers_encoder': [2,10],
             'n_layers_decoder': [2],
             'n_hidden': [128],
             'n_latent': [10],
@@ -71,7 +71,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'MIScale': [0.2],
             'train_size': [0.8],
             'lr': [1e-2],  # 1e-3, 5e-3, 1e-4
-            'adv_lr': [1e-2, 5e-3, 5e-4],  # 5e-4, 1e-8
+            'adv_lr': [1, 1e-1, 1e-2, 5e-3, 1e-3, 5e-4],  # 5e-4, 1e-8
             'pre_n_epochs' : [50],
             'n_epochs': [350],  # 350
             'nsamples_z': [200],
@@ -186,16 +186,18 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
     trainer_vae_MI.train(n_epochs=pre_n_epochs, lr=lr)
     trainer_vae_MI.model.adv = adv
 
+    trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
+
     if adv == True:
         if adv_model == 'MI':
             advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.03)
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.03)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
         trainer_vae_MI.adv_model = advnet
         trainer_vae_MI.adv_criterion = torch.nn.BCELoss(reduction='mean')
         trainer_vae_MI.adv_optimizer = torch.optim.Adam(advnet.parameters(), lr=adv_lr)
@@ -266,6 +268,9 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
     fig1_path = '%s/config%s/std_penalty_%s_%s_config%s.png' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id)
     fig.savefig(fig1_path)
     plt.close(fig)
+
+    minibatch_info = pd.DataFrame.from_dict({'minibatch_ELBO': ELBO_list, 'minibatch_penalty': penalty_list})
+    minibatch_info.to_csv('%s/config%s/%s_%s_config%s_minibatch_info.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id), index=None, header=True)
 
     trainer_vae_MI.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/trainset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
     trainer_vae_MI.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/testset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
