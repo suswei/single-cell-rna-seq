@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import itertools
 import math
-
+import seaborn as sns
 
 def SummarizeResult(result_type: str = 'image', file_paths: list = ['Not_Specified'],
                     subfile_titles: list = ['Not_Specified'], figtitle: str = 'Not_Specified', n_column: int = 2):
@@ -358,6 +358,80 @@ def clustermetric_vs_ELBO(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Mo
     hyperparameter_dataframe = pd.concat([configs, hyperparameter_dataframe], axis=1)
     hyperparameter_dataframe.to_csv(results_dict + '%s_%s_%s_hyperparameters.csv' % (dataset_name, nuisance_variable, 'configs'), index=None,header=True)
 
+def choose_adv_lr_min_max_MI(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', config_numbers: int=12):
+    hyperparameter_config = {
+        'n_layers_encoder': [2, 10],
+        'n_layers_decoder': [2],
+        'n_hidden': [128],
+        'n_latent': [10],
+        'dropout_rate': [0.1],
+        'reconstruction_loss': ['zinb'],
+        'use_batches': [True],
+        'use_cuda': [False],
+        'MIScale': [0, 0.9],
+        'train_size': [0.8],
+        'lr': [1e-2],
+        'adv_lr': [1, 1e-1, 1e-2, 5e-3, 1e-3, 5e-4],
+        'pre_n_epochs': [100],  # 100
+        'n_epochs': [700],
+        'nsamples_z': [200],
+        'adv': [True],
+        'Adv_Net_architecture': [[256] * 10],
+        'pre_adv_epochs': [350],
+        'adv_epochs': [3],
+        'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
+        'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
+        'initial': ['xavier_normal'],
+        # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
+        'adv_model': ['MI'],
+        'optimiser': ['Adam'],
+        'adv_drop_out': [0.2],
+        'std': [True],
+        'taskid': [0]
+    }
+    keys, values = zip(*hyperparameter_config.items())
+    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+    for k in [0, 1]:
+        smaller_MIScale = pd.DataFrame(columns=['adv_lr', 'MIScale0'])
+        higher_MIScale = pd.DataFrame(columns=['adv_lr', 'MIScale0.9'])
+        for i in range(k*config_numbers, (k+1)*config_numbers):
+            MI_training_oneconfig_path = input_dir_path + 'config%s/%s_%s_config%s_minibatch_info.csv' % (i, dataset_name, nuisance_variable, i)
+            key, value = zip(*hyperparameter_experiments[i].items())
+            adv_lr = value[11]
+            MIScale = value[8]
+            if os.path.isfile(MI_training_oneconfig_path):
+                MI_training_oneconfig = pd.read_csv(MI_training_oneconfig_path)
+                if MIScale == 0:
+                    intermediate1 = pd.DataFrame.from_dict({'adv_lr': [adv_lr]*(MI_training_oneconfig.shape[0])})
+                    intermediate1 = pd.concat([intermediate1, MI_training_oneconfig.loc[:,'minibatch_penalty']], axis=1)
+                    intermediate1.columns = ['adv_lr', 'MIScale0']
+                    smaller_MIScale = pd.concat([smaller_MIScale, intermediate1], axis=0)
+                elif MIScale == 0.9:
+                    intermediate2 = pd.DataFrame.from_dict({'adv_lr': [adv_lr] * (MI_training_oneconfig.shape[0])})
+                    intermediate2 = pd.concat([intermediate2, MI_training_oneconfig.loc[:, 'minibatch_penalty']], axis=1)
+                    intermediate2.columns = ['adv_lr', 'MIScale0.9']
+                    higher_MIScale = pd.concat([higher_MIScale, intermediate2], axis=0)
+            else:
+                if MIScale == 0:
+                    intermediate1 = pd.DataFrame.from_dict({'adv_lr': [adv_lr] * 42000, 'MIScale0': [0]*42000})
+                    smaller_MIScale = pd.concat([smaller_MIScale, intermediate1], axis=0)
+                elif MIScale == 0.9:
+                    intermediate2 = pd.DataFrame.from_dict({'adv_lr': [adv_lr] * 42000, 'MIScale0.9': [0] * 42000})
+                    higher_MIScale = pd.concat([higher_MIScale, intermediate2], axis=0)
+
+        smaller_higher_MIScale = pd.concat([smaller_MIScale, higher_MIScale.iloc[:,1]], axis=1)
+        smaller_higher_MIScale2 = pd.melt(smaller_higher_MIScale, id_vars=['adv_lr'], value_vars=['MIScale0', 'MIScale0.9'], var_name='MIScale')
+        fig, ax = plt.subplots(figsize=(10, 7))
+        ax = sns.boxplot(x='adv_lr', y='value', data=smaller_higher_MIScale2, hue='MIScale')
+        if k == 0:
+            ax.set_title('n_layer_encoder==%s' % (2))
+            plt.savefig(results_dict + '%s_%s_encoder%s_MI_adv_lr.png' % (dataset_name, nuisance_variable, 2))
+        elif k == 1:
+            ax.set_title('n_layer_encoder==%s' % (10))
+            plt.savefig(results_dict + '%s_%s_encoder%s_MI_adv_lr.png' % (dataset_name, nuisance_variable, 10))
 
 def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',

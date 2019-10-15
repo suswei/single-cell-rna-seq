@@ -275,6 +275,7 @@ class Trainer:
                         optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
+                        #print(torch.sum(self.model.z_encoder.encoder.fc_layers.Layer1[0].weight.data))
 
                         ELBO_list.append(ELBO.detach().cpu().numpy())
                         std_ELBO_list.append(std_ELBO.detach().cpu().numpy())
@@ -292,7 +293,7 @@ class Trainer:
                         optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
-
+                        #print(torch.sum(self.model.z_encoder.encoder.fc_layers.Layer1[0].weight.data))
                 if (self.model.save_path != 'None') and (self.epoch%10 == 0):
                     self.model.eval()
                     with torch.no_grad():

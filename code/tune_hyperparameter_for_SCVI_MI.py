@@ -38,10 +38,10 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [0, 0.9],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
             'train_size': [0.8],
             'lr': [1e-2],
-            'adv_lr': [1, 1e-1, 1e-2, 5e-3, 1e-3, 5e-4],
+            'adv_lr': [1e-2],
             'pre_n_epochs': [100], #100
             'n_epochs': [700],
             'nsamples_z': [200],
@@ -56,7 +56,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
             'std': [True],
-            'taskid': [0]
+            'taskid': [0, 10, 50, 80]
         }
     elif dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'Classifier':
         hyperparameter_config = {
@@ -189,14 +189,19 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
     trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
 
     if adv == True:
-        if adv_model == 'MI':
+        if adv_model == 'MI' and n_layers_encoder==2:
             advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.03)
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.2, max=0.6)
+        if adv_model == 'MI' and n_layers_encoder==10:
+            advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
+                                  activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
+                                  save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-2, max=0.3)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
-                                  save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
+                                  save_path='../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
                                   data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
         trainer_vae_MI.adv_model = advnet
         trainer_vae_MI.adv_criterion = torch.nn.BCELoss(reduction='mean')
