@@ -820,6 +820,11 @@ for encoder in [2,10]:
        file_paths += [one_file_path]
 ```
 
+```python
+from IPython.display import HTML
+HTML('<img src="D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss.gif">')
+```
+
 <a id='section9'></a>
 <b><font size="+1">2.2 Compare estimated mutual information with true mutual inforamtion</font></b>
 
