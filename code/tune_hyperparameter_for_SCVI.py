@@ -30,7 +30,7 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
 
     if dataset_name == 'muris_tabula' and nuisance_variable == 'batch':
         hyperparameter_config = {
-            'n_layers_encoder': [2],
+            'n_layers_encoder': [10],
             'n_layers_decoder': [2],
             'n_hidden': [128],
             'n_latent': [10],
@@ -39,10 +39,11 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
             'use_batches': [True],
             'use_cuda': [False],
             'train_size': [0.8],
-            'lr': [5e-3,1e-4,1e-5,5e-6,1e-6],
-            'n_epochs': [1500],
+            'lr': [5e-2],
+            'n_epochs': [800],
             'nsamples_z': [200],
             'adv': [False],
+            'std': [True]
         }
     elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
         hyperparameter_config = {
@@ -104,15 +105,16 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
     n_epochs = value[10]  # 500
     nsamples_z = value[11]
     adv = value[12]
+    std = value[13]
 
     if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/scviconfig%s' % (dataset_name, config_id)):
         os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/scviconfig%s' % (dataset_name, config_id))
 
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
-              n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
-              n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,
-              reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z, adv=adv, save_path=result_save_path+'/scviconfig%s/'%(config_id))
-    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed,use_cuda=use_cuda, frequency=5, kl=1)
+              n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,
+              reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z, adv=adv, save_path=result_save_path+'/scviconfig%s/'%(config_id), std=std,
+              mini_ELBO=10000, max_ELBO=30000)
+    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed,use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
 
     vae_file_path = '%s/%s_%s_config%s_Vae.pk1' % (data_save_path, dataset_name, nuisance_variable, config_id)
 
@@ -120,7 +122,10 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
         trainer_vae.model.load_state_dict(torch.load(vae_file_path))
         trainer_vae.model.eval()
     else:
-        ELBO_list = trainer_vae.train(n_epochs=n_epochs, lr=lr)
+        if trainer_vae.model.adv == False and trainer_vae.model.std == True:
+            ELBO_list, std_ELBO_list = trainer_vae.train(n_epochs=n_epochs, lr=lr)
+        elif trainer_vae.model.adv == False and trainer_vae.model.std == False:
+            ELBO_list = trainer_vae.train(n_epochs=n_epochs, lr=lr)
         torch.save(trainer_vae.model.state_dict(), vae_file_path)
         ll_train_set = trainer_vae.history["ll_train_set"]
         ll_test_set = trainer_vae.history["ll_test_set"]
