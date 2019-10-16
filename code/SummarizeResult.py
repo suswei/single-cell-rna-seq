@@ -427,6 +427,7 @@ def choose_adv_lr_min_max_MI(input_dir_path: str='D:/UMelb/PhD_Projects/Project1
         smaller_higher_MIScale2 = pd.melt(smaller_higher_MIScale, id_vars=['adv_lr'], value_vars=['MIScale0', 'MIScale0.9'], var_name='MIScale')
         fig, ax = plt.subplots(figsize=(10, 7))
         ax = sns.boxplot(x='adv_lr', y='value', data=smaller_higher_MIScale2, hue='MIScale')
+        ax.set(ylim=(-2.2, 0.7))
         if k == 0:
             ax.set_title('n_layer_encoder==%s' % (2))
             plt.savefig(results_dict + '%s_%s_encoder%s_MI_adv_lr.png' % (dataset_name, nuisance_variable, 2))
@@ -470,8 +471,10 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
+    fig = plt.figure()
+    camera = Camera(fig)
 
+    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
     repetition_number = len(repetition_id)
     for n_layer in range(n_layer_number):
         valid_config = []
@@ -521,8 +524,11 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
                 if adv == 'MI':
                     plt.title('%s, %s, encoder%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, n_layer, repetition_id[rep], Label),fontsize=18)
                     fig.savefig(results_dict + '%s_%s_encoder%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, n_layer, repetition_id[rep], Label))
-                plt.close(fig)
+                    camera.snap()
+    animation = camera.animate()
+    animation.save(results_dict + 'stdMI_stdreconstloss.gif', writer='imagemagick')
 
+    '''
         for Label in Label_list:
             xaxis_index = list(range(1, len(valid_config) + 1))
             xtick_labels = valid_config
@@ -560,3 +566,4 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
                     plt.title('%s, %s, encoder%s, MIScale%s, repid%s, clusteringmetrics' % (dataset_name, nuisance_variable, n_layer_encoder, MIScale, repid), fontsize=18)
                     fig.savefig(results_dict + 'config%s/%s_%s_encoder%s_MIScale%s_repid%s_clusteringmetrics.png' % (p, dataset_name, nuisance_variable, n_layer_encoder, MIScale, repid))
                     plt.close(fig)
+    '''
