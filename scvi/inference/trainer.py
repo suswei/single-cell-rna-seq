@@ -165,10 +165,11 @@ class Trainer:
                             ql_m, ql_v, library = self.model.l_encoder(x_)
 
                             if self.adv_model.name == 'MI':
-                                z_batch0_tensor = z[(Variable(torch.LongTensor([1]))-batch_index_adv).squeeze(1).byte()]
-                                z_batch1_tensor = z[batch_index_adv.squeeze(1).byte()]
-                                l_batch0_tensor = library[(Variable(torch.LongTensor([1])) - batch_index_adv).squeeze(1).byte()]
-                                l_batch1_tensor = library[batch_index_adv.squeeze(1).byte()]
+                                batch_index_adv_list = np.ndarray.tolist(batch_index_adv.detach().numpy())
+                                z_batch0_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]], :]
+                                z_batch1_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]], :]
+                                l_batch0_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]], :]
+                                l_batch1_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]], :]
                                 l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
                                 l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
 

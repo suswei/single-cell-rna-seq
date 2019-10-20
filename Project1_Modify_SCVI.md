@@ -1,7 +1,7 @@
 ---
 jupyter:
   jupytext:
-    formats: ipynb,md
+    formats: md,ipynb
     text_representation:
       extension: .md
       format_name: markdown
@@ -663,11 +663,10 @@ First, I need to get the hyperparameter for MI_net (esp: adv_lr), and the minimu
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
             'std': [False],
-            'taskid': [0]
+            'taskid': [0, 10, 50, 80]
 Here the minibatch size for vae is 128, the minibatch size for MINE net is 256, because when sample size is larger, MINE net will give a better estimator, and when sample size is larger, there is a lower chance to get a minibatch which is extremely uneven between the two batches. For MIScale, I try 0, and 0.9, because theorectically, when MIScale=0, it produces the maximum value of MI, when MIScale=0.9, it produces the minimum value of MI.
 
-The result is stored in adv_lr_min_max_MI, and plot in figure 25. Note that the horizontal line in the plot means the configuration returns NaN. From figure 25, when adv_lr=0.01, MI is relatively larger when MIScale=0 than MIScale=0.9, no matter the n_layer_encoder=2 or 10, as I expect. The phenomenon disappears when adv_lr decreases to 0.001 and 0.0005. And the MI estimator of adv_lr=0.01 is relatively larger than the MI estimator of adv_lr=0.005, when MIScale=0, no matter n_layer_encoder=2 or 10. Therefore, I choose adv_lr to be 0.01. When n_layer_encoder=2, I choose 0.6 and -0.2 as the max and mim values to standardize MI. When n_layer_encoder=10, the MI estimator becomes smaller, especially when adv_lr=0.01 and 0.005, it could be because n_layer_encoder=10 gives higher BE which means less batch effect. Therefore, when n_layer_encoder=10, I choose 0.3 and -2 as the max and mim values to standardize MI.
-
+The result is stored in adv_lr_min_max_MI, and plot in figure 25. Note that the horizontal line in the plot means the configuration returns NaN. From figure 25, although when adv_lr=0.01 can give higher MI estimator, but it is rather unstable, and has convergent issues. I choose adv_lr-0.005. I choose 0.3, -0.3 as the max and min for MI, no matter the n_layer_encoder=2 or 10.
 
 Next I try the following hyperparameter configurations to draw the std_MI vs std_reconstloss, here the loss is torch.max((1-MI_Scale)*std_reconstloss, MI_Scale*std_MI), here std_MI and std_reconstloss is on the whole trainset and testset instead of minibatch:
             
@@ -682,7 +681,7 @@ Next I try the following hyperparameter configurations to draw the std_MI vs std
             'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
             'train_size': [0.8],
             'lr': [1e-2],
-            'adv_lr': [1e-2],
+            'adv_lr': [5e-3],
             'pre_n_epochs': [100], 
             'n_epochs': [700],
             'nsamples_z': [200],
@@ -697,16 +696,12 @@ Next I try the following hyperparameter configurations to draw the std_MI vs std
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
             'std': [True],
-            'taskid': [0, 10, 50, 80]
-            
-
+            'taskid': [0, 10, 50, 80]            
 The minibatch size for vae is 128, the minibatch size for MINE net is 256. For each MIScale, I repeat 4 times. Therefore, get the std_MI vs std_reconstloss plot 4 times, to get a preliminary idea that whether I should choose the MIScale evenly from 0 to 1, or unevenly from 0 to 1. Here the minibatch size for vae is 128, the minibatch size for MINE net is 256.
 
-The result is stored in , plot in . 
+The result is stored in stdMI_stdreconstloss, plot in Figure26. Unfortunately, I can not observe the trend that when MIScale increase, stdMI decrease and stdreconstloss increase. It could be because of convergence issue.
 
 
-
-Next, 
 
 
 
@@ -805,6 +800,7 @@ print(hyperparameters_dataframe)
 ```
 
 ```python
+#Figure25
 import os
 %matplotlib inline
 import itertools
@@ -812,17 +808,26 @@ import pandas as pd
 exec(open('code\\SummarizeResult.py').read())
 choose_adv_lr_min_max_MI(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/adv_lr_min_max_MI/',
                   results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/adv_lr_min_max_MI/',
-                  dataset_name='muris_tabula', nuisance_variable='batch', config_numbers=12)
-file_paths = []
-for encoder in [2,10]:
-    one_file_path = 'D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/adv_lr_min_max_MI/muris_tabula_batch_encoder%s_MI_adv_lr.png' % (encoder)
-    if os.path.isfile(one_file_path):
-       file_paths += [one_file_path]
+                  dataset_name='muris_tabula', nuisance_variable='batch', n_layer_number=2, adv_lr_number=6, MIScale_number=2, repetition_id=[0,10,50,80])
 ```
 
 ```python
+#Figure26
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], hyperparameter_config_index=1, 
+            adv='MI', n_layer_number=2, repetition_id=[0, 10, 50, 80])
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'], hyperparameter_config_index=1, 
+            adv='MI', n_layer_number=2, repetition_id=[0, 10, 50, 80])
 from IPython.display import HTML
-HTML('<img src="D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss.gif">')
+HTML('<img src="D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/trainset_stdMI_stdreconstloss.gif">')
 ```
 
 <a id='section9'></a>

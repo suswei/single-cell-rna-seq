@@ -16,6 +16,7 @@ from scvi.inference import UnsupervisedTrainer
 import torch
 from torch.autograd import Variable
 import itertools
+from tqdm import tqdm
 
 def main(dataset_name, nuisance_variable, adv_model, config_id):
     # taskid is just any integer from 0 to 99
@@ -30,7 +31,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
 
     if dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'MI':
         hyperparameter_config = {
-            'n_layers_encoder': [2,10],
+            'n_layers_encoder': [10],
             'n_layers_decoder': [2],
             'n_hidden': [128],
             'n_latent': [10],
@@ -38,25 +39,25 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'taskid': list(range(100)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6,0.7, 0.8, 0.9],
             'train_size': [0.8],
-            'lr': [1e-2],
-            'adv_lr': [5e-3],
-            'pre_n_epochs': [100],
-            'n_epochs': [700],
+            'lr': [1e-3],
+            'adv_lr': [5e-4],
+            'pre_n_epochs': [50],
+            'n_epochs': [350],
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
-            'pre_adv_epochs': [350],
-            'adv_epochs': [3],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [5],
             'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
             'initial': ['xavier_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
             'adv_model' : ['MI'],
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
-            'std': [True],
-            'taskid': [0, 10, 50, 80]
+            'std': [True]
         }
     elif dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'Classifier':
         hyperparameter_config = {
@@ -136,25 +137,25 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
     reconstruction_loss = value[5]
     use_batches = value[6]
     use_cuda = value[7]
-    MIScale = value[8]
-    train_size = value[9]
-    lr = value[10]  # 0.0005
-    adv_lr = value[11]
-    pre_n_epochs = value[12]
-    n_epochs = value[13]  # 500
-    nsamples_z = value[14]
-    adv = value[15]
-    Adv_Net_architecture = value[16]
-    pre_adv_epochs = value[17]
-    adv_epochs = value[18]
-    activation_fun = value[19]
-    unbiased_loss = value[20]
-    initial = value[21]
-    adv_model = value[22]
-    optimiser = value[23]
-    adv_drop_out = value[24]
-    std = value[25]
-    taskid = value[26]
+    taskid = value[8]
+    MIScale = value[9]
+    train_size = value[10]
+    lr = value[11]  # 0.0005
+    adv_lr = value[12]
+    pre_n_epochs = value[13]
+    n_epochs = value[14]  # 500
+    nsamples_z = value[15]
+    adv = value[16]
+    Adv_Net_architecture = value[17]
+    pre_adv_epochs = value[18]
+    adv_epochs = value[19]
+    activation_fun = value[20]
+    unbiased_loss = value[21]
+    initial = value[22]
+    adv_model = value[23]
+    optimiser = value[24]
+    adv_drop_out = value[25]
+    std = value[26]
 
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, 100), dtype=np.uint32)
@@ -163,7 +164,6 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
     desired_seed = int(desired_seeds[0, taskid])
 
     clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty','std_ELBO'])
-
 
     if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id)):
         os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id))
@@ -193,7 +193,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.3, max=0.3)
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.03)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
@@ -286,7 +286,54 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
      x_ = Variable(torch.from_numpy(x_).type(torch.FloatTensor), requires_grad=True)
      qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, None)
      batch_indices_tensor = Variable(torch.from_numpy(trainer_vae_MI.test_set.gene_dataset.batch_indices).type(torch.FloatTensor),requires_grad=True)
-     '''
+     
+
+    ##fully train adv_minenet
+    advnet2 = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
+                         activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
+                         save_path='None',data_loader=trainer_vae_MI_adv, drop_out=adv_drop_out, net_name=adv_model, min=-0.3, max=0.3)
+    full_adv_optimizer = torch.optim.Adam(advnet2.parameters(), lr=adv_lr)
+    full_adv_epochs = 500
+    for full_adv_epoch in tqdm(range(full_adv_epochs)):
+        advnet2.train()
+        for tensor in advnet2.data_loader.data_loaders_loop():
+            sample_batch_adv, local_l_mean_adv, local_l_var_adv, batch_index_adv, _ = tensor
+            if trainer_vae_MI.model.log_variational:
+                x_ = torch.log(1 + x_)
+            qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, None)
+            ql_m, ql_v, library = trainer_vae_MI.model.l_encoder(x_)
+
+            batch_index_adv_list = np.ndarray.tolist(batch_index_adv.detach().numpy())
+            z_batch0_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]], :]
+            z_batch1_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]], :]
+            l_batch0_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]],:]
+            l_batch1_tensor = library[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]],:]
+            l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
+            l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
+
+            if (l_z_batch0_tensor.shape[0] == 0) or (l_z_batch1_tensor.shape[0] == 0):
+                continue
+
+            pred_xz = advnet2(input=l_z_batch0_tensor)
+            pred_x_z = advnet2(input=l_z_batch1_tensor)
+
+            if advnet2.unbiased_loss:
+                t = pred_xz
+                et = torch.exp(pred_x_z)
+                if advnet2.ma_et is None:
+                    advnet2.ma_et = torch.mean(et).detach().item()
+                advnet2.ma_et += advnet2.ma_rate * (torch.mean(et).detach().item() - advnet2.ma_et)
+                # unbiasing use moving average
+                loss_adv2 = -(torch.mean(t) - (torch.log(torch.mean(et)) * torch.mean(et).detach() / advnet2.ma_et))
+            else:
+                loss_adv = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+                loss_adv2 = -loss_adv  # maximizing loss_adv equals minimizing -loss_adv
+
+            full_adv_optimizer.zero_grad()
+            loss_adv2.backward()
+            full_adv_optimizer.step()
+    advnet2.eval()
+    '''
     z_tensor_train = Variable(torch.from_numpy(np.empty([0, 10], dtype=float)).type(torch.FloatTensor),requires_grad=True)
     batch_indices_list_train = []
     library_tensor_train = Variable(torch.from_numpy(np.empty([0, 1], dtype=float)).type(torch.FloatTensor),requires_grad=True)
