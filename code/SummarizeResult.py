@@ -453,8 +453,14 @@ def choose_adv_lr_min_max_MI(input_dir_path: str='D:/UMelb/PhD_Projects/Project1
 
 def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
-                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset', 'testset'], config_numbers: int=107,
-                  hyperparameter_config_index: int=2, adv: str='MI', n_layer_number: int=2, repetition_id: list=[0]):
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset'], hyperparameter_config_index: int=2,
+                  adv: str='MI', n_layer_number: int=2, repetition_id: list=[0, 10, 50, 80]):
+
+    if not os.path.exists(results_dict + 'trainset'):
+        os.makedirs(results_dict + 'trainset')
+    if not os.path.exists(results_dict + 'testset'):
+        os.makedirs(results_dict + 'testset')
+
     hyperparameter_config = {
         'n_layers_encoder': [2, 10],
         'n_layers_decoder': [2],
@@ -467,7 +473,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
         'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
         'train_size': [0.8],
         'lr': [1e-2],
-        'adv_lr': [1e-2],
+        'adv_lr': [1e-3],
         'pre_n_epochs': [100],  # 100
         'n_epochs': [700],
         'nsamples_z': [200],
@@ -515,7 +521,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
                 if (i % repetition_number == rep):
                     config_list.append(i)
 
-            for Label in ['trainset']:
+            for Label in Label_list:
                 clustermetric_half = clustermetric.loc[clustermetric['configs'].isin(config_list)]
                 std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:]
                 std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:]
@@ -538,18 +544,20 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
 
                 if adv == 'MI':
                     plt.title('%s, %s, encoder%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, [2,10][n_layer], repetition_id[rep], Label),fontsize=18)
-                    fig.savefig(results_dict + '%s_%s_encoder%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, [2,10][n_layer], repetition_id[rep], Label))
+                    fig.savefig(results_dict + Label + '/%s_%s_encoder%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, [2,10][n_layer], repetition_id[rep], Label))
                     plt.close(fig)
-    image_folder = results_dict
-    video_name = results_dict + 'stdMI_stdreconstloss.mp4'
-    images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
-    frame = cv2.imread(os.path.join(image_folder, images[0]))
-    height, width, layers = frame.shape
-    video = cv2.VideoWriter(video_name, 0, 1, (width, height))
-    for image in images:
-        video.write(cv2.imread(os.path.join(image_folder, image)))
-    cv2.destroyAllWindows()
-    video.release()
+
+    for Label in Label_list:
+        image_folder = results_dict + '%s/'%(Label)
+        video_name = results_dict + '%s/%s_stdMI_stdreconstloss.mp4'%(Label, Label)
+        images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
+        frame = cv2.imread(os.path.join(image_folder, images[0]))
+        height, width, layers = frame.shape
+        video = cv2.VideoWriter(video_name, 0, 1, (width, height))
+        for image in images:
+            video.write(cv2.imread(os.path.join(image_folder, image)))
+        cv2.destroyAllWindows()
+        video.release()
 
     '''
         for Label in Label_list:
