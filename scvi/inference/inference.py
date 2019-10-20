@@ -64,10 +64,11 @@ class UnsupervisedTrainer(Trainer):
             #z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             #z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
             if self.adv_model.name == 'MI':
-                z_batch0_tensor = z[(Variable(torch.LongTensor([1])) - batch_index).squeeze(1).byte()]
-                z_batch1_tensor = z[batch_index.squeeze(1).byte()]
-                l_batch0_tensor = library[(Variable(torch.LongTensor([1])) - batch_index).squeeze(1).byte()]
-                l_batch1_tensor = library[batch_index.squeeze(1).byte()]
+                batch_index_list = np.ndarray.tolist(batch_index.detach().numpy())
+                z_batch0_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]], :]
+                z_batch1_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]], :]
+                l_batch0_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]], :]
+                l_batch1_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]], :]
                 l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
                 l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
 
@@ -93,11 +94,11 @@ class UnsupervisedTrainer(Trainer):
             std_ELBO = (ELBO - mini_ELBO) / (max_ELBO - mini_ELBO)
             if self.adv_model.name == 'MI':
                 std_penalty = (penalty_loss-adv_min)/(adv_max - adv_min)
-                loss = torch.max((1-self.model.MIScale)*std_ELBO, self.model.MIScale*penalty_loss)
+                loss = torch.max((1-self.model.MIScale)*std_ELBO, self.model.MIScale*std_penalty)
                 #loss = ELBO + self.model.MIScale * penalty_loss
             elif self.adv_model.name == 'Classifier':
                 std_penalty = (-penalty_loss-(-adv_max))/(-adv_min-(-adv_max))
-                loss = torch.max((1 - self.model.MIScale) * std_ELBO, self.model.MIScale * penalty_loss)
+                loss = torch.max((1 - self.model.MIScale) * std_ELBO, self.model.MIScale * std_penalty)
                 #loss = ELBO - self.model.MIScale * penalty_loss
 
             if self.adv_model.name == 'MI':
