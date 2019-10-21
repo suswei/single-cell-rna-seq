@@ -39,8 +39,8 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
             'use_batches': [True],
             'use_cuda': [False],
             'train_size': [0.8],
-            'lr': [5e-2],
-            'n_epochs': [800],
+            'lr': [1e-3],
+            'n_epochs': [350],
             'nsamples_z': [200],
             'adv': [False],
             'std': [True]
@@ -113,8 +113,8 @@ def main(taskid, dataset_name, nuisance_variable, config_id):
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
               n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,
               reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z, adv=adv, save_path=result_save_path+'/scviconfig%s/'%(config_id), std=std,
-              mini_ELBO=10000, max_ELBO=30000)
-    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed,use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
+              mini_ELBO=14000, max_ELBO=18000)
+    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed,use_cuda=use_cuda, frequency=5, kl=1)
 
     vae_file_path = '%s/%s_%s_config%s_Vae.pk1' % (data_save_path, dataset_name, nuisance_variable, config_id)
 
