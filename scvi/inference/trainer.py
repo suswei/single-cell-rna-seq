@@ -105,7 +105,6 @@ class Trainer:
         self.model.train()
         if params is None:
             params = filter(lambda p: p.requires_grad, self.model.parameters())
-
         # if hasattr(self, 'optimizer'):
         #     optimizer = self.optimizer
         # else:
