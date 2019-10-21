@@ -42,15 +42,15 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'taskid': list(range(100)),
             'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6,0.7, 0.8, 0.9],
             'train_size': [0.8],
-            'lr': [1e-3],
-            'adv_lr': [5e-4],
-            'pre_n_epochs': [50],
-            'n_epochs': [350],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100],
+            'n_epochs': [700],
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
-            'pre_adv_epochs': [100],
-            'adv_epochs': [5],
+            'pre_adv_epochs': [350],
+            'adv_epochs': [3],
             'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
             'initial': ['xavier_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
@@ -110,8 +110,8 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    data_save_path = './data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
-    result_save_path = './result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    data_save_path = '../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    result_save_path = '../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
 
     if dataset_name == 'muris_tabula':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
@@ -165,8 +165,8 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
 
     clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty','std_ELBO'])
 
-    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id)):
-        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id))
+    if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id)):
+        os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s' % (dataset_name, config_id))
 
     #vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
     #          n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z, adv=False,
@@ -179,7 +179,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
                     n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate, reconstruction_loss=reconstruction_loss,
                     MI_estimator=adv_model, MIScale=MIScale, nsamples_z=nsamples_z, adv=False,
                     Adv_MineNet4_architecture=Adv_Net_architecture, save_path=result_save_path+'/config%s/'%(config_id),
-                    std=std, mini_ELBO=10000, max_ELBO=30000) #np.percentile(vae_ELBO_list, 90)
+                    std=std, mini_ELBO=14000, max_ELBO=18000) #mini_ELBO=15000, max_ELBO=20000
     trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
 
     #Pretrain trainer_vae_MI.vae_MI when adv=False
@@ -192,11 +192,11 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         if adv_model == 'MI':
             advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
-                                  save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.03)
+                                  save_path='../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.2, max=0.2)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
-                                  save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
+                                  save_path='../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
                                   data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
         trainer_vae_MI.adv_model = advnet
         trainer_vae_MI.adv_criterion = torch.nn.BCELoss(reduction='mean')
@@ -359,7 +359,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
         pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
         predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
-        std_predicted_mutual_info = (predicted_mutual_info - (-0.02))/(0.03-(-0.02))
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.2))/(0.2-(-0.2))
     elif adv_model == 'Classifier':
         z_l_train = torch.cat((library_tensor_train, z_tensor_train), dim=1)
         batch_indices_tensor_train = Variable(torch.from_numpy(batch_indices_array_train).type(torch.FloatTensor),requires_grad=False)
@@ -374,7 +374,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
         ELBO_list_train += [ELBO*sample_batch.shape[0]]
         number_samples += sample_batch.shape[0]
-    std_ELBO_train = (sum(ELBO_list_train)/number_samples - 10000)/(30000 - 10000)
+    std_ELBO_train = (sum(ELBO_list_train)/number_samples - 14000)/(18000 - 14000)
 
     label = '%s_%s_config%s_VaeMI_trainset' % (dataset_name, nuisance_variable, config_id)
 
@@ -413,7 +413,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
         pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
         predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
-        std_predicted_mutual_info = (predicted_mutual_info - (-0.02)) / (0.03 - (-0.02))
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.2)) / (0.2 - (-0.2))
     elif adv_model == 'Classifier':
         z_l_test = torch.cat((library_tensor_test, z_tensor_test), dim=1)
         batch_indices_tensor_test = Variable(torch.from_numpy(batch_indices_array_test).type(torch.FloatTensor), requires_grad=False)
@@ -429,7 +429,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
         ELBO_list_test += [ELBO* sample_batch.shape[0]]
         number_samples += sample_batch.shape[0]
-    std_ELBO_test = (sum(ELBO_list_test) / number_samples - 10000) / (30000 - 10000)
+    std_ELBO_test = (sum(ELBO_list_test) / number_samples - 14000) / (18000 - 14000)
 
     label = '%s_%s_config%s_VaeMI_testset' % (dataset_name, nuisance_variable, config_id)
     if adv_model == 'MI':

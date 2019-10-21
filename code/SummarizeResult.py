@@ -454,7 +454,7 @@ def choose_adv_lr_min_max_MI(input_dir_path: str='D:/UMelb/PhD_Projects/Project1
 def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset'], hyperparameter_config_index: int=2,
-                  adv: str='MI', n_layer_number: int=2, repetition_id: list=[0, 10, 50, 80]):
+                  adv: str='MI', n_layer_number: int=2, repetition_number: int=100):
 
     if not os.path.exists(results_dict + 'trainset'):
         os.makedirs(results_dict + 'trainset')
@@ -462,7 +462,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
         os.makedirs(results_dict + 'testset')
 
     hyperparameter_config = {
-        'n_layers_encoder': [2, 10],
+        'n_layers_encoder': [10],
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10],
@@ -470,82 +470,63 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
         'reconstruction_loss': ['zinb'],
         'use_batches': [True],
         'use_cuda': [False],
+        'taskid': list(range(100)),
         'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
         'train_size': [0.8],
-        'lr': [1e-2],
-        'adv_lr': [1e-3],
-        'pre_n_epochs': [100],  # 100
-        'n_epochs': [700],
+        'lr': [1e-3],
+        'adv_lr': [5e-4],
+        'pre_n_epochs': [50],  # 100
+        'n_epochs': [350],
         'nsamples_z': [200],
         'adv': [True],
         'Adv_Net_architecture': [[256] * 10],
-        'pre_adv_epochs': [350],
-        'adv_epochs': [3],
+        'pre_adv_epochs': [100],
+        'adv_epochs': [5],
         'activation_fun': ['ELU'],
         'unbiased_loss': [True],
         'initial': ['xavier_normal'],
         'adv_model': ['MI'],
         'optimiser': ['Adam'],
         'adv_drop_out': [0.2],
-        'std': [True],
-        'taskid': [0, 10, 50, 80]
+        'std': [True]
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    fig = plt.figure()
-
-    repetition_number = len(repetition_id)
     for n_layer in range(n_layer_number):
-        clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
-        valid_config = []
-        for i in range(n_layer*10*repetition_number, (n_layer+1)*10*repetition_number):
-            clustermetric_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_ClusterMetric.csv'%(i,i)
-            if os.path.isfile(clustermetric_filepath_oneconfig):
-                valid_config = valid_config + [i]
-                clustermetric_oneconfig = pd.read_csv(clustermetric_filepath_oneconfig)
-                clustermetric = pd.concat([clustermetric, clustermetric_oneconfig], axis=0)
+        for rep in range(repetition_number):
+            clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
+            valid_config = []
+            for i in range(n_layer*repetition_number*10+rep*10, n_layer*repetition_number*10+(rep+1)*10):
+                clustermetric_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_ClusterMetric.csv'%(i,i)
+                if os.path.isfile(clustermetric_filepath_oneconfig):
+                    valid_config = valid_config + [i]
+                    clustermetric_oneconfig = pd.read_csv(clustermetric_filepath_oneconfig)
+                    clustermetric = pd.concat([clustermetric, clustermetric_oneconfig], axis=0)
+                else:
+                    continue
+            if len(valid_config)>0:
+                for Label in Label_list:
+                    std_ELBO = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:]
+                    std_penalty = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:]
+
+                    fig = plt.figure(figsize=(10, 7))
+                    lines1 = plt.plot(std_ELBO, std_penalty)
+
+                    scale_list = [(i-n_layer*repetition_number*10-rep*10) / 10 for i in valid_config]
+
+                    for i in range(len(scale_list)):
+                        plt.text(std_ELBO[i], std_penalty[i], '%s' % (scale_list[i]),horizontalalignment='right', fontsize=12)
+
+                    plt.xlabel('std_ELBO', fontsize=16)
+                    plt.ylabel('std_penalty', fontsize=16)
+
+                    if adv == 'MI':
+                        plt.title('%s, %s, encoder%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, [10][n_layer], rep, Label),fontsize=18)
+                        fig.savefig(results_dict + Label + '/%s_%s_encoder%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, [10][n_layer], rep, Label))
+                        plt.close(fig)
             else:
                 continue
-
-        valid_config_rep = []
-        for i in valid_config:
-            valid_config_rep.append(i)
-            valid_config_rep.append(i)
-
-        clustermetric = pd.concat([pd.DataFrame.from_dict({'configs': valid_config_rep}), clustermetric.reset_index(drop=True)], axis=1)
-
-        for rep in range(repetition_number):
-            config_list = []
-            for i in valid_config_rep:
-                if (i % repetition_number == rep):
-                    config_list.append(i)
-
-            for Label in Label_list:
-                clustermetric_half = clustermetric.loc[clustermetric['configs'].isin(config_list)]
-                std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:]
-                std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:]
-
-                fig = plt.figure(figsize=(10, 7))
-                lines1 = plt.plot(std_ELBO, std_penalty)
-
-                unique_list = []
-                for i in config_list:
-                    if i not in unique_list:
-                        unique_list.append(i)
-
-                scale_list = [(i-n_layer*repetition_number*10-rep) / (10*repetition_number) for i in unique_list]
-
-                for i in range(len(scale_list)):
-                    plt.text(std_ELBO[i], std_penalty[i], '%s' % (scale_list[i]),horizontalalignment='right', fontsize=12)
-
-                plt.xlabel('std_ELBO', fontsize=16)
-                plt.ylabel('std_penalty', fontsize=16)
-
-                if adv == 'MI':
-                    plt.title('%s, %s, encoder%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, [2,10][n_layer], repetition_id[rep], Label),fontsize=18)
-                    fig.savefig(results_dict + Label + '/%s_%s_encoder%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, [2,10][n_layer], repetition_id[rep], Label))
-                    plt.close(fig)
 
     for Label in Label_list:
         image_folder = results_dict + '%s/'%(Label)
