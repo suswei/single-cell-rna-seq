@@ -49,8 +49,8 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
-            'pre_adv_epochs': [350],
-            'adv_epochs': [3],
+            'pre_adv_epochs': [150],
+            'adv_epochs': [1],
             'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
             'initial': ['xavier_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
@@ -193,7 +193,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.07, max=0.07)
+                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.03, max=0.03)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
@@ -359,7 +359,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
         pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
         predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
-        std_predicted_mutual_info = (predicted_mutual_info - (-0.07))/(0.07-(-0.07))
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.03))/(0.03-(-0.03))
     elif adv_model == 'Classifier':
         z_l_train = torch.cat((library_tensor_train, z_tensor_train), dim=1)
         batch_indices_tensor_train = Variable(torch.from_numpy(batch_indices_array_train).type(torch.FloatTensor),requires_grad=False)
@@ -413,7 +413,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
         pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
         predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
-        std_predicted_mutual_info = (predicted_mutual_info - (-0.07)) / (0.07 - (-0.07))
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.03)) / (0.03 - (-0.03))
     elif adv_model == 'Classifier':
         z_l_test = torch.cat((library_tensor_test, z_tensor_test), dim=1)
         batch_indices_tensor_test = Variable(torch.from_numpy(batch_indices_array_test).type(torch.FloatTensor), requires_grad=False)
