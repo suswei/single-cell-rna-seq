@@ -453,45 +453,13 @@ def choose_adv_lr_min_max_MI(input_dir_path: str='D:/UMelb/PhD_Projects/Project1
 
 def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
-                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset'], hyperparameter_config_index: int=2,
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset'],
                   adv: str='MI', n_layer_number: int=2, repetition_number: int=100):
 
     if not os.path.exists(results_dict + 'trainset'):
         os.makedirs(results_dict + 'trainset')
     if not os.path.exists(results_dict + 'testset'):
         os.makedirs(results_dict + 'testset')
-
-    hyperparameter_config = {
-        'n_layers_encoder': [10],
-        'n_layers_decoder': [2],
-        'n_hidden': [128],
-        'n_latent': [10],
-        'dropout_rate': [0.1],
-        'reconstruction_loss': ['zinb'],
-        'use_batches': [True],
-        'use_cuda': [False],
-        'taskid': list(range(100)),
-        'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-        'train_size': [0.8],
-        'lr': [1e-3],
-        'adv_lr': [5e-4],
-        'pre_n_epochs': [50],  # 100
-        'n_epochs': [350],
-        'nsamples_z': [200],
-        'adv': [True],
-        'Adv_Net_architecture': [[256] * 10],
-        'pre_adv_epochs': [100],
-        'adv_epochs': [5],
-        'activation_fun': ['ELU'],
-        'unbiased_loss': [True],
-        'initial': ['xavier_normal'],
-        'adv_model': ['MI'],
-        'optimiser': ['Adam'],
-        'adv_drop_out': [0.2],
-        'std': [True]
-    }
-    keys, values = zip(*hyperparameter_config.items())
-    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     for n_layer in range(n_layer_number):
         for rep in range(repetition_number):
