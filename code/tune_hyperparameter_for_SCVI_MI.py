@@ -39,13 +39,13 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'taskid': list(range(10)),
-            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6,0.7, 0.8, 0.9],
+            'taskid': list(range(3)),
+            'MIScale': [0],
             'train_size': [0.8],
             'lr': [1e-2],
             'adv_lr': [5e-3],
-            'pre_n_epochs': [100],
-            'n_epochs': [700],
+            'pre_n_epochs': [100, 150, 200],
+            'n_epochs': [200,300,400],
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
@@ -179,46 +179,59 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
                     n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate, reconstruction_loss=reconstruction_loss,
                     MI_estimator=adv_model, MIScale=MIScale, nsamples_z=nsamples_z, adv=False,
                     Adv_MineNet4_architecture=Adv_Net_architecture, save_path=result_save_path+'/config%s/'%(config_id),
-                    std=std, mini_ELBO=12000, max_ELBO=16000) #mini_ELBO=15000, max_ELBO=20000
+                    std=False, mini_ELBO=12000, max_ELBO=16800) #mini_ELBO=15000, max_ELBO=20000
     trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
 
+    vae_MI_file_path = '%s/%s_%s_config%s_VaeMI.pth' % (data_save_path, dataset_name, nuisance_variable, config_id)
     #Pretrain trainer_vae_MI.vae_MI when adv=False
-    trainer_vae_MI.train(n_epochs=pre_n_epochs, lr=lr)
-    trainer_vae_MI.model.adv = adv
+    trainer_vae_MI.train(n_epochs=pre_n_epochs, lr=1e-3)
+    torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
 
-    trainer_vae_MI_adv = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed,use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
+    vae_MI2 = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
+                    n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
+                    n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,
+                    reconstruction_loss=reconstruction_loss,
+                    MI_estimator=adv_model, MIScale=MIScale, nsamples_z=nsamples_z, adv=adv,
+                    Adv_MineNet4_architecture=Adv_Net_architecture,
+                    save_path=result_save_path + '/config%s/' % (config_id),
+                    std=std, mini_ELBO=12000, max_ELBO=16800)  # mini_ELBO=15000, max_ELBO=20000
+    trainer_vae_MI2 = UnsupervisedTrainer(vae_MI2, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
+    trainer_vae_MI2.model.load_state_dict(torch.load(vae_MI_file_path))
+    #trainer_vae_MI2.model.adv = adv
+    #trainer_vae_MI2.model.std = std
+
+    trainer_vae_MI2_adv = UnsupervisedTrainer(vae_MI2, gene_dataset, train_size=train_size, seed=desired_seed,use_cuda=use_cuda, frequency=5, kl=1, batch_size=256)
 
     if adv == True:
         if adv_model == 'MI':
             advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.06)
+                                  data_loader=trainer_vae_MI2_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.06)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI_adv, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
-        trainer_vae_MI.adv_model = advnet
-        trainer_vae_MI.adv_criterion = torch.nn.BCELoss(reduction='mean')
-        trainer_vae_MI.adv_optimizer = torch.optim.Adam(advnet.parameters(), lr=adv_lr)
-        trainer_vae_MI.adv_epochs = pre_adv_epochs
-        trainer_vae_MI.change_adv_epochs = adv_epochs
+                                  data_loader=trainer_vae_MI2_adv, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
+        trainer_vae_MI2.adv_model = advnet
+        trainer_vae_MI2.adv_criterion = torch.nn.BCELoss(reduction='mean')
+        trainer_vae_MI2.adv_optimizer = torch.optim.Adam(advnet.parameters(), lr=adv_lr)
+        trainer_vae_MI2.adv_epochs = pre_adv_epochs
+        trainer_vae_MI2.change_adv_epochs = adv_epochs
 
-    vae_MI_file_path = '%s/%s_%s_config%s_VaeMI.pk1' % (data_save_path, dataset_name, nuisance_variable, config_id)
+
     adv_MI_file_path = '%s/%s_%s_config%s_advMI.pk1' % (data_save_path, dataset_name, nuisance_variable, config_id)
     '''
     if os.path.isfile(vae_MI_file_path) and os.path.isfile(adv_MI_file_path):
-        trainer_vae_MI.model.load_state_dict(torch.load(vae_MI_file_path))
-        trainer_vae_MI.model.eval()
-        trainer_vae_MI.adv_model.load_state_dict(torch.load(adv_MI_file_path))
-        trainer_vae_MI.adv_model.eval()
+        trainer_vae_MI2.model.load_state_dict(torch.load(vae_MI_file_path))
+        trainer_vae_MI2.model.eval()
+        trainer_vae_MI2.adv_model.load_state_dict(torch.load(adv_MI_file_path))
+        trainer_vae_MI2.adv_model.eval()
     else:
     '''
-    ELBO_list, std_ELBO_list, penalty_list, std_penalty_list = trainer_vae_MI.train(n_epochs=n_epochs, lr=lr)
-    torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
-    torch.save(trainer_vae_MI.adv_model.state_dict(), adv_MI_file_path)
-    ll_train_set = trainer_vae_MI.history["ll_train_set"]
-    ll_test_set = trainer_vae_MI.history["ll_test_set"]
+    ELBO_list, std_ELBO_list, penalty_list, std_penalty_list = trainer_vae_MI2.train(n_epochs=n_epochs, lr=lr)
+    #torch.save(trainer_vae_MI2.adv_model.state_dict(), adv_MI_file_path)
+    ll_train_set = trainer_vae_MI2.history["ll_train_set"]
+    ll_test_set = trainer_vae_MI2.history["ll_test_set"]
     x = np.linspace(0, 500, (len(ll_train_set)))
 
     fig = plt.figure(figsize=(14, 7))
@@ -234,7 +247,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
     fig.savefig(fig1_path)
     plt.close(fig)
     '''
-    layers = {'layers': ['layer2'] + ['layer%s'%((k+1)*10-1) for k in range(int(trainer_vae_MI.adv_model.n_hidden_layers / 10))]}
+    layers = {'layers': ['layer2'] + ['layer%s'%((k+1)*10-1) for k in range(int(trainer_vae_MI2.adv_model.n_hidden_layers / 10))]}
     activation_mean_pd = pd.concat([pd.DataFrame.from_dict(layers),pd.DataFrame(data=activation_mean, columns=['epoch%s'%(i*10) for i in range(int((n_epochs-1)/10)+1)])],axis=1)
     activation_var_pd = pd.concat([pd.DataFrame.from_dict(layers),pd.DataFrame(data=activation_var, columns=['epoch%s'%(i*10) for i in range(int((n_epochs-1)/10)+1)])],axis=1)
     activation_mean_pd.to_csv('%s/config%s/%s_%s_config%s_activationmean.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id),index=None, header=True)
@@ -272,20 +285,20 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
     minibatch_info = pd.DataFrame.from_dict({'minibatch_ELBO': ELBO_list, 'minibatch_penalty': penalty_list})
     minibatch_info.to_csv('%s/config%s/%s_%s_config%s_minibatch_info.csv' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id), index=None, header=True)
 
-    trainer_vae_MI.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/trainset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
-    trainer_vae_MI.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/testset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
+    trainer_vae_MI2.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/trainset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
+    trainer_vae_MI2.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/config%s/testset_tsne_SCVI+MI_%s_%s_config%s' % (result_save_path, config_id, dataset_name, nuisance_variable, config_id))
 
-    asw, nmi, ari, uca = trainer_vae_MI.train_set.clustering_scores()
-    be = trainer_vae_MI.train_set.entropy_batch_mixing()
+    asw, nmi, ari, uca = trainer_vae_MI2.train_set.clustering_scores()
+    be = trainer_vae_MI2.train_set.entropy_batch_mixing()
 
-    # latent, batch_indices, labels = trainer_vae_MI.train_set.get_latent(sample=False)
+    # latent, batch_indices, labels = trainer_vae_MI2.train_set.get_latent(sample=False)
     '''
-     x_ = trainer_vae_MI.test_set.gene_dataset._X.toarray()
-     if trainer_vae_MI.model.log_variational:
+     x_ = trainer_vae_MI2.test_set.gene_dataset._X.toarray()
+     if trainer_vae_MI2.model.log_variational:
          x_ = np.log(1 + x_)
      x_ = Variable(torch.from_numpy(x_).type(torch.FloatTensor), requires_grad=True)
-     qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, None)
-     batch_indices_tensor = Variable(torch.from_numpy(trainer_vae_MI.test_set.gene_dataset.batch_indices).type(torch.FloatTensor),requires_grad=True)
+     qz_m, qz_v, z = trainer_vae_MI2.model.z_encoder(x_, None)
+     batch_indices_tensor = Variable(torch.from_numpy(trainer_vae_MI2.test_set.gene_dataset.batch_indices).type(torch.FloatTensor),requires_grad=True)
      
 
     ##fully train adv_minenet
@@ -298,10 +311,10 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         advnet2.train()
         for tensor in advnet2.data_loader.data_loaders_loop():
             sample_batch_adv, local_l_mean_adv, local_l_var_adv, batch_index_adv, _ = tensor
-            if trainer_vae_MI.model.log_variational:
+            if trainer_vae_MI2.model.log_variational:
                 x_ = torch.log(1 + x_)
-            qz_m, qz_v, z = trainer_vae_MI.model.z_encoder(x_, None)
-            ql_m, ql_v, library = trainer_vae_MI.model.l_encoder(x_)
+            qz_m, qz_v, z = trainer_vae_MI2.model.z_encoder(x_, None)
+            ql_m, ql_v, library = trainer_vae_MI2.model.l_encoder(x_)
 
             batch_index_adv_list = np.ndarray.tolist(batch_index_adv.detach().numpy())
             z_batch0_tensor = z[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]], :]
@@ -337,13 +350,13 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
     z_tensor_train = Variable(torch.from_numpy(np.empty([0, 10], dtype=float)).type(torch.FloatTensor),requires_grad=True)
     batch_indices_list_train = []
     library_tensor_train = Variable(torch.from_numpy(np.empty([0, 1], dtype=float)).type(torch.FloatTensor),requires_grad=True)
-    for tensors in trainer_vae_MI.train_set:
+    for tensors in trainer_vae_MI2.train_set:
         sample_batch, local_l_mean, local_l_var, batch_index, label = tensors
-        if trainer_vae_MI.model.log_variational:
+        if trainer_vae_MI2.model.log_variational:
             x_ = torch.log(1 + sample_batch)
-        z_tensor_train = torch.cat((z_tensor_train, trainer_vae_MI.model.z_encoder(x_)[0].cpu()), dim=0)
+        z_tensor_train = torch.cat((z_tensor_train, trainer_vae_MI2.model.z_encoder(x_)[0].cpu()), dim=0)
         batch_indices_list_train += [batch_index.cpu()]
-        library_tensor_train = torch.cat((library_tensor_train, trainer_vae_MI.model.l_encoder(x_)[0].cpu()), dim=0)
+        library_tensor_train = torch.cat((library_tensor_train, trainer_vae_MI2.model.l_encoder(x_)[0].cpu()), dim=0)
     batch_indices_array_train = np.empty([0, 1], dtype=int)
     for i in range(len(batch_indices_list_train)):
         batch_indices_array_train = np.concatenate((batch_indices_array_train, batch_indices_list_train[i].detach().numpy()), axis=0)
@@ -356,21 +369,21 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         l_batch1_tensor = library_tensor_train[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]], :]
         l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
         l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
-        pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
-        pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
+        pred_xz = trainer_vae_MI2.adv_model(input=l_z_batch0_tensor)
+        pred_x_z = trainer_vae_MI2.adv_model(input=l_z_batch1_tensor)
         predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
         std_predicted_mutual_info = (predicted_mutual_info - (-0.02))/(0.06-(-0.02))
     elif adv_model == 'Classifier':
         z_l_train = torch.cat((library_tensor_train, z_tensor_train), dim=1)
         batch_indices_tensor_train = Variable(torch.from_numpy(batch_indices_array_train).type(torch.FloatTensor),requires_grad=False)
-        logit = trainer_vae_MI.adv_model(z_l_train)
-        cross_entropy = trainer_vae_MI.adv_criterion(logit, batch_indices_tensor_train).detach().cpu().numpy()
+        logit = trainer_vae_MI2.adv_model(z_l_train)
+        cross_entropy = trainer_vae_MI2.adv_criterion(logit, batch_indices_tensor_train).detach().cpu().numpy()
         std_cross_entropy = (-cross_entropy - (-6))/(-0.2 - (-6))
     ELBO_list_train = []
     number_samples = 0
-    for tensors in trainer_vae_MI.train_set:
+    for tensors in trainer_vae_MI2.train_set:
         sample_batch, local_l_mean, local_l_var, batch_index, label = tensors
-        reconst_loss, kl_divergence = trainer_vae_MI.model(sample_batch, local_l_mean, local_l_var, batch_index)
+        reconst_loss, kl_divergence = trainer_vae_MI2.model(sample_batch, local_l_mean, local_l_var, batch_index)
         ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
         ELBO_list_train += [ELBO*sample_batch.shape[0]]
         number_samples += sample_batch.shape[0]
@@ -384,20 +397,20 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be], 'std_penalty': [std_cross_entropy], 'std_ELBO':[std_ELBO_train]})
     clustering_metric = pd.concat([clustering_metric, intermediate_dataframe1], axis=0)
 
-    asw, nmi, ari, uca = trainer_vae_MI.test_set.clustering_scores()
-    be = trainer_vae_MI.test_set.entropy_batch_mixing()
+    asw, nmi, ari, uca = trainer_vae_MI2.test_set.clustering_scores()
+    be = trainer_vae_MI2.test_set.entropy_batch_mixing()
 
-    # latent, batch_indices, labels = trainer_vae_MI.test_set.get_latent(sample=False)
+    # latent, batch_indices, labels = trainer_vae_MI2.test_set.get_latent(sample=False)
     z_tensor_test = Variable(torch.from_numpy(np.empty([0,10],dtype=float)).type(torch.FloatTensor), requires_grad=True)
     batch_indices_list_test = []
     library_tensor_test = Variable(torch.from_numpy(np.empty([0,1],dtype=float)).type(torch.FloatTensor), requires_grad=True)
-    for tensors in trainer_vae_MI.test_set:
+    for tensors in trainer_vae_MI2.test_set:
         sample_batch, local_l_mean, local_l_var, batch_index, label = tensors
-        if trainer_vae_MI.model.log_variational:
+        if trainer_vae_MI2.model.log_variational:
             x_ = torch.log(1 + sample_batch)
-        z_tensor_test = torch.cat((z_tensor_test, trainer_vae_MI.model.z_encoder(x_)[0].cpu()),dim=0)
+        z_tensor_test = torch.cat((z_tensor_test, trainer_vae_MI2.model.z_encoder(x_)[0].cpu()),dim=0)
         batch_indices_list_test += [batch_index.cpu()]
-        library_tensor_test = torch.cat((library_tensor_test, trainer_vae_MI.model.l_encoder(x_)[0].cpu()),dim=0)
+        library_tensor_test = torch.cat((library_tensor_test, trainer_vae_MI2.model.l_encoder(x_)[0].cpu()),dim=0)
     batch_indices_array_test = np.empty([0, 1], dtype=int)
     for i in range(len(batch_indices_list_test)):
         batch_indices_array_test = np.concatenate((batch_indices_array_test, batch_indices_list_test[i].detach().numpy()), axis=0)
@@ -410,22 +423,22 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         l_batch1_tensor = library_tensor_test[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]], :]
         l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
         l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
-        pred_xz = trainer_vae_MI.adv_model(input=l_z_batch0_tensor)
-        pred_x_z = trainer_vae_MI.adv_model(input=l_z_batch1_tensor)
+        pred_xz = trainer_vae_MI2.adv_model(input=l_z_batch0_tensor)
+        pred_x_z = trainer_vae_MI2.adv_model(input=l_z_batch1_tensor)
         predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
         std_predicted_mutual_info = (predicted_mutual_info - (-0.02)) / (0.06 - (-0.02))
     elif adv_model == 'Classifier':
         z_l_test = torch.cat((library_tensor_test, z_tensor_test), dim=1)
         batch_indices_tensor_test = Variable(torch.from_numpy(batch_indices_array_test).type(torch.FloatTensor), requires_grad=False)
-        logit = trainer_vae_MI.adv_model(z_l_test)
-        cross_entropy = trainer_vae_MI.adv_criterion(logit, batch_indices_tensor_test).detach().cpu().numpy()
+        logit = trainer_vae_MI2.adv_model(z_l_test)
+        cross_entropy = trainer_vae_MI2.adv_criterion(logit, batch_indices_tensor_test).detach().cpu().numpy()
         std_cross_entropy = (-cross_entropy - (-6)) / (-0.2 - (-6))
 
     ELBO_list_test = []
     number_samples = 0
-    for tensors in trainer_vae_MI.test_set:
+    for tensors in trainer_vae_MI2.test_set:
         sample_batch, local_l_mean, local_l_var, batch_index, label = tensors
-        reconst_loss, kl_divergence = trainer_vae_MI.model(sample_batch, local_l_mean, local_l_var, batch_index)
+        reconst_loss, kl_divergence = trainer_vae_MI2.model(sample_batch, local_l_mean, local_l_var, batch_index)
         ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
         ELBO_list_test += [ELBO* sample_batch.shape[0]]
         number_samples += sample_batch.shape[0]
