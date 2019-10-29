@@ -194,7 +194,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
                     MI_estimator=adv_model, MIScale=MIScale, nsamples_z=nsamples_z, adv=adv,
                     Adv_MineNet4_architecture=Adv_Net_architecture,
                     save_path=result_save_path + '/config%s/' % (config_id),
-                    std=std, mini_ELBO=12000, max_ELBO=16800)  # mini_ELBO=15000, max_ELBO=20000
+                    std=std, mini_ELBO=12000, max_ELBO=16000)  # mini_ELBO=15000, max_ELBO=20000
     trainer_vae_MI2 = UnsupervisedTrainer(vae_MI2, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
     trainer_vae_MI2.model.load_state_dict(torch.load(vae_MI_file_path))
     #trainer_vae_MI2.model.adv = adv
@@ -387,7 +387,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
         ELBO_list_train += [ELBO*sample_batch.shape[0]]
         number_samples += sample_batch.shape[0]
-    std_ELBO_train = (sum(ELBO_list_train)/number_samples - 12000)/(16800 - 12000)
+    std_ELBO_train = (sum(ELBO_list_train)/number_samples - 12000)/(16000 - 12000)
 
     label = '%s_%s_config%s_VaeMI_trainset' % (dataset_name, nuisance_variable, config_id)
 
@@ -442,7 +442,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
         ELBO_list_test += [ELBO* sample_batch.shape[0]]
         number_samples += sample_batch.shape[0]
-    std_ELBO_test = (sum(ELBO_list_test) / number_samples - 12000) / (16800 - 12000)
+    std_ELBO_test = (sum(ELBO_list_test) / number_samples - 12000) / (16000 - 12000)
 
     label = '%s_%s_config%s_VaeMI_testset' % (dataset_name, nuisance_variable, config_id)
     if adv_model == 'MI':

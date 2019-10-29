@@ -81,7 +81,7 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
     vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
                     n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,
                     reconstruction_loss=reconstruction_loss, MI_estimator=adv_model, adv=False, save_path='None',
-                    std=False, mini_ELBO=12000, max_ELBO=16800)  # mini_ELBO=15000, max_ELBO=20000
+                    std=False, mini_ELBO=12000, max_ELBO=16000)  # mini_ELBO=15000, max_ELBO=20000
     trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
 
     vae_MI_file_path = '%s/%s_%s_taskid%s_VaeMI.pth' % (data_save_path, dataset_name, nuisance_variable, taskid)
