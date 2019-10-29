@@ -39,13 +39,13 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'reconstruction_loss': ['zinb'],
             'use_batches': [True],
             'use_cuda': [False],
-            'taskid': list(range(3)),
-            'MIScale': [0],
+            'taskid': list(range(5)),
+            'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9],
             'train_size': [0.8],
             'lr': [1e-2],
             'adv_lr': [5e-3],
-            'pre_n_epochs': [100, 150, 200],
-            'n_epochs': [200,300,400],
+            'pre_n_epochs': [100],
+            'n_epochs': [150,200],
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
@@ -174,18 +174,18 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
     #trainer_vae = UnsupervisedTrainer(vae, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
     #vae_ELBO_list = trainer_vae.train(n_epochs=n_epochs, lr=lr)
 
-    vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
-                    n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
-                    n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate, reconstruction_loss=reconstruction_loss,
-                    MI_estimator=adv_model, MIScale=MIScale, nsamples_z=nsamples_z, adv=False,
-                    Adv_MineNet4_architecture=Adv_Net_architecture, save_path=result_save_path+'/config%s/'%(config_id),
-                    std=False, mini_ELBO=12000, max_ELBO=16800) #mini_ELBO=15000, max_ELBO=20000
-    trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
+    #vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
+    #                n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
+    #                n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate, reconstruction_loss=reconstruction_loss,
+    #                MI_estimator=adv_model, MIScale=MIScale, nsamples_z=nsamples_z, adv=False,
+    #                Adv_MineNet4_architecture=Adv_Net_architecture, save_path=result_save_path+'/config%s/'%(config_id),
+    #                std=False, mini_ELBO=12000, max_ELBO=16800) #mini_ELBO=15000, max_ELBO=20000
+    #trainer_vae_MI = UnsupervisedTrainer(vae_MI, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
 
-    vae_MI_file_path = '%s/%s_%s_config%s_VaeMI.pth' % (data_save_path, dataset_name, nuisance_variable, config_id)
+    vae_MI_file_path = '%s/%s_%s_taskid%s_VaeMI.pth' % (data_save_path, dataset_name, nuisance_variable, taskid)
     #Pretrain trainer_vae_MI.vae_MI when adv=False
-    trainer_vae_MI.train(n_epochs=pre_n_epochs, lr=1e-3)
-    torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
+    #trainer_vae_MI.train(n_epochs=pre_n_epochs, lr=1e-3)
+    #torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
 
     vae_MI2 = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
                     n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
@@ -204,12 +204,12 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
 
     if adv == True:
         if adv_model == 'MI':
-            advnet = MINE_Net4_3(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture,
+            advnet = MINE_Net4_3(input_dim=vae_MI2.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
                                   data_loader=trainer_vae_MI2_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.06)
         elif adv_model == 'Classifier':
-            advnet = Classifier_Net(input_dim=vae_MI.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
+            advnet = Classifier_Net(input_dim=vae_MI2.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
                                   data_loader=trainer_vae_MI2_adv, drop_out = adv_drop_out, net_name = adv_model, min=0.2, max=6)
         trainer_vae_MI2.adv_model = advnet
@@ -387,7 +387,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
         ELBO_list_train += [ELBO*sample_batch.shape[0]]
         number_samples += sample_batch.shape[0]
-    std_ELBO_train = (sum(ELBO_list_train)/number_samples - 12000)/(16000 - 12000)
+    std_ELBO_train = (sum(ELBO_list_train)/number_samples - 12000)/(16800 - 12000)
 
     label = '%s_%s_config%s_VaeMI_trainset' % (dataset_name, nuisance_variable, config_id)
 
@@ -442,7 +442,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         ELBO = torch.mean(reconst_loss + kl_divergence).detach().cpu().numpy()
         ELBO_list_test += [ELBO* sample_batch.shape[0]]
         number_samples += sample_batch.shape[0]
-    std_ELBO_test = (sum(ELBO_list_test) / number_samples - 12000) / (16000 - 12000)
+    std_ELBO_test = (sum(ELBO_list_test) / number_samples - 12000) / (16800 - 12000)
 
     label = '%s_%s_config%s_VaeMI_testset' % (dataset_name, nuisance_variable, config_id)
     if adv_model == 'MI':
