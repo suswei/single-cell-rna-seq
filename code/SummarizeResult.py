@@ -547,3 +547,62 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
                     fig.savefig(results_dict + 'config%s/%s_%s_encoder%s_MIScale%s_repid%s_clusteringmetrics.png' % (p, dataset_name, nuisance_variable, n_layer_encoder, MIScale, repid))
                     plt.close(fig)
     '''
+
+def shorten_time(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset'],
+                  adv: str='MI', n_epochs_number: int=2, repetition_number: int=100):
+
+    if not os.path.exists(results_dict + 'trainset'):
+        os.makedirs(results_dict + 'trainset')
+    if not os.path.exists(results_dict + 'testset'):
+        os.makedirs(results_dict + 'testset')
+
+    for rep in range(repetition_number):
+        for n_epoch in range(n_epochs_number):
+            clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
+            valid_MIScale = []
+            for i in range(10):
+                if n_epoch == 0:
+                    config = rep * 20 + 2*i
+                elif n_epoch == 1:
+                    config = rep * 20 + 2*i + 1
+                clustermetric_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_ClusterMetric.csv'%(config,config)
+                if os.path.isfile(clustermetric_filepath_oneconfig):
+                    valid_MIScale = valid_MIScale + [i/10]
+                    clustermetric_oneconfig = pd.read_csv(clustermetric_filepath_oneconfig)
+                    clustermetric = pd.concat([clustermetric, clustermetric_oneconfig], axis=0)
+                else:
+                    continue
+            if len(valid_MIScale)>0:
+                for Label in Label_list:
+                    std_ELBO = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:]
+                    std_penalty = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:]
+
+                    fig = plt.figure(figsize=(10, 7))
+                    lines1 = plt.plot(std_ELBO, std_penalty)
+
+                    for i in range(len(valid_MIScale)):
+                        plt.text(std_ELBO[i], std_penalty[i], '%s' % (valid_MIScale[i]),horizontalalignment='right', fontsize=12)
+
+                    plt.xlabel('std_ELBO', fontsize=16)
+                    plt.ylabel('std_penalty', fontsize=16)
+
+                    if adv == 'MI':
+                        plt.title('%s, %s, n_epochs%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, [150,200][n_epoch], rep, Label),fontsize=18)
+                        fig.savefig(results_dict + Label + '/%s_%s_n_epochs%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, [150,200][n_epoch], rep, Label))
+                        plt.close(fig)
+            else:
+                continue
+
+    for Label in Label_list:
+        image_folder = results_dict + '%s/'%(Label)
+        video_name = results_dict + '%s/%s_stdMI_stdreconstloss.mp4'%(Label, Label)
+        images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
+        frame = cv2.imread(os.path.join(image_folder, images[0]))
+        height, width, layers = frame.shape
+        video = cv2.VideoWriter(video_name, 0, 1, (width, height))
+        for image in images:
+            video.write(cv2.imread(os.path.join(image_folder, image)))
+        cv2.destroyAllWindows()
+        video.release()
