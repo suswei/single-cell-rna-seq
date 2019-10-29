@@ -25,10 +25,10 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
     # nuisance_variable could be 'batch'
     # MI_estimator could be 'Mine_Net4', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
 
-    if not os.path.exists('../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
-    if not os.path.exists('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
+    if not os.path.exists('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
+        os.makedirs('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
+    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
+        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
 
     if dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'MI':
         hyperparameter_config = {
@@ -46,8 +46,8 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    data_save_path = '../data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
-    result_save_path = '../result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    data_save_path = './data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    result_save_path = './result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
 
     if dataset_name == 'muris_tabula':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
@@ -59,8 +59,6 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
         gene_dataset = PbmcDataset(save_path=data_save_path)
     elif dataset_name == 'retina':
         gene_dataset = RetinaDataset(save_path=data_save_path)
-
-
 
     key, value = zip(*hyperparameter_experiments[0].items())
     n_layers_encoder = value[0]
