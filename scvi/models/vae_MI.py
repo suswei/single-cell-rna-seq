@@ -60,7 +60,7 @@ class VAE_MI(nn.Module):
                  dropout_rate: float = 0.1, dispersion: str = "gene",
                  log_variational: bool = True, reconstruction_loss: str = "zinb",
                  n_hidden_z: int = 5, n_layers_z: int = 10,
-                 MI_estimator: str = 'NN', Adv_MineNet4_architecture: list=[32,16], MIScale: int=1,
+                 MI_estimator: str = 'NN', Adv_MineNet4_architecture: list=[32,16], MIScale: int=0,
                  nsamples_z: int=200, adv: bool=False, adv_minibatch_MI: float=0, save_path: str='None',
                  minibatch_index: int=0, mini_ELBO: int=10000, max_ELBO: int=1000000, minibatch_number: int=60, std: bool=False):
         super().__init__()
