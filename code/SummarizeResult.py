@@ -562,11 +562,15 @@ def shorten_time(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI
         for n_epoch in range(max_reconstloss_number):
             clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
             valid_MIScale = []
+            '''
             for i in range(10):
                 if n_epoch == 0:
                     config = rep * 20 + 2*i
                 elif n_epoch == 1:
                     config = rep * 20 + 2*i + 1
+            '''
+            for i in range(10):
+                config = rep * 10 + i
                 clustermetric_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_ClusterMetric.csv'%(config,config)
                 if os.path.isfile(clustermetric_filepath_oneconfig):
                     valid_MIScale = valid_MIScale + [i/10]
@@ -589,8 +593,8 @@ def shorten_time(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI
                     plt.ylabel('std_penalty', fontsize=16)
 
                     if adv == 'MI':
-                        plt.title('%s, %s, max_reconst%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, [16500,17000][n_epoch], rep, Label),fontsize=18)
-                        fig.savefig(results_dict + Label + '/%s_%s_max_reconst%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, [16500,17000][n_epoch], rep, Label))
+                        plt.title('%s, %s, max_reconst%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, [17000][n_epoch], rep, Label),fontsize=18)
+                        fig.savefig(results_dict + Label + '/%s_%s_max_reconst%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, [17000][n_epoch], rep, Label))
                         plt.close(fig)
             else:
                 continue
