@@ -58,7 +58,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
             'std': [True],
-            'max_reconst': [16500, 17000]
+            'max_reconst': [17000]
         }
     elif dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'Classifier':
         hyperparameter_config = {
@@ -209,7 +209,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
             advnet = MINE_Net4_3(input_dim=vae_MI2.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
-                                  data_loader=trainer_vae_MI2_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.06)
+                                  data_loader=trainer_vae_MI2_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.015, max=0.03)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI2.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/config%s/' % (dataset_name, config_id),
@@ -374,7 +374,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         pred_xz = trainer_vae_MI2.adv_model(input=l_z_batch0_tensor)
         pred_x_z = trainer_vae_MI2.adv_model(input=l_z_batch1_tensor)
         predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
-        std_predicted_mutual_info = (predicted_mutual_info - (-0.02))/(0.06-(-0.02))
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.015))/(0.03-(-0.015))
     elif adv_model == 'Classifier':
         z_l_train = torch.cat((library_tensor_train, z_tensor_train), dim=1)
         batch_indices_tensor_train = Variable(torch.from_numpy(batch_indices_array_train).type(torch.FloatTensor),requires_grad=False)
@@ -428,7 +428,7 @@ def main(dataset_name, nuisance_variable, adv_model, config_id):
         pred_xz = trainer_vae_MI2.adv_model(input=l_z_batch0_tensor)
         pred_x_z = trainer_vae_MI2.adv_model(input=l_z_batch1_tensor)
         predicted_mutual_info = (torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))).detach().cpu().numpy()
-        std_predicted_mutual_info = (predicted_mutual_info - (-0.02)) / (0.06 - (-0.02))
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.015)) / (0.03 - (-0.015))
     elif adv_model == 'Classifier':
         z_l_test = torch.cat((library_tensor_test, z_tensor_test), dim=1)
         batch_indices_tensor_test = Variable(torch.from_numpy(batch_indices_array_test).type(torch.FloatTensor), requires_grad=False)

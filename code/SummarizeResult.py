@@ -551,7 +551,7 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
 def shorten_time(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset'],
-                  adv: str='MI', n_epochs_number: int=2, repetition_number: int=100):
+                  adv: str='MI', max_reconstloss_number: int=2, repetition_number: int=100):
 
     if not os.path.exists(results_dict + 'trainset'):
         os.makedirs(results_dict + 'trainset')
@@ -559,7 +559,7 @@ def shorten_time(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI
         os.makedirs(results_dict + 'testset')
 
     for rep in range(repetition_number):
-        for n_epoch in range(n_epochs_number):
+        for n_epoch in range(max_reconstloss_number):
             clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
             valid_MIScale = []
             for i in range(10):
@@ -589,8 +589,8 @@ def shorten_time(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI
                     plt.ylabel('std_penalty', fontsize=16)
 
                     if adv == 'MI':
-                        plt.title('%s, %s, n_epochs%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, [150,200][n_epoch], rep, Label),fontsize=18)
-                        fig.savefig(results_dict + Label + '/%s_%s_n_epochs%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, [150,200][n_epoch], rep, Label))
+                        plt.title('%s, %s, max_reconst%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, [16500,17000][n_epoch], rep, Label),fontsize=18)
+                        fig.savefig(results_dict + Label + '/%s_%s_max_reconst%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, [16500,17000][n_epoch], rep, Label))
                         plt.close(fig)
             else:
                 continue
