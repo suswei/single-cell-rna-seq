@@ -159,8 +159,6 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
     taskid = int(taskid)
     desired_seed = int(desired_seeds[0, taskid])
 
-    clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty','std_ELBO', 'std_penalty_fully'])
-
     if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/rep%s' % (dataset_name, taskid)):
         os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/rep%s' % (dataset_name, taskid))
 
@@ -181,11 +179,13 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
     trainer_vae_MI.train(n_epochs=pre_n_epochs, lr=1e-3)
     torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
 
-    MIScales = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    MIScales = [0, 1] #, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
     for MIScale in MIScales:
+        clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO', 'std_penalty_fully'])
+
         vae_MI2 = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
                         n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,
-                        reconstruction_loss=reconstruction_loss, MI_estimator=adv_model, MIScale=MIScale, nsamples_z=nsamples_z, adv=adv,
+                        reconstruction_loss=reconstruction_loss, MI_estimator=adv_model, MIScale=MIScale/10, nsamples_z=nsamples_z, adv=adv,
                         Adv_MineNet4_architecture=Adv_Net_architecture, save_path=result_save_path + '/rep%s/' % (taskid), std=std, mini_ELBO=12000, max_ELBO=max_reconst)  # mini_ELBO=15000, max_ELBO=20000
         trainer_vae_MI2 = UnsupervisedTrainer(vae_MI2, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
         trainer_vae_MI2.model.load_state_dict(torch.load(vae_MI_file_path))
