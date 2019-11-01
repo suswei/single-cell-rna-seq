@@ -179,7 +179,7 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
     trainer_vae_MI.train(n_epochs=pre_n_epochs, lr=1e-3)
     torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
 
-    MIScales = [0, 1] #, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
+    MIScales = [0,1,2,3,4,5,6,7,8,9]
     for MIScale in MIScales:
         clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO', 'std_penalty_fully'])
 
