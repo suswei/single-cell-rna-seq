@@ -47,7 +47,9 @@ Although imposing invariance to the patterns identified by deep learning is extr
 
 <!-- #region -->
 <a id='section4'></a>
-<b><font size="+1">1.2 scVI</font></b>
+<b><font size="+1">1.2 explain scVI and mutual information separately</font></b>
+
+Explain from autoencoder, to variational autoencoder, to scVI (Valentine, [2019](https://www.biorxiv.org/content/biorxiv/early/2019/08/16/737601.full.pdf))
 
 scVI is essentially a variational autoencoder, one of the most popular approaches to unsupervised learning of complicated distributions (Doersch, [2016](https://arxiv.org/abs/1606.05908)). Therefore, variational autoencoder will be discussed first. Suppose $x$ is a data point in a dataset with an unknown possibility distribution $p(x)$, $z$ is the representation called latent vector for the data point $x$, defined over a high-, but lower-dimensional space $Z$ than the original datapoint $x$. For each $x$, $z$ is a random variable with probability density $p(z)$. Suppose we have a family of derministic functions $f(z;\theta)$, parameterized by a vector $\theta$ in some space $\Theta$, where $f: Z \times \Theta \rightarrow X$, the objective is to optimize $\theta$ such that the probability of each $x$ in the training dataset can be maximized, according to the definition: $p(x) = \int_{Z} p(x|z;\theta)p(z)dz$. In most cases, p(z) is set to be $N(0,I)$, where $I$ is the identity matrix. $p(x)$ can be approximated by sampling a large number of z values $\{z_{1},...,z_{n}\}$ and averaging $p(x|z_{i}), i\in \{1,...,n\}$. In practice, for most $z$ sampled from $p(z)$, $p(x|z)$ will be almost zero, contributing nothing to our estimator for $p(x)$. The solution to circumvent this problem is to narrow down the sampling space of $z$ such that $z$ are more likely to have produced $x$, thus giving a meaningful value of $p(x|z)$. The narrowed space of $z$ is determined by the posteror probability distribution $p(z|x)$, which, however, is usually difficult to compute analytically. Suppose $q(z|x)$ is a function approximator for $p(z|x)$, then:
 
@@ -102,12 +104,9 @@ the function $f_{w}$ stands for the neural network that encodes the mean proport
 the parameter $\theta \in \mathbb{R}_{+}^{G}$ denotes a gene-specific inverse dispersion and it is estimated via variational Bayesian inference. <font color=red>(check how to estimate $\theta$ here?)</font>
 
 
-
-
-
 <font color=red>(how to calculate logp(x|z,l,s) and backpropogate?)</font>
 
-There are many traditional statistical methods, compared with deep learning, to infer the biological variation in single-cell data with nuisance factors. scVI is claimed to be superior than the traditional statistical methods in three aspects (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)). First, although both SCVI and other existing methods use a parametric statistical model with a 'expressiion' component (e.g., ZINB-WaVE uses a negative binomial as the expression componnet (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5)), BISCUIT uses a log normal distribution as the expression component (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))) and a zero compnent (usually a bernoulli distribution <font color=red>(is it true?)</font>) to fit the distribution of the random variable which is the count of the transcripts for each gene in each cell, and although both SCVI and other methods are first trying to learn a low-dimensional manifold from the single-cell RNA count data <font color=red>(what are the other low-dimension manifold learning methods?)</font> as well additional covariates provided as metadata (e.g., batch (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5) (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf))), cell quality (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5))) and map the low-dimensional representation to the parameter of the model, the neural network in scvi frees the mapping function from the constraint of the generalized linear assumption in other methods, which is difficult to justify. <font color=red>(check at least one method e.g. ZINB-WaVE to check what is the generalized linear assumption in this method?)</font>). Second, scvi can be used to analyze the single-cell RNA seq data for all the various downstream tasks to ensure consistency, compared with other methods usually designed specially only for different subsets of all tasks (e.g., imputation and clustering, but not differential expression (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))). Third, scvi provides a higher computational scalability, desirable for the ever-growing size of recent datasets consisting of hundreads of thousands of cells (commercial 10x genomics, [2017](https://support.10xgenomics.com/single-cell-gene-expression/datasets/), or envisioned by consortia like the Human Cell Atlas (Regev, et al., [2017](https://elifesciences.org/articles/27041))), compared with other methods applicable only to tens of thousands of cells <font color=red>(why scvi has higher computational scalability?)</font>). 
+There are many traditional statistical methods, compared with deep learning, to infer the biological variation in single-cell data with nuisance factors. scVI is claimed to be superior than the traditional statistical methods in three aspects (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)). First, although both SCVI and other existing methods use a parametric statistical model with a 'expressiion' component (e.g., ZINB-WaVE uses a negative binomial as the expression componnet (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5)), BISCUIT uses a log normal distribution as the expression component (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))) and a zero compnent (usually a bernoulli distribution <font color=red>(is it true?)</font>) to fit the distribution of the random variable which is the count of the transcripts for each gene in each cell, and although both SCVI and other methods are first trying to learn a low-dimensional manifold from the single-cell RNA count data <font color=red>(what are the other low-dimension manifold learning methods?)</font> as well additional covariates provided as metadata (e.g., batch (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5) (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf))), cell quality (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5))) and map the low-dimensional representation to the parameter of the model, the neural network in scvi frees the mapping function from the constraint of the generalized linear assumption in other methods, which is difficult to justify. <font color=red>(check at least one method e.g. ZINB-WaVE to check what is the generalized linear assumption in this method?)</font>). Second, scvi can be used to analyze the single-cell RNA seq data for all the various downstream tasks to ensure consistency, compared with other methods usually designed specially only for different subsets of all tasks (e.g., imputation and clustering, but not differential expression (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))). Third, scvi provides a higher computational scalability, desirable for the ever-growing size of recent datasets consisting of hundreads of thousands of cells (commercial 10x genomics, [2017](https://support.10xgenomics.com/single-cell-gene-expression/datasets/), or envisioned by consortia like the Human Cell Atlas (Regev, et al., [2017](https://elifesciences.org/articles/27041))), compared with other methods applicable only to tens of thousands of cells <font color=red>(why scvi has higher computational scalability? Refer to (Valentine, [2019](https://www.biorxiv.org/content/biorxiv/early/2019/08/16/737601.full.pdf))) and (Matthew, [2019](https://www.biorxiv.org/content/10.1101/237065v4))</font>). 
 
 As mentioned above, scVI is also superior to other deep learning methods (e.g. DCA, Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2)) for removing the techinical variation, in a way that apart from removing technical variations from all resources, scVI explicitly models two nuisance factors, library size and batch labels. However, there is still much variation from nuisance factors (e.g. batch) remained in the dataset after scVI implementation when those nuisance factors have large confounding effects initially(Xu, et al. [2019](https://www.biorxiv.org/content/10.1101/532895v1)). Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) analyzed that the different dimensions of the latent vectors are hardly independent because the approximateed posterior distribution poorly matches the real posterior and the data we have are always finite, and they also observed empirically that the the independence properties encoded by the generative model wil often not be respected by the approximate posterior. Therefore, in order to impose invariance to nuisance factors in scVI, Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) proposed a a framework named Hilbert-Schmidt Independence Criterion (HSIC)-constrained variational autoencoder (VAE), which enforces independence between the learnt latent representations and arbitrary nuisance factors through maximizing the traditional variational lower bound of VAE with a penalty for desired independence requirement calibrated by a kernel-based non-parametric method called HSIC. <font color=red>(Describe the HSIC method here in details!!!!!!!, the code for the paper is [here](https://github.com/romain-lopez/HCV/blob/master/scVI/scVIgenqc.py))</font>. 
 
@@ -120,8 +119,6 @@ However, the main drawback for HSIC to measure dependence is that it is not appl
 
 where $\mathbb{P}_{XZ}$ is the joint probability distribution of $X$ and $Z$, $\mathbb{P}_{X} = \int_{\mathcal{Z}}d\mathbb{P}_{XZ}$ and $\mathbb{P}_{Z} = \int_{\mathcal{X}}d\mathbb{P}_{XZ}$ are the marginal probability distribution for $X$ and $Z$, respectively. Essentially, the mutual information is equivalent to the Kullback-Leibler (KL-) divergence between the joint $\mathbb{P}_{XZ}$ and the product of the marginals $\mathbb{P} \otimes \mathbb{Q}$: $I(X, Z) = D_{KL}(\mathbb{P}_{XZ}||\mathbb{P}_{X} \otimes \mathbb{P}_{Z})$, where $D_{KL}(\mathbb{P}||\mathbb{Q})=\mathbb{E}_{\mathbb{P}} \Big[log \frac{d\mathbb{P}}{d\mathbb{Q}}\Big]$. Put simply, the mutual information of two random variable is the KL-divergence between the true joint distribution and joint distribution when $X$ and $Z$ are assumed to be independent. According to the Donsker-Varadhan representation, $D_{KL}(\mathbb{P}||\mathbb{Q}) = \underset{T: \Omega \rightarrow \mathbb{R}}{sup} E_{\mathbb{P}}[T] - log(\mathbb{E}_{\mathbb{Q}}[e^{T}])$, where T is all functions under which the two expectations are finite. Consequently, $D_{KL}(\mathbb{P}||\mathbb{Q}) \geq \underset{T \in \mathcal{F}}{sup} E_{\mathbb{P}}[T] - log(\mathbb{E}_{\mathbb{Q}}[e^{T}])$, where $\mathcal{F}$ is any class of functions $T: \Omega \rightarrow \mathbb{R}$. The larger number of functions $\mathcal{F}$ contains, the tighter the lower bound for $D_{KL}(\mathbb{P}||\mathbb{Q})$ is. $\mathcal{F}$ is chosen to be a family of function $T_{\theta}: \mathcal{X} X \mathcal{Z} \rightarrow \mathbb{R}$ parametrized with parameters $\theta \in \Theta$ in the MINE neural network. Therefore, $I(X;Z) \geq I_{\Theta}(X, Z) = \underset{\theta \in \Theta}{sup} E_{\mathbb{P}_{XZ}}[T_{\theta}] - log(\mathbb{E}_{\mathbb{P}_{X} \otimes \mathbb{P}_{Z}}[e^{T_{\theta}}])$
 
-
- 
 
 Let x be data points, z be latent variable, s be batch, then the aggregated posterior of $z$ conditional on batch $s$ is:
 \begin{equation}
@@ -161,16 +158,28 @@ D_{KL}(\mathbb{P}||\mathbb{Q}) &\geq \underset{T\in \mathbb{F}}{sup} E_{\mathbb{
 \end{equation}
 
 
+<b><font size="+1">1.2.2 Visualization of data manifold</font></b>
 
-<b><font size="+1">1.3 multi-objective optimization</font></b>
+Compare neural network (SAUCI), PCA, Diffusion maps, tSNE, PHATE () in visualizing single-cell RNA data in exploratory analysis. (Matthew, [2019](https://www.biorxiv.org/content/10.1101/237065v4))
+
+<b><font size="+1">1.2.3 Metrics used</font></b>
+
+Clustering metrics, batch entropy
+<!-- #endregion -->
+
+<a id='section5'></a>
+<b><font size="+1">1.3 SCVI penalized by mutual information</font></b>
+
+<b><font size="+1">1.3.1 multi-objective optimization</font></b>
 
 There are two ways to minimize both two objectives: one way is that $\theta^{\lambda} = \underset{\theta}{argmin}[(1-\lambda)*L_{1}(\theta) + \lambda * L_{2}(\theta)], \{\theta^{\lambda}: \lambda \in [0,1]\}$. The second way is called shebyshev, which is $\theta^{\lambda} = \underset{\theta}{argmin} \hspace{0.2cm} max\{(1-\lambda)*L_{1}(\theta), \lambda * L_{2}(\theta)\}, \{\theta^{\lambda}: \lambda \in [0,1]\}$. 
 
 If we draw the true $\left[\begin{array}{c} L_{1}(\theta) \\ L_{2}(\theta) \end{array}\right] $, when $\theta = \underset{\theta}{argmin} \left[\begin{array}{c} L_{1}(\theta) \\ L_{2}(\theta) \end{array}\right]$, the line is called the parento front. Chebyshev is a better approximation of the parento front. When we use the first way, which is $S_{loss} = [(1-\lambda)*L_{1}(\theta) + \lambda * L_{2}(\theta)]$, we could get $L_{2}{\theta} = \frac{S_{loss}-(1-\lambda)*L_{1}(\theta)}{\lambda}$, all the points on the convex hole can be approximated, but points on the concave hole can not be approximated. In our case, $L_{1}(\theta)$ is the std_reconstloss, $L_{2}(\theta)$ is the std_MI penalty, I want to minimimize both. Standardize both reconstloss and MI penalty is to make sure that they are on the same scale, from 0 to 1.
-<!-- #endregion -->
 
-<a id='section5'></a>
-<b><font size="+1">1.3 SCVI with mutual information penalty</font></b>
+<b><font size="+1">1.3.2 Explaining the hyperparameters for neural network, architecture of neural network, adversarial training</font></b>
+
+For the pretraining in adversarial training, how to save weights of the pretrained neural network and use the saved weights to initialize the new neural network with the same structure but different loss function? check this blog to see the technichs: 
+[save and reload weights](https://towardsdatascience.com/everything-you-need-to-know-about-saving-weights-in-pytorch-572651f3f8de).
 
 
 
@@ -541,7 +550,7 @@ Is deep learning only appropriate when dimension of input is at least 70? The an
 regression, logistic regression etc can be also considered as a type of simple deep learning neural network. 
 <font color=red>But how to consider linear regresion or logistic regression as deep learning neural network?Be clear about the details</font>
 
-<!-- #region -->
+
 <a id='section7'></a>
 <b><font size="+1">2.4 Compare SCVI and SCVI+MI_Penalty: strategy 2</font></b>
 
@@ -697,24 +706,433 @@ Next I try the following hyperparameter configurations to draw the std_MI vs std
             'adv_drop_out': [0.2],
             'std': [True],
             'taskid': [0, 10, 50, 80]            
-The minibatch size for vae is 128, the minibatch size for MINE net is 256. For each MIScale, I repeat 4 times. Therefore, get the std_MI vs std_reconstloss plot 4 times, to get a preliminary idea that whether I should choose the MIScale evenly from 0 to 1, or unevenly from 0 to 1. Here the minibatch size for vae is 128, the minibatch size for MINE net is 256.
+The minibatch size for vae is 128, the minibatch size for MINE net is 256. For each MIScale, I repeat 4 times. Therefore, get the std_MI vs std_reconstloss plot 4 times, to get a preliminary idea that whether I should choose the MIScale evenly from 0 to 1, or unevenly from 0 to 1. Here for standardize reconstloss, min and max value I use is 10000 and 30000. To standardize mutual information, min and max value I use is -0.3 and 0.3. 
 
-The result is stored in stdMI_stdreconstloss, plot in Figure26. Unfortunately, I can not observe the trend that when MIScale increase, stdMI decrease and stdreconstloss increase. It could be because of convergence issue.
+The result is stored in stdMI_stdreconstloss, plot in Figure26. Unfortunately, I can not observe the trend that when MIScale increase, stdMI decrease and stdreconstloss increase. It could be because of convergence issue. I can try another learning rate for minenet. 
 
+Remember that previously, there is a hyperparameter combination which gives me the trend that when MIScale increase, stdreconstloss increase, stdMI decrease. I repeat it again.
 
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6,0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-3],
+            'adv_lr': [5e-4],
+            'pre_n_epochs': [50],
+            'n_epochs': [350],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [5],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'],
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
 
+The minibatch size for vae is 128, the minibatch size for MINE net is 256. For each MIScale, I repeat 10 times. Here to standardize reconstloss, min and max value I use is 10000 and 30000. To standardize mutual information, min and max value I use is -0.02 and 0.03. The result is stored in stdMI_stdreconstloss2, plot in Figure27. So we can observe the trend that when MIScale increase, stdMI decrease and stdreconstloss increase. But the problem for this result is although the trend is OK, when MIScale=0, the loss is just stdreconstloss, this gives bad clustering metrics. Considering about practical usage, I want to start from a good clustering metrics when MIScale=0.
 
+Pay attention, for figure26, I use a new subset method for minibatch when calculating mutual information. Because when calculating mutual information, I need to get latent vector z from batch 0 and from batch 1 separately. Formerly and for figure 27, I used 
+      #z_batch0_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]], :]
+      #z_batch1_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]], :]
+      #l_batch0_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]], :]
+      #l_batch1_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]], :]
+Now for figure26 and figure 28, I use the code:
+      z_batch0_tensor = z[(Variable(torch.LongTensor([1])) - batch_index).squeeze(1).byte()]
+      z_batch1_tensor = z[batch_index.squeeze(1).byte()]
+      l_batch0_tensor = library[(Variable(torch.LongTensor([1])) - batch_index).squeeze(1).byte()]
+      l_batch1_tensor = library[batch_index.squeeze(1).byte()]
+      l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
+      l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
+In order to make sure that this code is OK, for figure28, I repeat the experiment in figure27 using the same hyperparameters, but use the new code in the inference.py and trainer.py for the adversarial training process, the result is stored in stdMI_stdreconstloss3, plot in Figure28. Compared with Figure27, it seems that the code is OK, I can still observe the trend that when MIScale increases, stdreconstloss increases, stdMI decreases. Therefore in figure26, when I can not observe the trend, maybe it is because of the hyperparameters. 
 
+From now on, I'll use the code used for figure28 to subset latent vector z for batch 0 and batch 1. 
 
+In order to optimize hyperparameters either for result in figure 26 and figure 27, I try to use a different standardization scheme or/and different learning rate for minenet.
 
+For example, in order to optimize the result in figure26, I try the same hyperparameters as in figure26, but a different standardization scheme for both vae and Minenet, the hyperparameters are:
 
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [350],
+            'adv_epochs': [3],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The min and max to standardize reconstloss is 12000 and 18000 respectively. The min and max to standardize MI is -0.2 and 0.2 respectively. The result is stored in stdMI_stdreconstloss4, plot in figure29. Still the stdreconstloss changes dramatically, and when MIScale becomes large, stdMI even increases. Some jobs among the 100 jobs don't finish running on clusters, but I cancel them because the finished jobs have already demonstrated that I need to adjust the hyperparameters to make the trend of stdMI vs stdreconstloss to be better.
 
+Moreover, to optimize the result in figure26, I also try to decrease the learning rate for minenet, the hyperparameters are:
 
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [1e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [350],
+            'adv_epochs': [3],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The learning rate for minenet has decreased from 5e-3 to 1e-3, the min and max to standardize reconstloss are 12000 and 18000, respectively. However, as lr for minenet decreases, the min and max to standardize MI has become -0.06 and 0.06. The result is stored in stdMI_stdreconstloss5, plot in figure30. Still the stdreconstloss changes dramatically, and when MIScale becomes large, stdMI even increases. Some jobs among the 100 jobs don't finish running on clusters, but I cancel them because the finished jobs have already demonstrated that I need to adjust the hyperparameters to make the trend of stdMI vs stdreconstloss to be better. When I checked the MI value for MIScale=0 in stdMI_stdreconstloss5, min of MI is about -0.03, max of MI is about 0.03 (in most cases).       
 
+For figure29, to standardize MI, I use -0.2 and 0.2, actually when I checked the real MI value when MIScale=0 in stdMI_stdreconstloss4 directory, min of MI is -0.1, max of MI is 0.1. Therefore, I try to use the same hyperparameters as in figure29, but use a different min and max of MI:
 
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [350],
+            'adv_epochs': [3],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The min and max to standardize reconstloss is 12000 and 18000 respectively. The min and max to standardize MI used here is -0.07 and 0.07 respectively. The result is stored in stdMI_stdreconstloss6, plot in figure31. 
 
+Also I try to dampen the minenet using a smaller pre_adv_epochs, and smaller adv_epochs, but adv_lr is still 5e-3 as in figure29:
 
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [150],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The min and max to standardize reconstloss is 12000 and 18000 respectively. The min and max to standardize MI used here is smaller than figure31, they are -0.03 and 0.03 respectively. The result is stored in stdMI_stdreconstloss7, plot in figure32. 
 
+To my surprise, in check the true MI value in stdMI_stdreconstloss7, max of MI is even a little bigger than that in stdMI_stdreconstloss6. Therefore -0.03 and 0.03 are two narrow to standardize MI. I try the following hyperparameters, but use -0.03 and 0.06 to standardize MI, and the pre_adv_epochs changes to 100.:
+           
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The result is stored in stdMI_stdreconstloss8, plot in figure33. Still have the convergence issue at 0.9.
+
+In order to decrease the stdMI so that stdreconstloss will increase less, I use -0.01 and 0.05 to standardize MI. The hyperparameters are the same as in figure33. They are:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The result is in stdMI_stdreconstloss9, plot in figure34. This time, convergence issue seems better, however, when MIScale=0, stdMI is even smaller than 0, and stdMI at MIScale=0 varies a lot. This may be because our learning rate for adv_lr is a bit high, the MI estimator for MI varies a lot, and the min for MI we use is -0.01, which has a relatively small absolute value, therefore, the stdMI is very sensitive to the variation in MI estimator.
+
+There, I try to increase max to standardize MI, so that stdMI can be decreased, and stdreconstloss will increase less, while the absolute value for min becomes larger so that the stdMI doesn't vary so much, the hyperparameters are the same:
+           
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The min and max to standardize MI are -0.03 and 0.08. The result is stored in stdMI_stdreconstloss10, plot in figure35. Still not solved the former problem, when MIScale=0.8 and/or 0.9, there are convergence issue. 
+
+Try the following hyperparameter:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]        
+The min and max to standardize reconstloss changes to 12000, and 16000. The min and max to standardize MI is -0.02, and 0.06. The result is stored in stdMI_stdreconstloss11, plot in figure36. Figure36 have 6 repetitions out of 10 give a satisfactory image compared to 2 repetitions out out of 10 in figure 35. But in figure36, there are new problems, for repid=8, MIScale=0.5 even gives a smaller stdreconstloss than when MIScale=0, that is because I've decreased the max value used to standardize reconstructloss from 18000 to 16000, then the stdreconstloss is more sensitive to the variability of reconstloss.
+
+I'll use the hyperparameters in figure35 or figure36 for larger scale of repetitions. But before that, I need to decrease the computation times. Now the time is much longer than standard SCVI alone.
+
+I first tried the following hyperparameters to see  when MIScale=0, whether the pretrained-scvi and then trained std_scvi can have the same effects as scvi, the hyperparameters are:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(3)),
+            'MIScale': [0],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100, 150, 200],
+            'n_epochs': [200,300,400],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'],
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The result is stored in shorten_time directory, plot in figure37. It can be seen that all the configurations can recover the same effect as scvi. Therefore, pre_n_epochs=100, n_epochs=200 is the best one, because it is the shortest. Maybe we can decrease n_epochs even further, perhaps to 150 after checking the clustering metrics during training for config0.
+
+Next I try to see under these pre_n_epochs and n_epochs (try both 150 and 200 for n_epochs), whether the trend that when MIScale increases, stdreconstloss increase, and stdMI decrease remains. The hyperparameters are:
+
+           'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(5)),
+            'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100],
+            'n_epochs': [150, 200],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'],
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The result is stored in shorten_time1, and plot in figure38. It seems that when n_epochs=200, the result is better than when n_epochs=150. But the phenomenon that when MIScale increase, the stdreconstloss even decrease. This is because of the max value to standardize reconstloss is a little small.
+
+Next, I tried the following hyperparameters (the same hyperparameters as above but n_epochs=200):
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(5)),
+            'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100],
+            'n_epochs': [200],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'],
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+But try both 16500 and 17000 to standardize reconstloss. The min to standardize reconstloss is 12000. The min and max to standardize MI is -0.02 and 0.06. The result is stored in shorten_time2, plot in figure39. But when I checked the MI estimation when MIScale=0, the max is about 0.03, the min is about -0.03. 
+
+Therefore, I tried the following hyperparameters:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(5)),
+            'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100],
+            'n_epochs': [200],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'],
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+Use 12000 and 17000 as min and max to standardize reconstloss. Use 0.045 and -0.015 as min and max to standardize MI. Results are stord in shorten_time3, plot in figure 40. It appears that this is not better than result in figure39 for when min and max to standardize reconstloss is 12000 and 17000, min and max to standardize MI is 0.06 and -0.02, respectively.         
 
 <b><font size="3">2.4.3 Code</font></b>
 
@@ -729,7 +1147,6 @@ Figure 10 shows when the epoch increases to 500 and 750, 44 among 216 configs ru
 Then another phenomenon to notice is that the left half of the clustering metric plot doesn't have such cyclic phenomenon, when comparing the single peak in the left half and the two consecutive peaks of clustering metrics in the right half, the main difference is the adv_lr, from left, to right are 5e-6, 1e-8, 1e-10. Therefore, when adv_lr is smaller, the MINE_Net4 is less sensitive to initiation strategies.
 
 
-<!-- #endregion -->
 
 ```python
 import os
@@ -775,7 +1192,6 @@ for config in range(32):
 SummarizeResult('image',file_paths,'Fig21: Clustering metrics of trainset vs ELBO for different configs of scvi')
 hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO2/muris_tabula_batch_configs_hyperparameters.csv')
 print(hyperparameters_dataframe)
-
 ```
 
 ```python
@@ -818,16 +1234,245 @@ import os
 import itertools
 import pandas as pd
 exec(open('code\\SummarizeResult.py').read())
-choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
-            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+#choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], hyperparameter_config_index=1, 
+#            adv='MI', n_layer_number=2, repetition_id=[0, 10, 50, 80])
+#choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'], hyperparameter_config_index=1, 
+#            adv='MI', n_layer_number=2, repetition_id=[0, 10, 50, 80])
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure27
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss2/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss2/',
             dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], hyperparameter_config_index=1, 
-            adv='MI', n_layer_number=2, repetition_id=[0, 10, 50, 80])
-choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
-            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+            adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss2/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss2/',
             dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'], hyperparameter_config_index=1, 
-            adv='MI', n_layer_number=2, repetition_id=[0, 10, 50, 80])
-from IPython.display import HTML
-HTML('<img src="D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/trainset_stdMI_stdreconstloss.gif">')
+            adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss2/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure28
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss3/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], hyperparameter_config_index=1, 
+            adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss3/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'], hyperparameter_config_index=1, 
+            adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss3/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure29
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss4/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss4/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss4/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss4/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'], adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss4/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure30
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss5/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss5/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss5/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss5/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss5/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure31
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss6/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss6/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss6/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss6/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss6/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure32
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss7/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss7/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss7/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss7/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss7/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure33
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss8/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss8/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss8/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss8/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss8/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure34
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss9/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss9/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss9/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss9/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss9/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure35
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss10/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss10/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss10/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss10/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss10/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure36
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss11/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss11/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss11/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss11/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss11/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+
+```
+
+```python
+#Figure38
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+#shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time1/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time1/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_epochs_number=2, repetition_number=5)
+#shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time1/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time1/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_epochs_number=2, repetition_number=5)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time1/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure39
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+#shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time2/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time2/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', max_reconstloss_number=2, repetition_number=5)
+#shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time2/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time2/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', max_reconstloss_number=2, repetition_number=5)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time2/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure40
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time3/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', max_reconstloss_number=1, repetition_number=5)
+shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time3/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', max_reconstloss_number=1, repetition_number=5)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time3/trainset/trainset_stdMI_stdreconstloss.mp4")
 ```
 
 <a id='section9'></a>
