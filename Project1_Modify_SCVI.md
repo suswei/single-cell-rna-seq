@@ -16,38 +16,84 @@ jupyter:
 <a id='section1'></a>
 <h1><center>Project1_Modify_SCVI</center></h1>
 <b><font size="+2">1. Introduction</font></b>
-<a href='#section2'><p style="margin-left: 40px"><b><font size="+1">1.1 Deep Learning and the Invariance Problem</font></b></p></a>
-<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 scVI</font></b></p></a>
-<a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 scVI with mutual information penalty</font></b></p></a>
+<a href='#section2'><p style="margin-left: 40px"><b><font size="+1">1.1 The Invariance Problem in single-cell RNA seq analysis</font></b></p></a>
 
-<b><font size="+2">2. Have Done and Discussion</font></b>
-<a href='#section6'><p style="margin-left: 40px"><b><font size="+1">2.1 Break scVI</font></b></p></a>
-<a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.2 Compare estimated mutual inforamtion with true mutual inforamtion</font></b></p></a>
-<a href='#section7'><p style="margin-left: 40px"><b><font size="+1">2.3 Compare scVI and scVI+MI_Penalty-strategy 1</font></b></p></a>
-<a href='#section7'><p style="margin-left: 40px"><b><font size="+1">2.4 Compare scVI and scVI+MI_Penalty-strategy 2</font></b></p></a>
+<p style="margin-left: 60px">Batch effects and library size effects both included?</p>
 
-<a href='#section10'><b><font size="+2">3. To Does</font></b></a>
+<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 Existing methods to deal with the invariance problem in single-cell RNA seq problem</font></b></p></a>
 
-<b><font size="+2">4. Useful Tools, Information, and Knowledge</font></b>
-<a href='#section11'><p style="margin-left: 40px"><b><font size="+1">4.1 How to version control jupyter notebook</font></b></p></a>
-<a href='#section11'><p style="margin-left: 40px"><b><font size="+1">4.2 Deep Learning</font></b></p></a>
+<p style="margin-left: 60px">Generalized linear model methods and other neural network</p>
 
-<br/><br/>
+<p style="margin-left: 60px">scVI is superior than previous methods</p>
+
+<a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 scVI</font></b></p></a>
+
+<p style="margin-left: 60px">Introduction of scVI: from autoencoder, to variational autoencoder, to scVI</p>
+
+<p style="margin-left: 60px">Although superior, there is still remaining problem of scVI in dealing with the invariance problem in single-cell RNA seq analysis.</p>
+
+<a href='#section5'><p style="margin-left: 40px"><b><font size="+1">1.4 Existing Penalized scVI to extend scVI in dealing with the invariance problem in single-cell RNA seq analysis</font></b></p></a>
+
+<p style="margin-left: 60px">HISC (scVI penalized by MMD), saucie network penalized by MMD. The problem of using MMD as the penalty.</p>
+
+<a href='#section6'><p style="margin-left: 40px"><b><font size="+1">1.5 Use Mutual information as the penalty</font></b></p></a>
+
+<p style="margin-left: 60px">Explain mutual information.</p>
+
+<p style="margin-left: 60px">Explain the theory and algorithms of MineNet to estimate mutual information</p>
+
+<p style="margin-left: 60px">Explain how to calculate MI when combined with scVI</p>
+
+<a href='#section7'><p style="margin-left: 40px"><b><font size="+1">1.6 How to build MineNet and train MI_penalized scVI</font></b></p></a>
+
+<p style="margin-left: 60px">Explain basics for deep learning: why updating weights in the direction of gradient? how to establish the architecture and choose hyperparameters for MineNet: including the lr, initialization, activation, drop out, batch_normalization, optimizer. loss function for MI_penalized scVI</p>
+
+<p style="margin-left: 60px">Multi-task optimization and Parento front</p>
+
+<b><font size="+2">2. Have Done</font></b>
+<a href='#section8'><p style="margin-left: 40px"><b><font size="+1">2.1 Batch effects remained partially after scVI treatment of real datasets, and artificial datasets with a large batch effects to demonstrate that there is room to extend scVI for batch effect removal.</font></b></p></a>
+
+<a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.2 Compare estimated mutual inforamtion with true mutual inforamtion to demonstrate that MineNet can get an appropriate estimator for mutual inforamtion</font></b></p></a>
+
+<p style="margin-left: 60px">Do I also need to compare MMD estimator with MineNet estimator as the penalty?</p>
+
+<a href='#section10'><p style="margin-left: 40px"><b><font size="+1">2.3 scVI+MI_Penalty</font></b></p></a>
+
+<a href='#section11'><p style="margin-left: 40px"><b><font size="+1">2.4 automate the process for finding the hyperparameters of MI_penalized SCVI for different datasets </font></b></p></a>
+
+<a href='#section12'><p style="margin-left: 40px"><b><font size="+1">2.5 scVI and scVI+MI_Penalty comparison for downstream analysis</font></b></p></a>
+
+<a href='#section13'><b><font size="+2">3. Discussion</font></b></a>
+
+<a href='#section14'><b><font size="+2">4. Reference</font></b></a>
+
+<a href='#section15'><b><font size="+2">5. To Does</font></b></a>
+
+<b><font size="+2">6. Useful Tools, Information, and Knowledge</font></b>
+<a href='#section16'><p style="margin-left: 40px"><b><font size="+1">4.1 How to version control jupyter notebook</font></b></p></a>
+<a href='#section16'><p style="margin-left: 40px"><b><font size="+1">4.2 Deep Learning</font></b></p></a>
+
 <br/><br/>
 
 
 <a id='section2'></a>
-<b><font size="+1">1.1 Invariance of Deep Learning</font></b>
+<b><font size="+1">1.1 The Invariance Problem in single-cell RNA seq analysis</font></b>
 
-Deep learning has been widely used in many pattern recognition tasks, like image classification, object detection, and segmentation. During the process of deep learning, invariance could be imposed such that a pattern can still be correctly recognized when there are many confounding properties. For example, a cat in an image can still be classified correctly as a cat even when the image is rotated, enlarged or brightened. There are many researches, especially in computer vision field, about how to make deep learning network selects the complex, high level invariant features of the input, yet robust to irrelevant input transformations, which can be summarized in two aspects. 
+scRNA-seq data analysis has gained enormous attention recently and is contributing significantly to diverse research areas such as cancer(Patel et al., [2014](https://science-sciencemag-org.ezp.lib.unimelb.edu.au/content/344/6190/1396)), development (Semrau et al., [2017](https://www.nature.com/articles/s41467-017-01076-4)), autoimmunity (Gaublomme et al., [2015](https://www-sciencedirect-com.ezp.lib.unimelb.edu.au/science/article/pii/S0092867415014890)). One major interest is to represent the single-cell RNA sequencing (scRNA-seq) data in a way invariant to diverse confounding factors including transcriptional noise (Wagner et al., [2016](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nbt.3711), capture efficiency and sequnencing depth (Vallejos et al., [2017](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nmeth.4292)), amplication bias, and batch effects (Shaham et al., [2017](https://academic-oup-com.ezp.lib.unimelb.edu.au/bioinformatics/article/33/16/2539/3611270)), such that only true biological variance is left for downstream analysises including imputation of missing data in the scRNA-seq datasets with highly abundant 'drop-out' events, visualization and clustering, differential gene expression analysis. 
 
-One aspect to achieve invariability is to increase the amount of training data. Le et al.([2013](http://static.googleusercontent.com/media/research.google.com/en//archive/unsupervised_icml2012.pdf)) devoted enormous unlabeled image data and computation power to train a large neuron network with billions of parameters. The face feature detector learnt from the neuron network without labeling images as containing a face or not is robust not only to translation but also to scaling and out-of-plane rotation. Small training dataset can be expanded by generating new samples in the way of applying small random deformations to the original training examples, using deformations like rotations, scaling, translation or shearing, which are known not to change the target variables of interest. Ciresan et al. ([2010](https://arxiv.org/pdf/1003.0358.pdf)) applied large deep neural network on deformed MNIST digits and reached 0.35% classification error rate. Simard et al. ([2003](http://cognitivemedium.com/assets/rmnist/Simard.pdf)) trained convolutional neural network on MNIST English digit images with both affine and elastic deformations, and reached a record of 0.32% classification error rate. The other aspect to achieve invariability is to model general (e.g. a hierarchical organization of explanatory factors as the depth of neural network grows) or domain-specific prior information (e.g. the topological 2D structure of image data in computer vision, penalty) into deep learning network in the form of network structures before any data is fed in ([Bengio, Courville, & Vincent, 2012](https://arxiv.org/pdf/1206.5538.pdf)). <font color=red>can we learn nuisance factor effect from house keeping genes, and delete these effects for other genes???</font>
+<!-- #region -->
+<a id='section3'></a>
+<b><font size="+1">1.2 Existing methods to deal with the invariance problem in single-cell RNA seq problem</font></b>
 
-Although imposing invariance to the patterns identified by deep learning is extremely investigated in computer vision, it is also a general, or even more important problem in biology research when data is relatively expensive to obtain and difficult to deform to generate new data. scRNA-seq data analysis has gained enormous attention recently and is contributing significantly to diverse research areas such as cancer(Patel et al., [2014](https://science-sciencemag-org.ezp.lib.unimelb.edu.au/content/344/6190/1396)), development (Semrau et al., [2017](https://www.nature.com/articles/s41467-017-01076-4)), autoimmunity (Gaublomme et al., [2015](https://www-sciencedirect-com.ezp.lib.unimelb.edu.au/science/article/pii/S0092867415014890)). One major interest is to represent the single-cell RNA sequencing (scRNA-seq) data in a way invariant to diverse confounding factors including transcriptional noise (Wagner et al., [2016](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nbt.3711), capture efficiency and sequnencing depth (Vallejos et al., [2017](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nmeth.4292)), amplication bias, and batch effects (Shaham et al., [2017](https://academic-oup-com.ezp.lib.unimelb.edu.au/bioinformatics/article/33/16/2539/3611270)), such that only true biological variance is left for downstream analysises including imputation of missing data in the scRNA-seq datasets with highly abundant 'drop-out' events, visualization and clustering, differential gene expression analysis. Although deep learning, especially generative deep network for unsupervised learning (<font color=red>(are there other neural network used in single cell rna seq for unsupervised learning?)</font>), has been used recently to analyze single-cell RNA seq data in several researches (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5), Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X), Eraslan, et al. [2018](https://www.nature.com/articles/s41467-018-07931-2), Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3), Lopez et al. [2018](https://www.nature.com/articles/s41592-018-0229-2)), some of them only focus on dimension reduction (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5),Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X)) and clustering cell types (Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3)). Among those that do investigate about removing the technical variations from the data (Deep Count Autoencoder network (DCA) developed by Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2), Single-cell Variational Inference (scVI) developed by Lopez et al. [2018](https://www.nature.com/articles/s41592-018-0229-2)), the correction effect is limited because it only comes from the basic nature of generative deep learning network that compression forces the autoencoder to learn only the essential latent features and the reconstruction ignores non-essential sources of variation. As scVI is superior than DCA in the sense that library size and batch labels are explicitly modeled in the deep neural network architecture, our research starts from scVI and investigate how to increase the correction effect for specific nuisance factors, library size and batch labels.
+Although deep learning, especially generative deep network for unsupervised learning (<font color=red>(are there other neural network used in single cell rna seq for unsupervised learning?)</font>), has been used recently to analyze single-cell RNA seq data in several researches (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5), Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X), Eraslan, et al. [2018](https://www.nature.com/articles/s41467-018-07931-2), Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3), Lopez et al. [2018](https://www.nature.com/articles/s41592-018-0229-2)), some of them only focus on dimension reduction (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5),Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X)) and clustering cell types (Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3)). Among those that do investigate about removing the technical variations from the data (Deep Count Autoencoder network (DCA) developed by Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2), 
+
+
+Single-cell Variational Inference (scVI) developed by Lopez et al. [2018](https://www.nature.com/articles/s41592-018-0229-2)), is superior than other methods, and its superiority will be demonstrated in more details after the introduction of scVI.
+<!-- #endregion -->
 
 <!-- #region -->
 <a id='section4'></a>
-<b><font size="+1">1.2 explain scVI and mutual information separately</font></b>
+<b><font size="+1">1.3 scVI</font></b>
 
 Explain from autoencoder, to variational autoencoder, to scVI (Valentine, [2019](https://www.biorxiv.org/content/biorxiv/early/2019/08/16/737601.full.pdf))
 
@@ -108,9 +154,24 @@ the parameter $\theta \in \mathbb{R}_{+}^{G}$ denotes a gene-specific inverse di
 
 There are many traditional statistical methods, compared with deep learning, to infer the biological variation in single-cell data with nuisance factors. scVI is claimed to be superior than the traditional statistical methods in three aspects (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)). First, although both SCVI and other existing methods use a parametric statistical model with a 'expressiion' component (e.g., ZINB-WaVE uses a negative binomial as the expression componnet (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5)), BISCUIT uses a log normal distribution as the expression component (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))) and a zero compnent (usually a bernoulli distribution <font color=red>(is it true?)</font>) to fit the distribution of the random variable which is the count of the transcripts for each gene in each cell, and although both SCVI and other methods are first trying to learn a low-dimensional manifold from the single-cell RNA count data <font color=red>(what are the other low-dimension manifold learning methods?)</font> as well additional covariates provided as metadata (e.g., batch (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5) (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf))), cell quality (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5))) and map the low-dimensional representation to the parameter of the model, the neural network in scvi frees the mapping function from the constraint of the generalized linear assumption in other methods, which is difficult to justify. <font color=red>(check at least one method e.g. ZINB-WaVE to check what is the generalized linear assumption in this method?)</font>). Second, scvi can be used to analyze the single-cell RNA seq data for all the various downstream tasks to ensure consistency, compared with other methods usually designed specially only for different subsets of all tasks (e.g., imputation and clustering, but not differential expression (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))). Third, scvi provides a higher computational scalability, desirable for the ever-growing size of recent datasets consisting of hundreads of thousands of cells (commercial 10x genomics, [2017](https://support.10xgenomics.com/single-cell-gene-expression/datasets/), or envisioned by consortia like the Human Cell Atlas (Regev, et al., [2017](https://elifesciences.org/articles/27041))), compared with other methods applicable only to tens of thousands of cells <font color=red>(why scvi has higher computational scalability? Refer to (Valentine, [2019](https://www.biorxiv.org/content/biorxiv/early/2019/08/16/737601.full.pdf))) and (Matthew, [2019](https://www.biorxiv.org/content/10.1101/237065v4))</font>). 
 
-As mentioned above, scVI is also superior to other deep learning methods (e.g. DCA, Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2)) for removing the techinical variation, in a way that apart from removing technical variations from all resources, scVI explicitly models two nuisance factors, library size and batch labels. However, there is still much variation from nuisance factors (e.g. batch) remained in the dataset after scVI implementation when those nuisance factors have large confounding effects initially(Xu, et al. [2019](https://www.biorxiv.org/content/10.1101/532895v1)). Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) analyzed that the different dimensions of the latent vectors are hardly independent because the approximateed posterior distribution poorly matches the real posterior and the data we have are always finite, and they also observed empirically that the the independence properties encoded by the generative model wil often not be respected by the approximate posterior. Therefore, in order to impose invariance to nuisance factors in scVI, Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) proposed a a framework named Hilbert-Schmidt Independence Criterion (HSIC)-constrained variational autoencoder (VAE), which enforces independence between the learnt latent representations and arbitrary nuisance factors through maximizing the traditional variational lower bound of VAE with a penalty for desired independence requirement calibrated by a kernel-based non-parametric method called HSIC. <font color=red>(Describe the HSIC method here in details!!!!!!!, the code for the paper is [here](https://github.com/romain-lopez/HCV/blob/master/scVI/scVIgenqc.py))</font>. 
+As mentioned above, scVI is also superior to other deep learning methods (e.g. DCA, Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2)) for removing the techinical variation, in a way that apart from removing technical variations from all resources, scVI explicitly models two nuisance factors, library size and batch labels. However, there is still much variation from nuisance factors (e.g. batch) remained in the dataset after scVI implementation when those nuisance factors have large confounding effects initially(Xu, et al. [2019](https://www.biorxiv.org/content/10.1101/532895v1)). 
+Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) analyzed that the different dimensions of the latent vectors are hardly independent because the approximateed posterior distribution poorly matches the real posterior and the data we have are always finite, and they also observed empirically that the the independence properties encoded by the generative model wil often not be respected by the approximate posterior. 
+<!-- #endregion -->
 
-However, the main drawback for HSIC to measure dependence is that it is not applicable to high-dimensional random variables, which is the inherent shortcoming for non-parametric kernel estimator. Belghazi et al. [2018](https://arxiv.org/pdf/1801.04062.pdf) proposed a neural network estimator named MINE for mutual information between high dimensional continuous random variables, where mutual information quantifies both linear and non-linear dependence of two random variables. And when given two random variables $X$ and $Z$, it is defined as:
+<a id='section5'></a>
+<b><font size="+1">1.4 Existing Penalized scVI to extend scVI in dealing with the invariance problem in single-cell RNA seq analysis</font></b>
+
+In order to impose invariance to nuisance factors in scVI, Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) proposed a a framework named Hilbert-Schmidt Independence Criterion (HSIC)-constrained variational autoencoder (VAE), which enforces independence between the learnt latent representations and arbitrary nuisance factors through maximizing the traditional variational lower bound of VAE with a penalty for desired independence requirement calibrated by a kernel-based non-parametric method called HSIC. <font color=red>(Describe the HSIC method here in details!!!!!!!, the code for the paper is [here](https://github.com/romain-lopez/HCV/blob/master/scVI/scVIgenqc.py))</font>. 
+
+However, the main drawback for HSIC to measure dependence is that it is not applicable to high-dimensional random variables, which is the inherent shortcoming for non-parametric kernel estimator. 
+
+
+
+<!-- #region -->
+<a id='section6'></a>
+<b><font size="+1">1.5 Use Mutual information as the penalty</font></b>
+
+Belghazi et al. [2018](https://arxiv.org/pdf/1801.04062.pdf) proposed a neural network estimator named MINE for mutual information between high dimensional continuous random variables, where mutual information quantifies both linear and non-linear dependence of two random variables. And when given two random variables $X$ and $Z$, it is defined as:
 \begin{equation}
 \begin{aligned}
  I(X;Z) = \int_{\mathcal{X} \times \mathcal{Z}} log \frac{d\mathbb{P}_{XZ}}{d\mathbb{P}_{Z} \otimes d\mathbb{P}_{Z}}d\mathbb{P}_{XZ},
@@ -156,52 +217,45 @@ D_{KL}(\mathbb{P}||\mathbb{Q}) &\geq \underset{T\in \mathbb{F}}{sup} E_{\mathbb{
                                &\approx \underset{T\in \mathcal{F}}{sup}\frac{1}{N_{0}}\Sigma_{i=1}^{N_{0}}T(z_{i}|s=0) - log(\frac{1}{N_{1}}\Sigma_{i=1}^{N_{1}}e^{T(z_{i}|s=1)})\\
 \end{aligned}
 \end{equation}
-
-
-<b><font size="+1">1.2.2 Visualization of data manifold</font></b>
-
-Compare neural network (SAUCI), PCA, Diffusion maps, tSNE, PHATE () in visualizing single-cell RNA data in exploratory analysis. (Matthew, [2019](https://www.biorxiv.org/content/10.1101/237065v4))
-
-<b><font size="+1">1.2.3 Metrics used</font></b>
-
-Clustering metrics, batch entropy
 <!-- #endregion -->
 
-<a id='section5'></a>
-<b><font size="+1">1.3 SCVI penalized by mutual information</font></b>
+<a id='section7'></a>
+<b><font size="+1">1.6 How to build MineNet and train MI_penalized scVI</font></b>
 
-<b><font size="+1">1.3.1 multi-objective optimization</font></b>
+<b><font size="+1">1.6.1 Explaining the hyperparameters for neural network, architecture of neural network, adversarial training</font></b>
+
+Explain basics for deep learning: why updating weights in the direction of gradient? how to establish the architecture and choose hyperparameters for MineNet: including the lr, initialization, activation, drop out, batch_normalization, optimizer. loss function for MI_penalized scVI.
+
+For the pretraining in adversarial training, how to save weights of the pretrained neural network and use the saved weights to initialize the new neural network with the same structure but different loss function? check this blog to see the technichs: 
+[save and reload weights](https://towardsdatascience.com/everything-you-need-to-know-about-saving-weights-in-pytorch-572651f3f8de).
+
+<b><font size="+1">1.6.2 multi-objective optimization and parento front</font></b>
 
 There are two ways to minimize both two objectives: one way is that $\theta^{\lambda} = \underset{\theta}{argmin}[(1-\lambda)*L_{1}(\theta) + \lambda * L_{2}(\theta)], \{\theta^{\lambda}: \lambda \in [0,1]\}$. The second way is called shebyshev, which is $\theta^{\lambda} = \underset{\theta}{argmin} \hspace{0.2cm} max\{(1-\lambda)*L_{1}(\theta), \lambda * L_{2}(\theta)\}, \{\theta^{\lambda}: \lambda \in [0,1]\}$. 
 
 If we draw the true $\left[\begin{array}{c} L_{1}(\theta) \\ L_{2}(\theta) \end{array}\right] $, when $\theta = \underset{\theta}{argmin} \left[\begin{array}{c} L_{1}(\theta) \\ L_{2}(\theta) \end{array}\right]$, the line is called the parento front. Chebyshev is a better approximation of the parento front. When we use the first way, which is $S_{loss} = [(1-\lambda)*L_{1}(\theta) + \lambda * L_{2}(\theta)]$, we could get $L_{2}{\theta} = \frac{S_{loss}-(1-\lambda)*L_{1}(\theta)}{\lambda}$, all the points on the convex hole can be approximated, but points on the concave hole can not be approximated. In our case, $L_{1}(\theta)$ is the std_reconstloss, $L_{2}(\theta)$ is the std_MI penalty, I want to minimimize both. Standardize both reconstloss and MI penalty is to make sure that they are on the same scale, from 0 to 1.
 
-<b><font size="+1">1.3.2 Explaining the hyperparameters for neural network, architecture of neural network, adversarial training</font></b>
 
-For the pretraining in adversarial training, how to save weights of the pretrained neural network and use the saved weights to initialize the new neural network with the same structure but different loss function? check this blog to see the technichs: 
-[save and reload weights](https://towardsdatascience.com/everything-you-need-to-know-about-saving-weights-in-pytorch-572651f3f8de).
+<a id='section8'></a>
+<b><font size="+1">2.1 Batch effects remained partially after scVI treatment of artificial datasets and real datasets with a large batch effects to demonstrate that there is room to extend scVI for batch effect removal.</font></b>
 
-
-
-
-<a id='section6'></a>
-<b><font size="+1">2.1 Break SCVI</font></b>
+Artificially datasets
 
 <b><font size="3">2.1.1 Goal</font></b> 
 
-<b><font size="3">2.1.2 Design</font></b>
+<b><font size="3">2.1.1 Design</font></b>
 
-<b><font size="3">2.1.3 Get Data</font></b>
+<b><font size="3">2.1.1 Get Data</font></b>
 
-<b><font size="3">2.1.4 Code</font></b>
+<b><font size="3">2.1.1 Code</font></b>
 
-<b><font size="3">2.1.5 Result and Lab Meeting Discussion</font></b>
+<b><font size="3">2.1.1 Result and Lab Meeting Discussion</font></b>
 
-<b><font size="3">2.1.5.1 Change Library Size</font></b>
+<b><font size="3">2.1.1.1 Change Library Size</font></b>
 
-<b><font size="3">2.1.5.2 Change number of genes with expression</font></b>
+<b><font size="3">2.1.1.2 Change number of genes with expression</font></b>
 
-<b><font size="3">2.1.5.3 Change gene's expression proportion</font></b>
+<b><font size="3">2.1.1.3 Change gene's expression proportion</font></b>
 
 Because only 9 genes are expressed in all cells, genes that are expressed in 80% cells (58 genes), 60% cells (117 genes) and 50% cells (168 genes) are selected respectively. All these 58, 117 and 168 genes have median expression in the first 200 places. All the other unselected genes will remain unchanged. Among the 58 (117/168) genes, arrange their expression levels in descending order, increase the last 1/4 of the genes' expression proportion by a certain times in a specific batch so that the expression ratio for a certain gene in batch0:batch1 is 0.2, 0.5, 2, 5, and rescale the rest of the genes among the 58 (117/168) genes. For example, in order to make batch0:batch1 be 0.2, increase the last 1/4 genes' expression proportion by 5 times in batch 1. in order to make batch0:batch1 be 5, increase the last 1/4 genes' expression proportion by 5 times in batch 0.
 
@@ -226,14 +280,13 @@ SummarizeResult('image',file_paths,subfile_titles,'Fig1: Clustering metrics of t
 Why when the ratio is 5, batch mixing entropy is even higher than that when the ratio is 2? Maybe it is because scvi is not stable, run different iterations.
 
 <!-- #region -->
-<a id='section7'></a>
-<b><font size="+1">2.3 Compare SCVI and SCVI+MI_Penalty: strategy 1</font></b>
+Real datasets
 
-<b><font size="3">2.3.1 Goal</font></b> 
+<b><font size="3">2.1.2 Goal</font></b> 
 
 Compare SCVI and SCVI with penalty of mutual information(MI) between nuisance factor and latent factor, using cluster metrics, and tsne plots as the comparison criteria.  
 
-<b><font size="3">2.3.2 Design</font></b>
+<b><font size="3">2.1.2 Design</font></b>
 
 Apply SCVI, SCVI with penalty of mutual information to the datasets: MouseMarrow, pbmc, retina.
 When the nuisance factor is 'batch', as batch is a categorical variable, use nearest neighbor method to estimate the mutual information between batch and the latent factor. When the nuisance factor is 'library size', use Mine_Net4 to estimate the mutual information between library size and the latent factor, as library size is a lognormal variable.
@@ -256,6 +309,7 @@ NMI is defined as $NMI=\frac{I(P;T)}{\sqrt{H(P)H(T)}}$, where $P$, $T$ are the e
 
 Calculate a similarity matrix for the cells and make U be a uniform random variable on the population of cells. Take $B_{U}$ as the empirical frequencies for the 50 nearest neighbors of cell $U$ being a in batch b. Get the entropy of this categorical variable and average over $T=100$ values of $U$. In this study, for BE, the higher the better.
 
+Compare neural network (SAUCI), PCA, Diffusion maps, tSNE, PHATE in visualizing single-cell RNA data in exploratory analysis. (Matthew, [2019](https://www.biorxiv.org/content/10.1101/237065v4))
 
 <b><font size="3">a. MouseMarrow</font></b>
 
@@ -360,13 +414,13 @@ The values for the following hyperparameters: n_layers, n_hidden, n_latent, drop
 
 
 
-<b><font size="3">2.3.3 Code</font></b>
+<b><font size="3">2.1.2 Code</font></b>
 
 In the shell,  git clone the Hui_Li branch of the github page https://github.com/susanwe/single-cell-rna-seq.git. Then in the working directory, create a virtual environment named venv, activate venv, and install all required packages with specific versions listed in Project1_Modify_SCVI-requirements.txt in the venv environment. Use command: cp code/tune_hyperparameter_for_MineNet4_MonteCarlo.sh tune_hyperparameter_for_MineNet4_MonteCarlo.sh to copy the tune_hyperparameter_for_MineNet4_MonteCarlo.sh file to the working directory. Use command: cp code/tune_hyperparameter_for_MineNet4_MonteCarlo.py tune_hyperparameter_for_MineNet4_MonteCarlo.py to copy the tune_hyperparameter_for_MineNet4_MonteCarlo.py to the working directory. Then in the working directory use command: sh tune_hyperparameter_for_MineNet4_MonteCarlo.sh to run tune_hyperparameter_for_MineNet4_MonteCarlo.py 100 times.
 
 After all jobs finish on spartan, git clone the Hui_Li branch of the github page https://github.com/susanwe/single-cell-rna-seq.git to local computer. Use the command: scp myusername@spartan.hpc.unimelb.edu.au:/data/projects/myproject/remote.dat local.dat to copy the results on spartan to local computer.
 
-<b><font size="3">2.3.4 Result</font></b>
+<b><font size="3">2.1.2 Result</font></b>
 
 <b><font size="3">a MouseMarrow</font></b>
 
@@ -538,6 +592,237 @@ for i,MineLoss_Scale in enumerate(MineLoss_Scales):
 SummarizeResult('image',file_paths,subfile_titles,'Fig9: tsne plot of scVI and scVI+MI_penalty for pbmc dataset, batch nuisance factor')
 ```
 
+<a id='section9'></a>
+<b><font size="+1">2.2 Compare estimated mutual information with true mutual inforamtion</font></b>
+
+<b><font size="+1">2.2.1 Goal </font></b>
+
+Compare estimated mutual information with true mutual information for three cases, namely, mutual information between a gaussian random variable and a gaussian random variable, between a lognorm random variable and a gaussian random variable, between a categorical random variable and a gaussian random variable
+
+<b><font size="3">2.2.2 Design</font></b>
+
+<b><font size="3">a. between a gaussian random variable and a gaussian random variable</font></b>
+
+Estimated mutual information is compared with true mutual information when the dimension of the two gaussian random variables  is 2 and 20. Take dimension 2 for example, suppose the two gaussian random variables are $X$ and $Y$. According to the paper [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf), set $P\left(X,Y\right)$ to be a gaussian distribution of dimension 4, with the componentwise correlation $corr(X_{i},Y_{j})=\delta_{ij}\rho$, where $\rho\in\left(-1,1\right)$ and $\delta_{ij}$ is Kronecker’s delta. And both $X$ and $Y$ have the standard normal gaussian distribution with dimension 2. 
+
+To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(X) + H(Y) - H(X,Y)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(X)$ and $H(Y)$ are the marginal differential entropy for $X$ and $Y$ repectively, $H(X,Y)$ is the joint differential entropy for $X$ and $Y$. $H(X)$, $H(Y)$ and $H(X,Y)$ are calculated by built-in function in python, which is scipy.stats.multivariate_normal.entropy().
+
+To estimate the mutual information between $X$ and $Y$, four neural network architectures, which are Mine_Net, Mine_Net2, Mine_Net3, Mine_Net4 are tried. All the 4 network architectures uses the algorithm 1 in the paper [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf) as the fundamental guidline. However, the main difference between Mine_Net3, Mine_Net4 and Mine_Net, Mine_Net2 is that MineNet, MineNet2 first transforms two random variables into two real numbers, and then linearly transform and activate the two real numbers. While, MineNet3, MineNet4 transforms two random variables into two vectors, then linearly transform and activate the two vectors, finally convert the combined vector into a real number. The main difference between Mine_Net3 and Mine_Net4 is that Mine_Net3 transforms the two random variables into two vectors separately, while Mine_Net4 transforms the matrix containing the two random variables together to a combined vector. The following shows the hyperparameter for the four network architectures.
+
+The hyperparameters for Mine_Net:
+
+    -n_hidden_z: [10], (the node number of each hidden layer)
+
+    -n_layers_z: [10, 30, 50], (the number of layers)
+
+    -Gaussian_Dimension: [2, 20],
+
+    -sample_size: [14388],
+    
+    -train_size: [0.5]
+
+    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+
+The hyperparameters for Mine_Net2:
+
+    -n_hidden_z: [10],
+
+    -n_layers_z: [10],
+
+    -Gaussian_Dimension: [2, 20],
+
+    -sample_size: [14388],
+    
+    -train_size: [0.5]
+
+    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+
+The hyperparameters for Mine_Net3:
+
+    -H : [10] (H means the dimension of the vectors)
+
+    -Gaussian_Dimension: [2, 20],
+
+    -sample_size: [14388],
+    
+    -train_size: [0.5]
+
+    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+
+The hyperparameters for Mine_Net4:
+
+    -n_latents = [32, 16] (the node number of the two hidden layers which converts the concatenated matrix of the two random variables into a vector)
+
+    -Gaussian_Dimension: [2, 20],
+
+    -sample_size: [14388],
+    
+    -train_size: [0.5]
+
+    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+    
+<b><font size="3">b. between a lognormal random variable and a gaussian random variable</font></b>
+
+The dimension for lognormal random variable is 1, and 2 dimensions for the gaussian random variable. Suppose $X$ is the lognormal random variable and $Y$ is the gaussian random variable. Let $Z=ln(X)$. Similar as the gaussian and gaussian case, set $P\left(Z,Y\right)$ to be a gaussian distribution of dimension 3, with the componentwise correlation $corr(Z_{i},Y_{j})=\delta_{ij}\rho$, , $\rho\in\left(-1,1\right)$, and $\delta_{ij}$ is Kronecker’s delta. In this case, the covariance matrix for $P(Z,Y)$ will be \begin{pmatrix}1 & \rho & 0 \\ \rho & 1 & 0 \\ 0 & 0 & 1\end{pmatrix}. Then by simple derivation, the joint distribution $P(X,Y) = P(X|Y)P(Y) = P(Z|Y)*|\frac{d_{Z}}{d_{X}}|*P(Y) = \frac{1}{X}P(Z,Y) = \frac{1}{X}P(ln(X),Y)$. $P(ln(X)) \sim N(0,1)$ and Y is a standard gaussian variable with dimension 2. 
+
+To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(X) + H(Y) - H(X,Y)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(X)$ and $H(Y)$ are the marginal differential entropy for $X$ and $Y$ repectively, $H(X,Y)$ is the joint differential entropy for $X$ and $Y$. $H(X)$ and $H(Y)$ are calculated by built-in function in python, which are scipy.stats.lognorm.entropy(), scipy.stats.multivariate_normal.entropy(). $H(X,Y)$ is calculated from the integration of $-P(X,Y)logP(X,Y)$.
+
+To estimate the mutual information between $X$ and $Y$, Mine_Net4 is tried. The hyperparameters for MineNet4 architecture are:
+
+    -n_latents = [32, 16] (the node number of the two hidden layers which converts the concatenated matrix of the two random variables into a vector)
+
+    -Gaussian_Dimension: [2, 20],
+
+    -sample_size: [14388],
+    
+    -train_size: [0.5]
+
+    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
+
+<b><font size="3">c. between a categorical random variable and a gaussian mixture random variable</font></b>
+
+The dimension for the categorical random variable is 1, 10 categories, and 2 dimensions for the gaussian mixture random variable. Suppose $X$ is the categorical random variable, $Y$ is the gaussian mixture random variable. Set $P(Y|X=x) = N(\mu_{x}, \sigma^2_{x})$. Mutual information between $X$ and $Y$ is introduced by correlating $\mu_{x}$ with $X$. The first case is when all the 10 categories of $X$ have the same probability, and $P(Y|X) are all standard normal with dimension 2$. The true mutual information between $X$ and $Y$ are 0. Case 2 is when all the 10 categories of $X$ have the same probability, and $P(Y|X)$ are normal with dimension 2, with mean of each dimension increasing 2 from 0 when category index increase, however, covariance matrix is as the same as in case 1. The way to change mean of $P(Y|X)$ could also be increasing 20, or be increasing and then decreasing as category index increases. And the probability of each category could be different. In total, 7 cases have been designed, each of which has a different mutual information. For each case, by simple derivation, the marginal distribution $P(Y) =\sum_{x=1}^{10}P(Y|X=x)P(X=x)$.
+
+To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(Y) - H(Y|X)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(Y)$ is the marginal differential entropy for $Y$, and $H(Y|X)$ is the conditional differential entropy $Y$ given $X$. $H(Y)$ is calculated from the integration of $-P(Y)logP(Y)$, $H(Y|X)$ is calculated by built-in function in python, which is scipy.stats.multivariate_normal.entropy().
+
+To estimate the mutual information between $X$ and $Y$, Mine_Net and [nearest neighbor method](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0087357&type=printable) are tried. Note: the categorical variable is transformed into dummy variable in Mine_Net method. The hyperparameters for the two methods are:
+
+The hyperparameters for Mine_Net:
+
+    -n_hidden_z: [10],
+
+    -n_layers_z: [10],
+
+    -Gaussian_Dimension: [2],
+
+    -sample_size: [14388],
+    
+    -train_size: [0.5]
+
+The parameters for nearest neighbors:
+
+    - repos: 100 (the estimator from the nearest neighbor is the mean of 100 estimators, each of which is for a data set of sample size 128)
+    
+    - sample_size: 128 (because the minibatch size in scvi training is 128)
+    
+    - k: 3 (the number of neighbors)
+    
+    - base: 2 (a parameter with default value 2 in the nearest neighbor method)
+
+<b><font size="3">2.2.3 Code</font></b>
+
+code/compare_estimatedMI_with_trueMI_gaussian_continuous.py produces estimatedMI_with_trueMI.csv in ./result/compare_estimatedMI_with_trueMI/continuous_gaussian/, use this csv file as read-in dataset for the Summarize_EstimatedMI_with_TrueMI() function in code/SummarizeResult.py file to produce plots in Fig5 and Fig6.
+
+code/compare_estimatedMI_with_trueMI_gaussian_categorical.py produces estimatedMI_with_trueMI.csv in ./result/compare_estimatedMI_with_trueMI/gaussian_categorical/, use this csv file as read-in dataset for the Summarize_EstimatedMI_with_TrueMI() function in code/SummarizeResult.py file to produce plots in Fig7.
+
+<b><font size="3">2.2.4 Result</font></b>
+
+<b><font size="3">a. between a gaussian random variable and a gaussian random variable</font></b>
+
+MineNet works bad for both dimension 2 and dimension 20 with all hyperparameter combinations which have been tried, whenever apply the trained network to the training dataset and testing dataset. The estimator is always near zero even though the true mutual information is large, like 30. Refer to Fig5 in the jupyternotebook in last committ ahead of current on the github repo.
+
+MineNet2 works bad for both dimension 2 and dimension 20 with the hyperparameter combination which has been tried, whenever apply the trained network to the training dataset and testing dataset. The estimator is always near zero even though the true mutual information is large, like 30. Refer to Fig6 in the jupyternotebook in last committ ahead of current on the github repo.
+
+MineNet3 works well for dimension 2 with the hyperparameter combination which has been tried when apply the trained network to the training dataset, but bad when apply to the testing dataset. And MineNet3 works bad for dimension 20 with the hyperparameter combination for both training and testing dataset. Refer to Fig7 in the jupyternotebook in last committ ahead of current on the github repo.
+
+MineNet4 works well for dimension 2 with the hyperparameter combination which has been tried when applied to both training dataset and testing dataset, but works bad for dimension 20 with the hyperparameter combination when applied to both training and testing dataset. Please refer to Fig5.
+
+<b><font size="3">b. between a lognormal random variable and a gaussian random variable</font></b>
+
+MineNet4 works well when gaussian dimension is 2 using the hyperparameter combination for both training and testing datasets. Please refer to Fig6.
+
+<b><font size="3">c. between a categorical random variable and a gaussian mixture random variable</font></b>
+
+MineNet works bad for gaussian mixture dimension 2 with the hyperparameter combination tried, while nearest neighbor estimator works better for gaussian mixture dimension 2. Please refer to Fig7. Nearest neighbor estimator could be negative values when true mutual information is very small.
+
+```python
+import os
+import math
+import itertools
+%matplotlib inline
+exec(open('code\\SummarizeResult.py').read())
+```
+
+```python
+Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian\\estimatedMI_with_trueMI.csv', method='Mine_Net4', distribution='gaussian', gaussian_dimensions=[2,20])
+hyperparameter_config = {
+        'method': ['Mine_Net4'],
+        'distribution': ['gaussian'],
+        'gaussian_dimension': [2, 20],
+        'type': ['training','testing']
+    }
+keys, values = zip(*hyperparameter_config.items())
+hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+file_paths = []
+
+image_dict = '.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian'
+for i in range(len(hyperparameter_experiments)):
+    key, value = zip(*hyperparameter_experiments[i].items())
+    method = value[0]
+    distribution = value[1]
+    gaussian_dimension = value[2]
+    type = value[3]
+    file_paths = file_paths + [image_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method,distribution, gaussian_dimension,type)]
+    
+SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig5: Compare estimated and true MI between gaussian and gaussian")
+```
+
+```python
+Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian\\estimatedMI_with_trueMI.csv', method='Mine_Net4', distribution='lognormal', gaussian_dimensions=[2])
+hyperparameter_config = {
+        'method': ['Mine_Net4'],
+        'distribution': ['lognormal'],
+        'gaussian_dimension': [2],
+        'type': ['training','testing']
+    }
+keys, values = zip(*hyperparameter_config.items())
+hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+file_paths = []
+image_dict = '.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian'
+for i in range(len(hyperparameter_experiments)):
+    key, value = zip(*hyperparameter_experiments[i].items())
+    method = value[0]
+    distribution = value[1]
+    gaussian_dimension = value[2]
+    type = value[3]
+    file_paths = file_paths + [image_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method,distribution, gaussian_dimension,type)]
+    
+SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig6: Compare estimated and true MI between lognormal and gaussian")
+```
+
+```python
+Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\estimatedMI_with_trueMI.csv', method='Mine_Net', distribution='categorical', gaussian_dimensions=[2])
+Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\estimatedMI_with_trueMI.csv', method='nearest_neighbor', distribution='categorical', gaussian_dimensions=[2])
+Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\estimatedMI_with_trueMI.csv', method='Mine_Net4', distribution='categorical', gaussian_dimensions=[2])
+
+hyperparameter_config = {
+        'method': ['Mine_Net','Mine_Net4'],
+        'distribution': ['categorical'],
+        'gaussian_dimension': [2],
+        'type': ['training','testing']
+    }
+keys, values = zip(*hyperparameter_config.items())
+hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+file_paths = []
+image_dict = '.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical'
+for i in range(len(hyperparameter_experiments)):
+    key, value = zip(*hyperparameter_experiments[i].items())
+    method = value[0]
+    distribution = value[1]
+    gaussian_dimension = value[2]
+    type = value[3]
+    file_paths = file_paths + [image_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method,distribution, gaussian_dimension,type)]
+
+file_paths += [image_dict + '\\nearest_neighbor_categorical_gaussian_dim2.png']
+    
+SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig7: Compare estimated and true MI between categorical and gaussian mixture")
+```
+
 <b><font size="3">2.2.5 Questions</font></b> 
 
 When clustering metrics demonstrate that SCVI+MINE works better than SCVI, however, tsne plot of scVI+MINE seems worse than that of scVI. One reason could be tsne plots are not very accurate, after all it only shows two components of latent vector z's variation (check tsne's paper, and say this sentence in a professional way). The other reason could be that the clustering metrics used here are not appropriate. <font color=red>Which one is correct or is there other explanation???????? Maybe know about manifold learning clustering metrics could help?? Not using euclidean distance</font>
@@ -551,14 +836,14 @@ regression, logistic regression etc can be also considered as a type of simple d
 <font color=red>But how to consider linear regresion or logistic regression as deep learning neural network?Be clear about the details</font>
 
 
-<a id='section7'></a>
-<b><font size="+1">2.4 Compare SCVI and SCVI+MI_Penalty: strategy 2</font></b>
+<a id='section10'></a>
+<b><font size="+1">2.3 scVI+MI_Penalty</font></b>
 
-<b><font size="3">2.4.1 Goal</font></b> 
+<b><font size="3">2.3.1 Goal</font></b> 
 
 Compare SCVI and SCVI with penalty of mutual information(MI) between nuisance factor and latent factor, using cluster metrics, and tsne plots as the comparison criteria.  
 
-<b><font size="3">2.4.2 Design</font></b>
+<b><font size="3">2.3.2 Design</font></b>
 
 Apply SCVI, SCVI with penalty of mutual information(MI) to the datasets: MouseMarrow, pbmc, retina.
 Use Mine_Net architecture to estimate the mutual information no matter whether the nuisance factor is batch or library size.
@@ -1134,11 +1419,11 @@ Therefore, I tried the following hyperparameters:
             'std': [True]
 Use 12000 and 17000 as min and max to standardize reconstloss. Use 0.045 and -0.015 as min and max to standardize MI. Results are stord in shorten_time3, plot in figure 40. It appears that this is not better than result in figure39 for when min and max to standardize reconstloss is 12000 and 17000, min and max to standardize MI is 0.06 and -0.02, respectively.         
 
-<b><font size="3">2.4.3 Code</font></b>
+<b><font size="3">2.3.3 Code</font></b>
 
 copy code/tune_hyperparameter_for_SCVI_MI.sh and code/tune_hyperparameter_for_SCVI_MI.py to the directory containing the code directory. Then in the directory containing code directory, submit tune_hyperparameter_for_SCVI_MI.sh for job submission which will run the tune_hyperparameter_for_SCVI_MI.py 108 times. For muris_tabula dataset and batch nuisance factor, the parameters for the main function in the tune_hyperparameter_for_SCVI_MI.py is taskid=0, dataset_name='muris_tabula', nuisance_variable='batch', MI_estimator='MINE_Net4_3', config_id=a number from range(0, 108). The result of different configurations are downloaded from spartan and stored in local computer.
 
-<b><font size="3">2.4.4 Result</font></b>
+<b><font size="3">2.3.4 Result</font></b>
 
 Among the 108 configurations for SCVI+Mine_estimated_MI, only 23 configurations complete successfully, among which none gives a better BE clustering metric than SCVI alone with the same hyperparameter for the SCVI part as the SCVI+Mine_estimated_MI here. And the MI_loss of minibatch of size 256 during the whole training process is very small. Refer to figure 9.
 
@@ -1475,238 +1760,50 @@ from IPython.display import Video
 Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time3/trainset/trainset_stdMI_stdreconstloss.mp4")
 ```
 
-<a id='section9'></a>
-<b><font size="+1">2.2 Compare estimated mutual information with true mutual inforamtion</font></b>
-
-<b><font size="+1">2.2.1 Goal </font></b>
-
-Compare estimated mutual information with true mutual information for three cases, namely, mutual information between a gaussian random variable and a gaussian random variable, between a lognorm random variable and a gaussian random variable, between a categorical random variable and a gaussian random variable
-
-<b><font size="3">2.2.2 Design</font></b>
-
-<b><font size="3">a. between a gaussian random variable and a gaussian random variable</font></b>
-
-Estimated mutual information is compared with true mutual information when the dimension of the two gaussian random variables  is 2 and 20. Take dimension 2 for example, suppose the two gaussian random variables are $X$ and $Y$. According to the paper [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf), set $P\left(X,Y\right)$ to be a gaussian distribution of dimension 4, with the componentwise correlation $corr(X_{i},Y_{j})=\delta_{ij}\rho$, where $\rho\in\left(-1,1\right)$ and $\delta_{ij}$ is Kronecker’s delta. And both $X$ and $Y$ have the standard normal gaussian distribution with dimension 2. 
-
-To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(X) + H(Y) - H(X,Y)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(X)$ and $H(Y)$ are the marginal differential entropy for $X$ and $Y$ repectively, $H(X,Y)$ is the joint differential entropy for $X$ and $Y$. $H(X)$, $H(Y)$ and $H(X,Y)$ are calculated by built-in function in python, which is scipy.stats.multivariate_normal.entropy().
-
-To estimate the mutual information between $X$ and $Y$, four neural network architectures, which are Mine_Net, Mine_Net2, Mine_Net3, Mine_Net4 are tried. All the 4 network architectures uses the algorithm 1 in the paper [Mutual Information Neural Estimator](https://arxiv.org/pdf/1801.04062.pdf) as the fundamental guidline. However, the main difference between Mine_Net3, Mine_Net4 and Mine_Net, Mine_Net2 is that MineNet, MineNet2 first transforms two random variables into two real numbers, and then linearly transform and activate the two real numbers. While, MineNet3, MineNet4 transforms two random variables into two vectors, then linearly transform and activate the two vectors, finally convert the combined vector into a real number. The main difference between Mine_Net3 and Mine_Net4 is that Mine_Net3 transforms the two random variables into two vectors separately, while Mine_Net4 transforms the matrix containing the two random variables together to a combined vector. The following shows the hyperparameter for the four network architectures.
-
-The hyperparameters for Mine_Net:
-
-    -n_hidden_z: [10], (the node number of each hidden layer)
-
-    -n_layers_z: [10, 30, 50], (the number of layers)
-
-    -Gaussian_Dimension: [2, 20],
-
-    -sample_size: [14388],
-    
-    -train_size: [0.5]
-
-    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
-
-
-The hyperparameters for Mine_Net2:
-
-    -n_hidden_z: [10],
-
-    -n_layers_z: [10],
-
-    -Gaussian_Dimension: [2, 20],
-
-    -sample_size: [14388],
-    
-    -train_size: [0.5]
-
-    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
-
-
-The hyperparameters for Mine_Net3:
-
-    -H : [10] (H means the dimension of the vectors)
-
-    -Gaussian_Dimension: [2, 20],
-
-    -sample_size: [14388],
-    
-    -train_size: [0.5]
-
-    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
-
-
-The hyperparameters for Mine_Net4:
-
-    -n_latents = [32, 16] (the node number of the two hidden layers which converts the concatenated matrix of the two random variables into a vector)
-
-    -Gaussian_Dimension: [2, 20],
-
-    -sample_size: [14388],
-    
-    -train_size: [0.5]
-
-    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
-    
-<b><font size="3">b. between a lognormal random variable and a gaussian random variable</font></b>
-
-The dimension for lognormal random variable is 1, and 2 dimensions for the gaussian random variable. Suppose $X$ is the lognormal random variable and $Y$ is the gaussian random variable. Let $Z=ln(X)$. Similar as the gaussian and gaussian case, set $P\left(Z,Y\right)$ to be a gaussian distribution of dimension 3, with the componentwise correlation $corr(Z_{i},Y_{j})=\delta_{ij}\rho$, , $\rho\in\left(-1,1\right)$, and $\delta_{ij}$ is Kronecker’s delta. In this case, the covariance matrix for $P(Z,Y)$ will be \begin{pmatrix}1 & \rho & 0 \\ \rho & 1 & 0 \\ 0 & 0 & 1\end{pmatrix}. Then by simple derivation, the joint distribution $P(X,Y) = P(X|Y)P(Y) = P(Z|Y)*|\frac{d_{Z}}{d_{X}}|*P(Y) = \frac{1}{X}P(Z,Y) = \frac{1}{X}P(ln(X),Y)$. $P(ln(X)) \sim N(0,1)$ and Y is a standard gaussian variable with dimension 2. 
-
-To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(X) + H(Y) - H(X,Y)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(X)$ and $H(Y)$ are the marginal differential entropy for $X$ and $Y$ repectively, $H(X,Y)$ is the joint differential entropy for $X$ and $Y$. $H(X)$ and $H(Y)$ are calculated by built-in function in python, which are scipy.stats.lognorm.entropy(), scipy.stats.multivariate_normal.entropy(). $H(X,Y)$ is calculated from the integration of $-P(X,Y)logP(X,Y)$.
-
-To estimate the mutual information between $X$ and $Y$, Mine_Net4 is tried. The hyperparameters for MineNet4 architecture are:
-
-    -n_latents = [32, 16] (the node number of the two hidden layers which converts the concatenated matrix of the two random variables into a vector)
-
-    -Gaussian_Dimension: [2, 20],
-
-    -sample_size: [14388],
-    
-    -train_size: [0.5]
-
-    -rho: [-0.99, -0.9, -0.7, -0.5, -0.3, -0.1, 0, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
-
-<b><font size="3">c. between a categorical random variable and a gaussian mixture random variable</font></b>
-
-The dimension for the categorical random variable is 1, 10 categories, and 2 dimensions for the gaussian mixture random variable. Suppose $X$ is the categorical random variable, $Y$ is the gaussian mixture random variable. Set $P(Y|X=x) = N(\mu_{x}, \sigma^2_{x})$. Mutual information between $X$ and $Y$ is introduced by correlating $\mu_{x}$ with $X$. The first case is when all the 10 categories of $X$ have the same probability, and $P(Y|X) are all standard normal with dimension 2$. The true mutual information between $X$ and $Y$ are 0. Case 2 is when all the 10 categories of $X$ have the same probability, and $P(Y|X)$ are normal with dimension 2, with mean of each dimension increasing 2 from 0 when category index increase, however, covariance matrix is as the same as in case 1. The way to change mean of $P(Y|X)$ could also be increasing 20, or be increasing and then decreasing as category index increases. And the probability of each category could be different. In total, 7 cases have been designed, each of which has a different mutual information. For each case, by simple derivation, the marginal distribution $P(Y) =\sum_{x=1}^{10}P(Y|X=x)P(X=x)$.
-
-To calculate the true mutual information between $X$ and $Y$, use the formula $I(X,Y) = H(Y) - H(Y|X)$ , where $I(X,Y)$ is the mutual information between $X$ and $Y$, $H(Y)$ is the marginal differential entropy for $Y$, and $H(Y|X)$ is the conditional differential entropy $Y$ given $X$. $H(Y)$ is calculated from the integration of $-P(Y)logP(Y)$, $H(Y|X)$ is calculated by built-in function in python, which is scipy.stats.multivariate_normal.entropy().
-
-To estimate the mutual information between $X$ and $Y$, Mine_Net and [nearest neighbor method](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0087357&type=printable) are tried. Note: the categorical variable is transformed into dummy variable in Mine_Net method. The hyperparameters for the two methods are:
-
-The hyperparameters for Mine_Net:
-
-    -n_hidden_z: [10],
-
-    -n_layers_z: [10],
-
-    -Gaussian_Dimension: [2],
-
-    -sample_size: [14388],
-    
-    -train_size: [0.5]
-
-The parameters for nearest neighbors:
-
-    - repos: 100 (the estimator from the nearest neighbor is the mean of 100 estimators, each of which is for a data set of sample size 128)
-    
-    - sample_size: 128 (because the minibatch size in scvi training is 128)
-    
-    - k: 3 (the number of neighbors)
-    
-    - base: 2 (a parameter with default value 2 in the nearest neighbor method)
-
-<b><font size="3">2.2.3 Code</font></b>
-
-code/compare_estimatedMI_with_trueMI_gaussian_continuous.py produces estimatedMI_with_trueMI.csv in ./result/compare_estimatedMI_with_trueMI/continuous_gaussian/, use this csv file as read-in dataset for the Summarize_EstimatedMI_with_TrueMI() function in code/SummarizeResult.py file to produce plots in Fig5 and Fig6.
-
-code/compare_estimatedMI_with_trueMI_gaussian_categorical.py produces estimatedMI_with_trueMI.csv in ./result/compare_estimatedMI_with_trueMI/gaussian_categorical/, use this csv file as read-in dataset for the Summarize_EstimatedMI_with_TrueMI() function in code/SummarizeResult.py file to produce plots in Fig7.
-
-<b><font size="3">2.2.4 Result</font></b>
-
-<b><font size="3">a. between a gaussian random variable and a gaussian random variable</font></b>
-
-MineNet works bad for both dimension 2 and dimension 20 with all hyperparameter combinations which have been tried, whenever apply the trained network to the training dataset and testing dataset. The estimator is always near zero even though the true mutual information is large, like 30. Refer to Fig5 in the jupyternotebook in last committ ahead of current on the github repo.
-
-MineNet2 works bad for both dimension 2 and dimension 20 with the hyperparameter combination which has been tried, whenever apply the trained network to the training dataset and testing dataset. The estimator is always near zero even though the true mutual information is large, like 30. Refer to Fig6 in the jupyternotebook in last committ ahead of current on the github repo.
-
-MineNet3 works well for dimension 2 with the hyperparameter combination which has been tried when apply the trained network to the training dataset, but bad when apply to the testing dataset. And MineNet3 works bad for dimension 20 with the hyperparameter combination for both training and testing dataset. Refer to Fig7 in the jupyternotebook in last committ ahead of current on the github repo.
-
-MineNet4 works well for dimension 2 with the hyperparameter combination which has been tried when applied to both training dataset and testing dataset, but works bad for dimension 20 with the hyperparameter combination when applied to both training and testing dataset. Please refer to Fig5.
-
-<b><font size="3">b. between a lognormal random variable and a gaussian random variable</font></b>
-
-MineNet4 works well when gaussian dimension is 2 using the hyperparameter combination for both training and testing datasets. Please refer to Fig6.
-
-<b><font size="3">c. between a categorical random variable and a gaussian mixture random variable</font></b>
-
-MineNet works bad for gaussian mixture dimension 2 with the hyperparameter combination tried, while nearest neighbor estimator works better for gaussian mixture dimension 2. Please refer to Fig7. Nearest neighbor estimator could be negative values when true mutual information is very small.
-
 ```python
+#Figure40
 import os
-import math
-import itertools
 %matplotlib inline
+import itertools
+import pandas as pd
 exec(open('code\\SummarizeResult.py').read())
-```
-
-```python
-Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian\\estimatedMI_with_trueMI.csv', method='Mine_Net4', distribution='gaussian', gaussian_dimensions=[2,20])
-hyperparameter_config = {
-        'method': ['Mine_Net4'],
-        'distribution': ['gaussian'],
-        'gaussian_dimension': [2, 20],
-        'type': ['training','testing']
-    }
-keys, values = zip(*hyperparameter_config.items())
-hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+pareto_front(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
+            output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
+            rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch', Label='trainset')
+pareto_front(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
+            output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
+            rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch', Label='testset')
 file_paths = []
+for Label in ['trainset','testset']:
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front\\muris_tabula_batch_%s_pareto_front.png'%(Label)] 
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front\\muris_tabula_batch_%s_std_penalty_full_pareto_front.png'%(Label)]
 
-image_dict = '.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian'
-for i in range(len(hyperparameter_experiments)):
-    key, value = zip(*hyperparameter_experiments[i].items())
-    method = value[0]
-    distribution = value[1]
-    gaussian_dimension = value[2]
-    type = value[3]
-    file_paths = file_paths + [image_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method,distribution, gaussian_dimension,type)]
-    
-SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig5: Compare estimated and true MI between gaussian and gaussian")
+SummarizeResult('image',file_paths,'Fig40: pareto_front')
 ```
 
-```python
-Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian\\estimatedMI_with_trueMI.csv', method='Mine_Net4', distribution='lognormal', gaussian_dimensions=[2])
-hyperparameter_config = {
-        'method': ['Mine_Net4'],
-        'distribution': ['lognormal'],
-        'gaussian_dimension': [2],
-        'type': ['training','testing']
-    }
-keys, values = zip(*hyperparameter_config.items())
-hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+<a id='section11'></a>
+<b><font size="+1">2.4 automate the process for finding the hyperparameters of MI_penalized SCVI for different datasets</font></b>
 
-file_paths = []
-image_dict = '.\\result\\compare_estimatedMI_with_trueMI\\continuous_gaussian'
-for i in range(len(hyperparameter_experiments)):
-    key, value = zip(*hyperparameter_experiments[i].items())
-    method = value[0]
-    distribution = value[1]
-    gaussian_dimension = value[2]
-    type = value[3]
-    file_paths = file_paths + [image_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method,distribution, gaussian_dimension,type)]
-    
-SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig6: Compare estimated and true MI between lognormal and gaussian")
-```
 
-```python
-Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\estimatedMI_with_trueMI.csv', method='Mine_Net', distribution='categorical', gaussian_dimensions=[2])
-Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\estimatedMI_with_trueMI.csv', method='nearest_neighbor', distribution='categorical', gaussian_dimensions=[2])
-Summarize_EstimatedMI_with_TrueMI(file_path='.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical\\estimatedMI_with_trueMI.csv', method='Mine_Net4', distribution='categorical', gaussian_dimensions=[2])
 
-hyperparameter_config = {
-        'method': ['Mine_Net','Mine_Net4'],
-        'distribution': ['categorical'],
-        'gaussian_dimension': [2],
-        'type': ['training','testing']
-    }
-keys, values = zip(*hyperparameter_config.items())
-hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+<a id='section12'></a>
+<b><font size="+1">2.5 scVI and scVI+MI_Penalty comparison for downstream analysis</font></b>
 
-file_paths = []
-image_dict = '.\\result\\compare_estimatedMI_with_trueMI\\gaussian_categorical'
-for i in range(len(hyperparameter_experiments)):
-    key, value = zip(*hyperparameter_experiments[i].items())
-    method = value[0]
-    distribution = value[1]
-    gaussian_dimension = value[2]
-    type = value[3]
-    file_paths = file_paths + [image_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method,distribution, gaussian_dimension,type)]
 
-file_paths += [image_dict + '\\nearest_neighbor_categorical_gaussian_dim2.png']
-    
-SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig7: Compare estimated and true MI between categorical and gaussian mixture")
-```
 
-<a id='section10'></a>
+
+<a id='section13'></a>
+<b><font size="+2">3. Discussion</font></b>
+
+
+
+
+<a id='section14'></a>
+<b><font size="+2">4. Reference</font></b>
+
+
+
+<a id='section15'></a>
 <b><font size="+2">3. To Does</font></b>
 
 <b><font size="+1">3.1 Tune Hyperparameter For MineNet</font></b>
@@ -1726,7 +1823,7 @@ Also check how the mutual inforamtion network estimator works between a categori
 Find real data set with obvious batch effect. Because the pbmc dataset used now do not have obvious batch effect. The dataset  ,harmonizing datasets with different composition of cell types,used in the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1) could be a resource. And another thing is to simulate data set with obvious batch effect from ZINB model.
 
 
-<a id='section11'></a>
+<a id='section16'></a>
 <b><font size="+2">4. Useful Tools and Information</font></b>
 
 <b><font size="+1">4.1 Version control for jupyter notebook</font></b>
@@ -1831,6 +1928,12 @@ learned from natural videos not only apply to still images, but also give compet
 number of object recognition benchmarks. Since our features can be extracted using a feed-forward
 neural network, they are also easy to use and efficient to compute.
 <!-- #endregion -->
+
+Deep learning has been widely used in many pattern recognition tasks, like image classification, object detection, and segmentation. During the process of deep learning, invariance could be imposed such that a pattern can still be correctly recognized when there are many confounding properties. For example, a cat in an image can still be classified correctly as a cat even when the image is rotated, enlarged or brightened. There are many researches, especially in computer vision field, about how to make deep learning network selects the complex, high level invariant features of the input, yet robust to irrelevant input transformations, which can be summarized in two aspects. 
+
+One aspect to achieve invariability is to increase the amount of training data. Le et al.([2013](http://static.googleusercontent.com/media/research.google.com/en//archive/unsupervised_icml2012.pdf)) devoted enormous unlabeled image data and computation power to train a large neuron network with billions of parameters. The face feature detector learnt from the neuron network without labeling images as containing a face or not is robust not only to translation but also to scaling and out-of-plane rotation. Small training dataset can be expanded by generating new samples in the way of applying small random deformations to the original training examples, using deformations like rotations, scaling, translation or shearing, which are known not to change the target variables of interest. Ciresan et al. ([2010](https://arxiv.org/pdf/1003.0358.pdf)) applied large deep neural network on deformed MNIST digits and reached 0.35% classification error rate. Simard et al. ([2003](http://cognitivemedium.com/assets/rmnist/Simard.pdf)) trained convolutional neural network on MNIST English digit images with both affine and elastic deformations, and reached a record of 0.32% classification error rate. The other aspect to achieve invariability is to model general (e.g. a hierarchical organization of explanatory factors as the depth of neural network grows) or domain-specific prior information (e.g. the topological 2D structure of image data in computer vision, penalty) into deep learning network in the form of network structures before any data is fed in ([Bengio, Courville, & Vincent, 2012](https://arxiv.org/pdf/1206.5538.pdf)). <font color=red>can we learn nuisance factor effect from house keeping genes, and delete these effects for other genes???</font>
+
+Although imposing invariance to the patterns identified by deep learning is extremely investigated in computer vision, it is also a general, or even more important problem in biology research when data is relatively expensive to obtain and difficult to deform to generate new data.
 
 ```python
 
