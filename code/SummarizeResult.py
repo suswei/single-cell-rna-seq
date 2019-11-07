@@ -1,12 +1,12 @@
 import os
-import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 import pandas as pd
 import itertools
 import math
 import seaborn as sns
-from celluloid import Camera
+import matplotlib.pyplot as plt
+import cv2
 
 def SummarizeResult(result_type: str = 'image', file_paths: list = ['Not_Specified'],
                     subfile_titles: list = ['Not_Specified'], figtitle: str = 'Not_Specified', n_column: int = 2):
@@ -361,7 +361,7 @@ def clustermetric_vs_ELBO(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Mo
 
 def choose_adv_lr_min_max_MI(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
                   results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
-                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', config_numbers: int=12):
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', n_layer_number: int=2, adv_lr_number: int=6, MIScale_number: int=2, repetition_id: list=[0]):
     hyperparameter_config = {
         'n_layers_encoder': [2, 10],
         'n_layers_decoder': [2],
@@ -382,83 +382,6 @@ def choose_adv_lr_min_max_MI(input_dir_path: str='D:/UMelb/PhD_Projects/Project1
         'Adv_Net_architecture': [[256] * 10],
         'pre_adv_epochs': [350],
         'adv_epochs': [3],
-        'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
-        'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
-        'initial': ['xavier_normal'],
-        # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
-        'adv_model': ['MI'],
-        'optimiser': ['Adam'],
-        'adv_drop_out': [0.2],
-        'std': [True],
-        'taskid': [0]
-    }
-    keys, values = zip(*hyperparameter_config.items())
-    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
-
-    for k in [0, 1]:
-        smaller_MIScale = pd.DataFrame(columns=['adv_lr', 'MIScale0'])
-        higher_MIScale = pd.DataFrame(columns=['adv_lr', 'MIScale0.9'])
-        for i in range(k*config_numbers, (k+1)*config_numbers):
-            MI_training_oneconfig_path = input_dir_path + 'config%s/%s_%s_config%s_minibatch_info.csv' % (i, dataset_name, nuisance_variable, i)
-            key, value = zip(*hyperparameter_experiments[i].items())
-            adv_lr = value[11]
-            MIScale = value[8]
-            if os.path.isfile(MI_training_oneconfig_path):
-                MI_training_oneconfig = pd.read_csv(MI_training_oneconfig_path)
-                if MIScale == 0:
-                    intermediate1 = pd.DataFrame.from_dict({'adv_lr': [adv_lr]*(MI_training_oneconfig.shape[0])})
-                    intermediate1 = pd.concat([intermediate1, MI_training_oneconfig.loc[:,'minibatch_penalty']], axis=1)
-                    intermediate1.columns = ['adv_lr', 'MIScale0']
-                    smaller_MIScale = pd.concat([smaller_MIScale, intermediate1], axis=0)
-                elif MIScale == 0.9:
-                    intermediate2 = pd.DataFrame.from_dict({'adv_lr': [adv_lr] * (MI_training_oneconfig.shape[0])})
-                    intermediate2 = pd.concat([intermediate2, MI_training_oneconfig.loc[:, 'minibatch_penalty']], axis=1)
-                    intermediate2.columns = ['adv_lr', 'MIScale0.9']
-                    higher_MIScale = pd.concat([higher_MIScale, intermediate2], axis=0)
-            else:
-                if MIScale == 0:
-                    intermediate1 = pd.DataFrame.from_dict({'adv_lr': [adv_lr] * 42000, 'MIScale0': [0]*42000})
-                    smaller_MIScale = pd.concat([smaller_MIScale, intermediate1], axis=0)
-                elif MIScale == 0.9:
-                    intermediate2 = pd.DataFrame.from_dict({'adv_lr': [adv_lr] * 42000, 'MIScale0.9': [0] * 42000})
-                    higher_MIScale = pd.concat([higher_MIScale, intermediate2], axis=0)
-
-        smaller_higher_MIScale = pd.concat([smaller_MIScale, higher_MIScale.iloc[:,1]], axis=1)
-        smaller_higher_MIScale2 = pd.melt(smaller_higher_MIScale, id_vars=['adv_lr'], value_vars=['MIScale0', 'MIScale0.9'], var_name='MIScale')
-        fig, ax = plt.subplots(figsize=(10, 7))
-        ax = sns.boxplot(x='adv_lr', y='value', data=smaller_higher_MIScale2, hue='MIScale')
-        ax.set(ylim=(-2.2, 0.7))
-        if k == 0:
-            ax.set_title('n_layer_encoder==%s' % (2))
-            plt.savefig(results_dict + '%s_%s_encoder%s_MI_adv_lr.png' % (dataset_name, nuisance_variable, 2))
-        elif k == 1:
-            ax.set_title('n_layer_encoder==%s' % (10))
-            plt.savefig(results_dict + '%s_%s_encoder%s_MI_adv_lr.png' % (dataset_name, nuisance_variable, 10))
-
-def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
-                  results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
-                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset', 'testset'], config_numbers: int=107,
-                  hyperparameter_config_index: int=2, adv: str='MI', n_layer_number: int=2, repetition_id: list=[0]):
-    hyperparameter_config = {
-        'n_layers_encoder': [2, 10],
-        'n_layers_decoder': [2],
-        'n_hidden': [128],
-        'n_latent': [10],
-        'dropout_rate': [0.1],
-        'reconstruction_loss': ['zinb'],
-        'use_batches': [True],
-        'use_cuda': [False],
-        'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-        'train_size': [0.8],
-        'lr': [1e-2],
-        'adv_lr': [1e-2],
-        'pre_n_epochs': [100],  # 100
-        'n_epochs': [700],
-        'nsamples_z': [200],
-        'adv': [True],
-        'Adv_Net_architecture': [[256] * 10],
-        'pre_adv_epochs': [350],
-        'adv_epochs': [3],
         'activation_fun': ['ELU'],
         'unbiased_loss': [True],
         'initial': ['xavier_normal'],
@@ -471,62 +394,119 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    fig = plt.figure()
-    camera = Camera(fig)
-
-    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
     repetition_number = len(repetition_id)
+    for k in range(n_layer_number):
+        for rep in range(repetition_number):
+            smaller_MIScale = pd.DataFrame(columns=['adv_lr', 'MIScale0'])
+            higher_MIScale = pd.DataFrame(columns=['adv_lr', 'MIScale0.9'])
+            config_list = []
+            for Scale_N in range(MIScale_number):
+                for adv_lr_N in range(adv_lr_number):
+                    config_list += [k*MIScale_number*adv_lr_number*repetition_number + Scale_N*adv_lr_number*repetition_number + adv_lr_N*repetition_number + rep]
+            for i in config_list:
+                MI_training_oneconfig_path = input_dir_path + 'config%s/%s_%s_config%s_minibatch_info.csv' % (i, dataset_name, nuisance_variable, i)
+                key, value = zip(*hyperparameter_experiments[i].items())
+                adv_lr = value[11]
+                MIScale = value[8]
+                if os.path.isfile(MI_training_oneconfig_path):
+                    MI_training_oneconfig = pd.read_csv(MI_training_oneconfig_path)
+                    if MIScale == 0:
+                        intermediate1 = pd.DataFrame.from_dict({'adv_lr': [adv_lr]*(MI_training_oneconfig.shape[0])})
+                        intermediate1 = pd.concat([intermediate1, MI_training_oneconfig.loc[:,'minibatch_penalty']], axis=1)
+                        intermediate1.columns = ['adv_lr', 'MIScale0']
+                        smaller_MIScale = pd.concat([smaller_MIScale, intermediate1], axis=0)
+                    elif MIScale == 0.9:
+                        intermediate2 = pd.DataFrame.from_dict({'adv_lr': [adv_lr] * (MI_training_oneconfig.shape[0])})
+                        intermediate2 = pd.concat([intermediate2, MI_training_oneconfig.loc[:, 'minibatch_penalty']], axis=1)
+                        intermediate2.columns = ['adv_lr', 'MIScale0.9']
+                        higher_MIScale = pd.concat([higher_MIScale, intermediate2], axis=0)
+                else:
+                    if MIScale == 0:
+                        intermediate1 = pd.DataFrame.from_dict({'adv_lr': [adv_lr] * 42000, 'MIScale0': [0]*42000})
+                        smaller_MIScale = pd.concat([smaller_MIScale, intermediate1], axis=0)
+                    elif MIScale == 0.9:
+                        intermediate2 = pd.DataFrame.from_dict({'adv_lr': [adv_lr] * 42000, 'MIScale0.9': [0] * 42000})
+                        higher_MIScale = pd.concat([higher_MIScale, intermediate2], axis=0)
+
+            smaller_higher_MIScale = pd.concat([smaller_MIScale, higher_MIScale.iloc[:,1]], axis=1)
+            smaller_higher_MIScale2 = pd.melt(smaller_higher_MIScale, id_vars=['adv_lr'], value_vars=['MIScale0', 'MIScale0.9'], var_name='MIScale')
+            fig, ax = plt.subplots(figsize=(10, 7))
+            ax = sns.boxplot(x='adv_lr', y='value', data=smaller_higher_MIScale2, hue='MIScale')
+            ax.set(ylim=(-3, 0.7))
+            if k == 0:
+                ax.set_title('n_layer_encoder%s, repid%s' % (2, repetition_id[rep]))
+                plt.savefig(results_dict + '%s_%s_encoder%s_repid%s_MI_adv_lr.png' % (dataset_name, nuisance_variable, 2, repetition_id[rep]))
+            elif k == 1:
+                ax.set_title('n_layer_encoder%s, repid%s' % (10, repetition_id[rep]))
+                plt.savefig(results_dict + '%s_%s_encoder%s_repid%s_MI_adv_lr.png' % (dataset_name, nuisance_variable, 10, repetition_id[rep]))
+
+    image_folder = results_dict
+    video_name = results_dict + 'stdMI_stdreconstloss.mp4'
+    images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
+    frame = cv2.imread(os.path.join(image_folder, images[0]))
+    height, width, layers = frame.shape
+    video = cv2.VideoWriter(video_name, 0, 1, (width, height))
+    for image in images:
+        video.write(cv2.imread(os.path.join(image_folder, image)))
+    cv2.destroyAllWindows()
+    video.release()
+
+def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset'],
+                  adv: str='MI', n_layer_number: int=2, repetition_number: int=100):
+
+    if not os.path.exists(results_dict + 'trainset'):
+        os.makedirs(results_dict + 'trainset')
+    if not os.path.exists(results_dict + 'testset'):
+        os.makedirs(results_dict + 'testset')
+
     for n_layer in range(n_layer_number):
-        valid_config = []
-        for i in range(n_layer*10*repetition_number, (n_layer+1)*10*repetition_number):
-            clustermetric_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_ClusterMetric.csv'%(i,i)
-            if os.path.isfile(clustermetric_filepath_oneconfig):
-                valid_config = valid_config + [i]
-                clustermetric_oneconfig = pd.read_csv(clustermetric_filepath_oneconfig)
-                clustermetric = pd.concat([clustermetric, clustermetric_oneconfig], axis=0)
+        for rep in range(repetition_number):
+            clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
+            valid_config = []
+            for i in range(n_layer*repetition_number*10+rep*10, n_layer*repetition_number*10+(rep+1)*10):
+                clustermetric_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_ClusterMetric.csv'%(i,i)
+                if os.path.isfile(clustermetric_filepath_oneconfig):
+                    valid_config = valid_config + [i]
+                    clustermetric_oneconfig = pd.read_csv(clustermetric_filepath_oneconfig)
+                    clustermetric = pd.concat([clustermetric, clustermetric_oneconfig], axis=0)
+                else:
+                    continue
+            if len(valid_config)>0:
+                for Label in Label_list:
+                    std_ELBO = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:]
+                    std_penalty = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:]
+
+                    fig = plt.figure(figsize=(10, 7))
+                    lines1 = plt.plot(std_ELBO, std_penalty)
+
+                    scale_list = [(i-n_layer*repetition_number*10-rep*10) / 10 for i in valid_config]
+
+                    for i in range(len(scale_list)):
+                        plt.text(std_ELBO[i], std_penalty[i], '%s' % (scale_list[i]),horizontalalignment='right', fontsize=12)
+
+                    plt.xlabel('std_ELBO', fontsize=16)
+                    plt.ylabel('std_penalty', fontsize=16)
+
+                    if adv == 'MI':
+                        plt.title('%s, %s, encoder%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, [10][n_layer], rep, Label),fontsize=18)
+                        fig.savefig(results_dict + Label + '/%s_%s_encoder%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, [10][n_layer], rep, Label))
+                        plt.close(fig)
             else:
                 continue
 
-        valid_config_rep = []
-        for i in valid_config:
-            valid_config_rep.append(i)
-            valid_config_rep.append(i)
-
-        clustermetric = pd.concat([pd.DataFrame.from_dict({'configs': valid_config_rep}), clustermetric.reset_index(drop=True)], axis=1)
-
-        for rep in range(repetition_number):
-            config_list = []
-            for i in valid_config_rep:
-                if (i % repetition_number == rep):
-                    config_list.append(i)
-
-            for Label in Label_list:
-                clustermetric_half = clustermetric.loc[clustermetric['configs'].isin(config_list)]
-                std_ELBO = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:]
-                std_penalty = clustermetric_half[clustermetric_half['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:]
-
-                fig = plt.figure(figsize=(10, 7))
-                lines1 = plt.plot(std_ELBO, std_penalty)
-
-                unique_list = []
-                for i in config_list:
-                    if i not in unique_list:
-                        unique_list.append(i)
-
-                scale_list = [(i-rep) / (10*repetition_number) for i in unique_list]
-
-                for i in range(len(scale_list)):
-                    plt.text(std_ELBO[i], std_penalty[i], '%s' % (scale_list[i]),horizontalalignment='right', fontsize=12)
-
-                plt.xlabel('std_ELBO', fontsize=16)
-                plt.ylabel('std_penalty', fontsize=16)
-
-                if adv == 'MI':
-                    plt.title('%s, %s, encoder%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, n_layer, repetition_id[rep], Label),fontsize=18)
-                    fig.savefig(results_dict + '%s_%s_encoder%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, n_layer, repetition_id[rep], Label))
-                    camera.snap()
-    animation = camera.animate()
-    animation.save(results_dict + 'stdMI_stdreconstloss.gif', writer='imagemagick')
+    for Label in Label_list:
+        image_folder = results_dict + '%s/'%(Label)
+        video_name = results_dict + '%s/%s_stdMI_stdreconstloss.mp4'%(Label, Label)
+        images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
+        frame = cv2.imread(os.path.join(image_folder, images[0]))
+        height, width, layers = frame.shape
+        video = cv2.VideoWriter(video_name, 0, 1, (width, height))
+        for image in images:
+            video.write(cv2.imread(os.path.join(image_folder, image)))
+        cv2.destroyAllWindows()
+        video.release()
 
     '''
         for Label in Label_list:
@@ -541,8 +521,8 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
             plt.legend(('asw', 'nmi','ari','uca','be'),loc='upper right', fontsize=16)
             plt.xticks(xaxis_index, xtick_labels, rotation='vertical', fontsize=14)
             plt.xlabel('config index', fontsize=16)
-            plt.title('%s, %s, encoder%s, %s, clusteringmetrics' % (dataset_name, nuisance_variable, n_layer, Label), fontsize=18)
-            fig.savefig(results_dict + '%s_%s_encoder%s_%s_clusteringmetrics.png' % (dataset_name, nuisance_variable, n_layer, Label))
+            plt.title('%s, %s, encoder%s, %s, clusteringmetrics' % (dataset_name, nuisance_variable, [2,10][n_layer], Label), fontsize=18)
+            fig.savefig(results_dict + '%s_%s_encoder%s_%s_clusteringmetrics.png' % (dataset_name, nuisance_variable, [2,10][n_layer], Label))
             plt.close(fig)
 
         for p in range(n_layer*10*repetition_number, (n_layer+1)*10*repetition_number):
@@ -567,3 +547,145 @@ def choose_config(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCV
                     fig.savefig(results_dict + 'config%s/%s_%s_encoder%s_MIScale%s_repid%s_clusteringmetrics.png' % (p, dataset_name, nuisance_variable, n_layer_encoder, MIScale, repid))
                     plt.close(fig)
     '''
+
+def shorten_time(input_dir_path: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  results_dict: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/',
+                  dataset_name: str='muris_tabula', nuisance_variable: str='batch', Label_list: list=['trainset'],
+                  adv: str='MI', max_reconstloss_number: int=2, repetition_number: int=100):
+
+    if not os.path.exists(results_dict + 'trainset'):
+        os.makedirs(results_dict + 'trainset')
+    if not os.path.exists(results_dict + 'testset'):
+        os.makedirs(results_dict + 'testset')
+
+    for rep in range(repetition_number):
+        for n_epoch in range(max_reconstloss_number):
+            clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO'])
+            valid_MIScale = []
+            '''
+            for i in range(10):
+                if n_epoch == 0:
+                    config = rep * 20 + 2*i
+                elif n_epoch == 1:
+                    config = rep * 20 + 2*i + 1
+            '''
+            for i in range(10):
+                config = rep * 10 + i
+                clustermetric_filepath_oneconfig = input_dir_path + 'config%s/muris_tabula_batch_config%s_ClusterMetric.csv'%(config,config)
+                if os.path.isfile(clustermetric_filepath_oneconfig):
+                    valid_MIScale = valid_MIScale + [i/10]
+                    clustermetric_oneconfig = pd.read_csv(clustermetric_filepath_oneconfig)
+                    clustermetric = pd.concat([clustermetric, clustermetric_oneconfig], axis=0)
+                else:
+                    continue
+            if len(valid_MIScale)>0:
+                for Label in Label_list:
+                    std_ELBO = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_ELBO']].values[0:]
+                    std_penalty = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['std_penalty']].values[0:]
+
+                    fig = plt.figure(figsize=(10, 7))
+                    lines1 = plt.plot(std_ELBO, std_penalty)
+
+                    for i in range(len(valid_MIScale)):
+                        plt.text(std_ELBO[i], std_penalty[i], '%s' % (valid_MIScale[i]),horizontalalignment='right', fontsize=12)
+
+                    plt.xlabel('std_ELBO', fontsize=16)
+                    plt.ylabel('std_penalty', fontsize=16)
+
+                    if adv == 'MI':
+                        plt.title('%s, %s, max_reconst%s, repid%s, %s, stdMI stdreconstloss' % (dataset_name, nuisance_variable, [17000][n_epoch], rep, Label),fontsize=18)
+                        fig.savefig(results_dict + Label + '/%s_%s_max_reconst%s_repid%s_%s_stdMI_stdreconstloss.png' % (dataset_name, nuisance_variable, [17000][n_epoch], rep, Label))
+                        plt.close(fig)
+            else:
+                continue
+
+    for Label in Label_list:
+        image_folder = results_dict + '%s/'%(Label)
+        video_name = results_dict + '%s/%s_stdMI_stdreconstloss.mp4'%(Label, Label)
+        images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
+        frame = cv2.imread(os.path.join(image_folder, images[0]))
+        height, width, layers = frame.shape
+        video = cv2.VideoWriter(video_name, 0, 1, (width, height))
+        for image in images:
+            video.write(cv2.imread(os.path.join(image_folder, image)))
+        cv2.destroyAllWindows()
+        video.release()
+
+#find the parento front when the goal is to minimize two objectives
+def simple_cull(inputPoints, dominates):
+    paretoPoints = set()
+    candidateRowNr = 0
+    dominatedPoints = set()
+    while True:
+        candidateRow = inputPoints[candidateRowNr]
+        inputPoints.remove(candidateRow)
+        rowNr = 0
+        nonDominated = True
+        while len(inputPoints) != 0 and rowNr < len(inputPoints):
+            row = inputPoints[rowNr]
+            if dominates(candidateRow, row):
+                # If it is worse on all features remove the row from the array
+                inputPoints.remove(row)
+                dominatedPoints.add(tuple(row))
+            elif dominates(row, candidateRow):
+                nonDominated = False
+                dominatedPoints.add(tuple(candidateRow))
+                rowNr += 1
+            else:
+                rowNr += 1
+
+        if nonDominated:
+            # add the non-dominated point to the Pareto frontier
+            paretoPoints.add(tuple(candidateRow))
+
+        if len(inputPoints) == 0:
+            break
+    return paretoPoints, dominatedPoints
+
+def dominates(row, candidateRow):
+    return sum([row[x] <= candidateRow[x] for x in range(len(row))]) == len(row)
+
+def pareto_front(input_dir: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
+                  output_dir : str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
+                  rep_number: int=100, Label: str='trainset', dataset_name: str= 'muris_tabula', nuisance_variable: str='batch'):
+    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO', 'std_penalty_fully'])
+    rep_scale = pd.DataFrame(columns=['rep','scale'])
+    for i in range(rep_number):
+        for j in range(10):
+            file_dir = input_dir + 'rep%s/'%(i) + 'muris_tabula_batch_MIScale%s_ClusterMetric.csv'%(j)
+            if os.path.isfile(file_dir):
+                clustermetric_onerep_onescale = pd.read_csv(file_dir)
+                rep_scale_one = pd.DataFrame.from_dict({'rep':[i,i], 'scale':[j,j]})
+                clustermetric = pd.concat([clustermetric, clustermetric_onerep_onescale], axis=0)
+                rep_scale = pd.concat([rep_scale_one, rep_scale], axis=0)
+    clustermetric = pd.concat([rep_scale, clustermetric], axis=1)
+    clustermetric_half = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_MIScale.*._VaeMI_' + Label)]
+    std_penalty = clustermetric_half.loc[:,'std_penalty'].values.tolist()
+    std_ELBO = clustermetric_half.loc[:,'std_ELBO'].values.tolist()
+    std_penalty_full = clustermetric_half.loc[:,'std_penalty_fully'].values.tolist()
+    inputPoints1 = [[std_ELBO[k],std_penalty[k]] for k in range(len(std_penalty))]
+    inputPoints2 = [[std_ELBO[k],std_penalty_full[k]] for k in range(len(std_penalty_full))]
+    paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates)
+    paretoPoints2, dominatedPoints2 = simple_cull(inputPoints2, dominates)
+
+    fig = plt.figure()
+    dp = np.array(list(dominatedPoints1))
+    pp = np.array(list(paretoPoints1))
+    plt.scatter(dp[:,0],dp[:,1])
+    plt.scatter(pp[:,0],pp[:,1],color='red')
+    plt.title('%s'%(Label), fontsize=18)
+    plt.xlabel('std_ELBO', fontsize=16)
+    plt.ylabel('std_penalty', fontsize=16)
+    fig.savefig(output_dir + '%s_%s_%s_pareto_front.png' % (dataset_name, nuisance_variable, Label))
+    plt.close(fig)
+
+    fig = plt.figure()
+    dp = np.array(list(dominatedPoints2))
+    pp = np.array(list(paretoPoints2))
+    plt.scatter(dp[:, 0], dp[:, 1])
+    plt.scatter(pp[:, 0], pp[:, 1], color='red')
+    plt.title('%s' % (Label), fontsize=18)
+    plt.xlabel('std_ELBO', fontsize=16)
+    plt.ylabel('std_penalty_full', fontsize=16)
+    fig.savefig(output_dir + '%s_%s_%s_std_penalty_full_pareto_front.png' % (dataset_name, nuisance_variable, Label))
+    plt.close(fig)

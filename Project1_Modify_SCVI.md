@@ -1,7 +1,7 @@
 ---
 jupyter:
   jupytext:
-    formats: ipynb,md
+    formats: md,ipynb
     text_representation:
       extension: .md
       format_name: markdown
@@ -16,38 +16,86 @@ jupyter:
 <a id='section1'></a>
 <h1><center>Project1_Modify_SCVI</center></h1>
 <b><font size="+2">1. Introduction</font></b>
-<a href='#section2'><p style="margin-left: 40px"><b><font size="+1">1.1 Deep Learning and the Invariance Problem</font></b></p></a>
-<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 scVI</font></b></p></a>
-<a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 scVI with mutual information penalty</font></b></p></a>
+<a href='#section2'><p style="margin-left: 40px"><b><font size="+1">1.1 The Invariance Problem in single-cell RNA seq analysis</font></b></p></a>
 
-<b><font size="+2">2. Have Done and Discussion</font></b>
-<a href='#section6'><p style="margin-left: 40px"><b><font size="+1">2.1 Break scVI</font></b></p></a>
-<a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.2 Compare estimated mutual inforamtion with true mutual inforamtion</font></b></p></a>
-<a href='#section7'><p style="margin-left: 40px"><b><font size="+1">2.3 Compare scVI and scVI+MI_Penalty-strategy 1</font></b></p></a>
-<a href='#section7'><p style="margin-left: 40px"><b><font size="+1">2.4 Compare scVI and scVI+MI_Penalty-strategy 2</font></b></p></a>
+<p style="margin-left: 60px">Batch effects and library size effects both included?</p>
 
-<a href='#section10'><b><font size="+2">3. To Does</font></b></a>
+<a href='#section3'><p style="margin-left: 40px"><b><font size="+1">1.2 Existing methods to deal with the invariance problem in single-cell RNA seq problem</font></b></p></a>
 
-<b><font size="+2">4. Useful Tools, Information, and Knowledge</font></b>
-<a href='#section11'><p style="margin-left: 40px"><b><font size="+1">4.1 How to version control jupyter notebook</font></b></p></a>
-<a href='#section11'><p style="margin-left: 40px"><b><font size="+1">4.2 Deep Learning</font></b></p></a>
+<p style="margin-left: 60px">Generalized linear model methods and other neural network</p>
 
-<br/><br/>
+<p style="margin-left: 60px">scVI is superior than previous methods</p>
+
+<a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 scVI</font></b></p></a>
+
+<p style="margin-left: 60px">Introduction of scVI: from autoencoder, to variational autoencoder, to scVI</p>
+
+<p style="margin-left: 60px">Although superior, there is still remaining problem of scVI in dealing with the invariance problem in single-cell RNA seq analysis.</p>
+
+<a href='#section5'><p style="margin-left: 40px"><b><font size="+1">1.4 Existing Penalized scVI to extend scVI in dealing with the invariance problem in single-cell RNA seq analysis</font></b></p></a>
+
+<p style="margin-left: 60px">HISC (scVI penalized by MMD), saucie network penalized by MMD. The problem of using MMD as the penalty.</p>
+
+<a href='#section6'><p style="margin-left: 40px"><b><font size="+1">1.5 Use Mutual information as the penalty</font></b></p></a>
+
+<p style="margin-left: 60px">Explain mutual information.</p>
+
+<p style="margin-left: 60px">Explain the theory and algorithms of MineNet to estimate mutual information</p>
+
+<p style="margin-left: 60px">Explain how to calculate MI when combined with scVI</p>
+
+<a href='#section7'><p style="margin-left: 40px"><b><font size="+1">1.6 How to build MineNet and train MI_penalized scVI</font></b></p></a>
+
+<p style="margin-left: 60px">Explain basics for deep learning: why updating weights in the direction of gradient? how to establish the architecture and choose hyperparameters for MineNet: including the lr, initialization, activation, drop out, batch_normalization, optimizer. loss function for MI_penalized scVI</p>
+
+<p style="margin-left: 60px">Multi-task optimization and Parento front</p>
+
+<b><font size="+2">2. Have Done</font></b>
+<a href='#section8'><p style="margin-left: 40px"><b><font size="+1">2.1 Batch effects remained partially after scVI treatment of real datasets, and artificial datasets with a large batch effects to demonstrate that there is room to extend scVI for batch effect removal.</font></b></p></a>
+
+<a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.2 Compare estimated mutual inforamtion with true mutual inforamtion to demonstrate that MineNet can get an appropriate estimator for mutual inforamtion</font></b></p></a>
+
+<p style="margin-left: 60px">Do I also need to compare MMD estimator with MineNet estimator as the penalty?</p>
+
+<a href='#section10'><p style="margin-left: 40px"><b><font size="+1">2.3 scVI+MI_Penalty</font></b></p></a>
+
+<a href='#section11'><p style="margin-left: 40px"><b><font size="+1">2.4 automate the process for finding the hyperparameters of MI_penalized SCVI for different datasets </font></b></p></a>
+
+<a href='#section12'><p style="margin-left: 40px"><b><font size="+1">2.5 scVI and scVI+MI_Penalty comparison for downstream analysis</font></b></p></a>
+
+<a href='#section13'><b><font size="+2">3. Discussion</font></b></a>
+
+<a href='#section14'><b><font size="+2">4. Reference</font></b></a>
+
+<a href='#section15'><b><font size="+2">5. To Does</font></b></a>
+
+<b><font size="+2">6. Useful Tools, Information, and Knowledge</font></b>
+<a href='#section16'><p style="margin-left: 40px"><b><font size="+1">4.1 How to version control jupyter notebook</font></b></p></a>
+<a href='#section16'><p style="margin-left: 40px"><b><font size="+1">4.2 Deep Learning</font></b></p></a>
+
 <br/><br/>
 
 
 <a id='section2'></a>
-<b><font size="+1">1.1 Invariance of Deep Learning</font></b>
+<b><font size="+1">1.1 The Invariance Problem in single-cell RNA seq analysis</font></b>
 
-Deep learning has been widely used in many pattern recognition tasks, like image classification, object detection, and segmentation. During the process of deep learning, invariance could be imposed such that a pattern can still be correctly recognized when there are many confounding properties. For example, a cat in an image can still be classified correctly as a cat even when the image is rotated, enlarged or brightened. There are many researches, especially in computer vision field, about how to make deep learning network selects the complex, high level invariant features of the input, yet robust to irrelevant input transformations, which can be summarized in two aspects. 
+scRNA-seq data analysis has gained enormous attention recently and is contributing significantly to diverse research areas such as cancer(Patel et al., [2014](https://science-sciencemag-org.ezp.lib.unimelb.edu.au/content/344/6190/1396)), development (Semrau et al., [2017](https://www.nature.com/articles/s41467-017-01076-4)), autoimmunity (Gaublomme et al., [2015](https://www-sciencedirect-com.ezp.lib.unimelb.edu.au/science/article/pii/S0092867415014890)). One major interest is to represent the single-cell RNA sequencing (scRNA-seq) data in a way invariant to diverse confounding factors including transcriptional noise (Wagner et al., [2016](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nbt.3711), capture efficiency and sequnencing depth (Vallejos et al., [2017](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nmeth.4292)), amplication bias, and batch effects (Shaham et al., [2017](https://academic-oup-com.ezp.lib.unimelb.edu.au/bioinformatics/article/33/16/2539/3611270)), such that only true biological variance is left for downstream analysises including imputation of missing data in the scRNA-seq datasets with highly abundant 'drop-out' events, visualization and clustering, differential gene expression analysis. 
 
-One aspect to achieve invariability is to increase the amount of training data. Le et al.([2013](http://static.googleusercontent.com/media/research.google.com/en//archive/unsupervised_icml2012.pdf)) devoted enormous unlabeled image data and computation power to train a large neuron network with billions of parameters. The face feature detector learnt from the neuron network without labeling images as containing a face or not is robust not only to translation but also to scaling and out-of-plane rotation. Small training dataset can be expanded by generating new samples in the way of applying small random deformations to the original training examples, using deformations like rotations, scaling, translation or shearing, which are known not to change the target variables of interest. Ciresan et al. ([2010](https://arxiv.org/pdf/1003.0358.pdf)) applied large deep neural network on deformed MNIST digits and reached 0.35% classification error rate. Simard et al. ([2003](http://cognitivemedium.com/assets/rmnist/Simard.pdf)) trained convolutional neural network on MNIST English digit images with both affine and elastic deformations, and reached a record of 0.32% classification error rate. The other aspect to achieve invariability is to model general (e.g. a hierarchical organization of explanatory factors as the depth of neural network grows) or domain-specific prior information (e.g. the topological 2D structure of image data in computer vision, penalty) into deep learning network in the form of network structures before any data is fed in ([Bengio, Courville, & Vincent, 2012](https://arxiv.org/pdf/1206.5538.pdf)). <font color=red>can we learn nuisance factor effect from house keeping genes, and delete these effects for other genes???</font>
+<!-- #region -->
+<a id='section3'></a>
+<b><font size="+1">1.2 Existing methods to deal with the invariance problem in single-cell RNA seq problem</font></b>
 
-Although imposing invariance to the patterns identified by deep learning is extremely investigated in computer vision, it is also a general, or even more important problem in biology research when data is relatively expensive to obtain and difficult to deform to generate new data. scRNA-seq data analysis has gained enormous attention recently and is contributing significantly to diverse research areas such as cancer(Patel et al., [2014](https://science-sciencemag-org.ezp.lib.unimelb.edu.au/content/344/6190/1396)), development (Semrau et al., [2017](https://www.nature.com/articles/s41467-017-01076-4)), autoimmunity (Gaublomme et al., [2015](https://www-sciencedirect-com.ezp.lib.unimelb.edu.au/science/article/pii/S0092867415014890)). One major interest is to represent the single-cell RNA sequencing (scRNA-seq) data in a way invariant to diverse confounding factors including transcriptional noise (Wagner et al., [2016](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nbt.3711), capture efficiency and sequnencing depth (Vallejos et al., [2017](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nmeth.4292)), amplication bias, and batch effects (Shaham et al., [2017](https://academic-oup-com.ezp.lib.unimelb.edu.au/bioinformatics/article/33/16/2539/3611270)), such that only true biological variance is left for downstream analysises including imputation of missing data in the scRNA-seq datasets with highly abundant 'drop-out' events, visualization and clustering, differential gene expression analysis. Although deep learning, especially generative deep network for unsupervised learning (<font color=red>(are there other neural network used in single cell rna seq for unsupervised learning?)</font>), has been used recently to analyze single-cell RNA seq data in several researches (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5), Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X), Eraslan, et al. [2018](https://www.nature.com/articles/s41467-018-07931-2), Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3), Lopez et al. [2018](https://www.nature.com/articles/s41592-018-0229-2)), some of them only focus on dimension reduction (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5),Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X)) and clustering cell types (Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3)). Among those that do investigate about removing the technical variations from the data (Deep Count Autoencoder network (DCA) developed by Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2), Single-cell Variational Inference (scVI) developed by Lopez et al. [2018](https://www.nature.com/articles/s41592-018-0229-2)), the correction effect is limited because it only comes from the basic nature of generative deep learning network that compression forces the autoencoder to learn only the essential latent features and the reconstruction ignores non-essential sources of variation. As scVI is superior than DCA in the sense that library size and batch labels are explicitly modeled in the deep neural network architecture, our research starts from scVI and investigate how to increase the correction effect for specific nuisance factors, library size and batch labels.
+Although deep learning, especially generative deep network for unsupervised learning (<font color=red>(are there other neural network used in single cell rna seq for unsupervised learning?)</font>), has been used recently to analyze single-cell RNA seq data in several researches (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5), Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X), Eraslan, et al. [2018](https://www.nature.com/articles/s41467-018-07931-2), Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3), Lopez et al. [2018](https://www.nature.com/articles/s41592-018-0229-2)), some of them only focus on dimension reduction (Ding, et al. [2018](https://www.nature.com/articles/s41467-018-04368-5),Wang, et al. [2017](https://www.sciencedirect.com/science/article/pii/S167202291830439X)) and clustering cell types (Grønbech, et al. [2019](https://www.biorxiv.org/content/10.1101/318295v3)). Among those that do investigate about removing the technical variations from the data (Deep Count Autoencoder network (DCA) developed by Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2), 
+
+
+Single-cell Variational Inference (scVI) developed by Lopez et al. [2018](https://www.nature.com/articles/s41592-018-0229-2)), is superior than other methods, and its superiority will be demonstrated in more details after the introduction of scVI.
+<!-- #endregion -->
 
 <!-- #region -->
 <a id='section4'></a>
-<b><font size="+1">1.2 scVI</font></b>
+<b><font size="+1">1.3 scVI</font></b>
+
+Explain from autoencoder, to variational autoencoder, to scVI (Valentine, [2019](https://www.biorxiv.org/content/biorxiv/early/2019/08/16/737601.full.pdf))
 
 scVI is essentially a variational autoencoder, one of the most popular approaches to unsupervised learning of complicated distributions (Doersch, [2016](https://arxiv.org/abs/1606.05908)). Therefore, variational autoencoder will be discussed first. Suppose $x$ is a data point in a dataset with an unknown possibility distribution $p(x)$, $z$ is the representation called latent vector for the data point $x$, defined over a high-, but lower-dimensional space $Z$ than the original datapoint $x$. For each $x$, $z$ is a random variable with probability density $p(z)$. Suppose we have a family of derministic functions $f(z;\theta)$, parameterized by a vector $\theta$ in some space $\Theta$, where $f: Z \times \Theta \rightarrow X$, the objective is to optimize $\theta$ such that the probability of each $x$ in the training dataset can be maximized, according to the definition: $p(x) = \int_{Z} p(x|z;\theta)p(z)dz$. In most cases, p(z) is set to be $N(0,I)$, where $I$ is the identity matrix. $p(x)$ can be approximated by sampling a large number of z values $\{z_{1},...,z_{n}\}$ and averaging $p(x|z_{i}), i\in \{1,...,n\}$. In practice, for most $z$ sampled from $p(z)$, $p(x|z)$ will be almost zero, contributing nothing to our estimator for $p(x)$. The solution to circumvent this problem is to narrow down the sampling space of $z$ such that $z$ are more likely to have produced $x$, thus giving a meaningful value of $p(x|z)$. The narrowed space of $z$ is determined by the posteror probability distribution $p(z|x)$, which, however, is usually difficult to compute analytically. Suppose $q(z|x)$ is a function approximator for $p(z|x)$, then:
 
@@ -102,16 +150,28 @@ the function $f_{w}$ stands for the neural network that encodes the mean proport
 the parameter $\theta \in \mathbb{R}_{+}^{G}$ denotes a gene-specific inverse dispersion and it is estimated via variational Bayesian inference. <font color=red>(check how to estimate $\theta$ here?)</font>
 
 
-
-
-
 <font color=red>(how to calculate logp(x|z,l,s) and backpropogate?)</font>
 
-There are many traditional statistical methods, compared with deep learning, to infer the biological variation in single-cell data with nuisance factors. scVI is claimed to be superior than the traditional statistical methods in three aspects (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)). First, although both SCVI and other existing methods use a parametric statistical model with a 'expressiion' component (e.g., ZINB-WaVE uses a negative binomial as the expression componnet (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5)), BISCUIT uses a log normal distribution as the expression component (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))) and a zero compnent (usually a bernoulli distribution <font color=red>(is it true?)</font>) to fit the distribution of the random variable which is the count of the transcripts for each gene in each cell, and although both SCVI and other methods are first trying to learn a low-dimensional manifold from the single-cell RNA count data <font color=red>(what are the other low-dimension manifold learning methods?)</font> as well additional covariates provided as metadata (e.g., batch (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5) (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf))), cell quality (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5))) and map the low-dimensional representation to the parameter of the model, the neural network in scvi frees the mapping function from the constraint of the generalized linear assumption in other methods, which is difficult to justify. <font color=red>(check at least one method e.g. ZINB-WaVE to check what is the generalized linear assumption in this method?)</font>). Second, scvi can be used to analyze the single-cell RNA seq data for all the various downstream tasks to ensure consistency, compared with other methods usually designed specially only for different subsets of all tasks (e.g., imputation and clustering, but not differential expression (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))). Third, scvi provides a higher computational scalability, desirable for the ever-growing size of recent datasets consisting of hundreads of thousands of cells (commercial 10x genomics, [2017](https://support.10xgenomics.com/single-cell-gene-expression/datasets/), or envisioned by consortia like the Human Cell Atlas (Regev, et al., [2017](https://elifesciences.org/articles/27041))), compared with other methods applicable only to tens of thousands of cells <font color=red>(why scvi has higher computational scalability?)</font>). 
+There are many traditional statistical methods, compared with deep learning, to infer the biological variation in single-cell data with nuisance factors. scVI is claimed to be superior than the traditional statistical methods in three aspects (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf)). First, although both SCVI and other existing methods use a parametric statistical model with a 'expressiion' component (e.g., ZINB-WaVE uses a negative binomial as the expression componnet (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5)), BISCUIT uses a log normal distribution as the expression component (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))) and a zero compnent (usually a bernoulli distribution <font color=red>(is it true?)</font>) to fit the distribution of the random variable which is the count of the transcripts for each gene in each cell, and although both SCVI and other methods are first trying to learn a low-dimensional manifold from the single-cell RNA count data <font color=red>(what are the other low-dimension manifold learning methods?)</font> as well additional covariates provided as metadata (e.g., batch (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5) (Lopez et al., [2018](https://people.eecs.berkeley.edu/~jregier/publications/lopez2018deep.pdf))), cell quality (Risso, et al., [2018](https://www.nature.com/articles/s41467-017-02554-5))) and map the low-dimensional representation to the parameter of the model, the neural network in scvi frees the mapping function from the constraint of the generalized linear assumption in other methods, which is difficult to justify. <font color=red>(check at least one method e.g. ZINB-WaVE to check what is the generalized linear assumption in this method?)</font>). Second, scvi can be used to analyze the single-cell RNA seq data for all the various downstream tasks to ensure consistency, compared with other methods usually designed specially only for different subsets of all tasks (e.g., imputation and clustering, but not differential expression (Prabhakaran, et al., [2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6004614/))). Third, scvi provides a higher computational scalability, desirable for the ever-growing size of recent datasets consisting of hundreads of thousands of cells (commercial 10x genomics, [2017](https://support.10xgenomics.com/single-cell-gene-expression/datasets/), or envisioned by consortia like the Human Cell Atlas (Regev, et al., [2017](https://elifesciences.org/articles/27041))), compared with other methods applicable only to tens of thousands of cells <font color=red>(why scvi has higher computational scalability? Refer to (Valentine, [2019](https://www.biorxiv.org/content/biorxiv/early/2019/08/16/737601.full.pdf))) and (Matthew, [2019](https://www.biorxiv.org/content/10.1101/237065v4))</font>). 
 
-As mentioned above, scVI is also superior to other deep learning methods (e.g. DCA, Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2)) for removing the techinical variation, in a way that apart from removing technical variations from all resources, scVI explicitly models two nuisance factors, library size and batch labels. However, there is still much variation from nuisance factors (e.g. batch) remained in the dataset after scVI implementation when those nuisance factors have large confounding effects initially(Xu, et al. [2019](https://www.biorxiv.org/content/10.1101/532895v1)). Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) analyzed that the different dimensions of the latent vectors are hardly independent because the approximateed posterior distribution poorly matches the real posterior and the data we have are always finite, and they also observed empirically that the the independence properties encoded by the generative model wil often not be respected by the approximate posterior. Therefore, in order to impose invariance to nuisance factors in scVI, Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) proposed a a framework named Hilbert-Schmidt Independence Criterion (HSIC)-constrained variational autoencoder (VAE), which enforces independence between the learnt latent representations and arbitrary nuisance factors through maximizing the traditional variational lower bound of VAE with a penalty for desired independence requirement calibrated by a kernel-based non-parametric method called HSIC. <font color=red>(Describe the HSIC method here in details!!!!!!!, the code for the paper is [here](https://github.com/romain-lopez/HCV/blob/master/scVI/scVIgenqc.py))</font>. 
+As mentioned above, scVI is also superior to other deep learning methods (e.g. DCA, Eraslan, et al [2018](https://www.nature.com/articles/s41467-018-07931-2)) for removing the techinical variation, in a way that apart from removing technical variations from all resources, scVI explicitly models two nuisance factors, library size and batch labels. However, there is still much variation from nuisance factors (e.g. batch) remained in the dataset after scVI implementation when those nuisance factors have large confounding effects initially(Xu, et al. [2019](https://www.biorxiv.org/content/10.1101/532895v1)). 
+Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) analyzed that the different dimensions of the latent vectors are hardly independent because the approximateed posterior distribution poorly matches the real posterior and the data we have are always finite, and they also observed empirically that the the independence properties encoded by the generative model wil often not be respected by the approximate posterior. 
+<!-- #endregion -->
 
-However, the main drawback for HSIC to measure dependence is that it is not applicable to high-dimensional random variables, which is the inherent shortcoming for non-parametric kernel estimator. Belghazi et al. [2018](https://arxiv.org/pdf/1801.04062.pdf) proposed a neural network estimator named MINE for mutual information between high dimensional continuous random variables, where mutual information quantifies both linear and non-linear dependence of two random variables. And when given two random variables $X$ and $Z$, it is defined as:
+<a id='section5'></a>
+<b><font size="+1">1.4 Existing Penalized scVI to extend scVI in dealing with the invariance problem in single-cell RNA seq analysis</font></b>
+
+In order to impose invariance to nuisance factors in scVI, Lopez et al. [2018](https://arxiv.org/pdf/1805.08672.pdf) proposed a a framework named Hilbert-Schmidt Independence Criterion (HSIC)-constrained variational autoencoder (VAE), which enforces independence between the learnt latent representations and arbitrary nuisance factors through maximizing the traditional variational lower bound of VAE with a penalty for desired independence requirement calibrated by a kernel-based non-parametric method called HSIC. <font color=red>(Describe the HSIC method here in details!!!!!!!, the code for the paper is [here](https://github.com/romain-lopez/HCV/blob/master/scVI/scVIgenqc.py))</font>. 
+
+However, the main drawback for HSIC to measure dependence is that it is not applicable to high-dimensional random variables, which is the inherent shortcoming for non-parametric kernel estimator. 
+
+
+
+<!-- #region -->
+<a id='section6'></a>
+<b><font size="+1">1.5 Use Mutual information as the penalty</font></b>
+
+Belghazi et al. [2018](https://arxiv.org/pdf/1801.04062.pdf) proposed a neural network estimator named MINE for mutual information between high dimensional continuous random variables, where mutual information quantifies both linear and non-linear dependence of two random variables. And when given two random variables $X$ and $Z$, it is defined as:
 \begin{equation}
 \begin{aligned}
  I(X;Z) = \int_{\mathcal{X} \times \mathcal{Z}} log \frac{d\mathbb{P}_{XZ}}{d\mathbb{P}_{Z} \otimes d\mathbb{P}_{Z}}d\mathbb{P}_{XZ},
@@ -120,8 +180,6 @@ However, the main drawback for HSIC to measure dependence is that it is not appl
 
 where $\mathbb{P}_{XZ}$ is the joint probability distribution of $X$ and $Z$, $\mathbb{P}_{X} = \int_{\mathcal{Z}}d\mathbb{P}_{XZ}$ and $\mathbb{P}_{Z} = \int_{\mathcal{X}}d\mathbb{P}_{XZ}$ are the marginal probability distribution for $X$ and $Z$, respectively. Essentially, the mutual information is equivalent to the Kullback-Leibler (KL-) divergence between the joint $\mathbb{P}_{XZ}$ and the product of the marginals $\mathbb{P} \otimes \mathbb{Q}$: $I(X, Z) = D_{KL}(\mathbb{P}_{XZ}||\mathbb{P}_{X} \otimes \mathbb{P}_{Z})$, where $D_{KL}(\mathbb{P}||\mathbb{Q})=\mathbb{E}_{\mathbb{P}} \Big[log \frac{d\mathbb{P}}{d\mathbb{Q}}\Big]$. Put simply, the mutual information of two random variable is the KL-divergence between the true joint distribution and joint distribution when $X$ and $Z$ are assumed to be independent. According to the Donsker-Varadhan representation, $D_{KL}(\mathbb{P}||\mathbb{Q}) = \underset{T: \Omega \rightarrow \mathbb{R}}{sup} E_{\mathbb{P}}[T] - log(\mathbb{E}_{\mathbb{Q}}[e^{T}])$, where T is all functions under which the two expectations are finite. Consequently, $D_{KL}(\mathbb{P}||\mathbb{Q}) \geq \underset{T \in \mathcal{F}}{sup} E_{\mathbb{P}}[T] - log(\mathbb{E}_{\mathbb{Q}}[e^{T}])$, where $\mathcal{F}$ is any class of functions $T: \Omega \rightarrow \mathbb{R}$. The larger number of functions $\mathcal{F}$ contains, the tighter the lower bound for $D_{KL}(\mathbb{P}||\mathbb{Q})$ is. $\mathcal{F}$ is chosen to be a family of function $T_{\theta}: \mathcal{X} X \mathcal{Z} \rightarrow \mathbb{R}$ parametrized with parameters $\theta \in \Theta$ in the MINE neural network. Therefore, $I(X;Z) \geq I_{\Theta}(X, Z) = \underset{\theta \in \Theta}{sup} E_{\mathbb{P}_{XZ}}[T_{\theta}] - log(\mathbb{E}_{\mathbb{P}_{X} \otimes \mathbb{P}_{Z}}[e^{T_{\theta}}])$
 
-
- 
 
 Let x be data points, z be latent variable, s be batch, then the aggregated posterior of $z$ conditional on batch $s$ is:
 \begin{equation}
@@ -159,40 +217,45 @@ D_{KL}(\mathbb{P}||\mathbb{Q}) &\geq \underset{T\in \mathbb{F}}{sup} E_{\mathbb{
                                &\approx \underset{T\in \mathcal{F}}{sup}\frac{1}{N_{0}}\Sigma_{i=1}^{N_{0}}T(z_{i}|s=0) - log(\frac{1}{N_{1}}\Sigma_{i=1}^{N_{1}}e^{T(z_{i}|s=1)})\\
 \end{aligned}
 \end{equation}
+<!-- #endregion -->
 
+<a id='section7'></a>
+<b><font size="+1">1.6 How to build MineNet and train MI_penalized scVI</font></b>
 
+<b><font size="+1">1.6.1 Explaining the hyperparameters for neural network, architecture of neural network, adversarial training</font></b>
 
-<b><font size="+1">1.3 multi-objective optimization</font></b>
+Explain basics for deep learning: why updating weights in the direction of gradient? how to establish the architecture and choose hyperparameters for MineNet: including the lr, initialization, activation, drop out, batch_normalization, optimizer. loss function for MI_penalized scVI.
+
+For the pretraining in adversarial training, how to save weights of the pretrained neural network and use the saved weights to initialize the new neural network with the same structure but different loss function? check this blog to see the technichs: 
+[save and reload weights](https://towardsdatascience.com/everything-you-need-to-know-about-saving-weights-in-pytorch-572651f3f8de).
+
+<b><font size="+1">1.6.2 multi-objective optimization and parento front</font></b>
 
 There are two ways to minimize both two objectives: one way is that $\theta^{\lambda} = \underset{\theta}{argmin}[(1-\lambda)*L_{1}(\theta) + \lambda * L_{2}(\theta)], \{\theta^{\lambda}: \lambda \in [0,1]\}$. The second way is called shebyshev, which is $\theta^{\lambda} = \underset{\theta}{argmin} \hspace{0.2cm} max\{(1-\lambda)*L_{1}(\theta), \lambda * L_{2}(\theta)\}, \{\theta^{\lambda}: \lambda \in [0,1]\}$. 
 
 If we draw the true $\left[\begin{array}{c} L_{1}(\theta) \\ L_{2}(\theta) \end{array}\right] $, when $\theta = \underset{\theta}{argmin} \left[\begin{array}{c} L_{1}(\theta) \\ L_{2}(\theta) \end{array}\right]$, the line is called the parento front. Chebyshev is a better approximation of the parento front. When we use the first way, which is $S_{loss} = [(1-\lambda)*L_{1}(\theta) + \lambda * L_{2}(\theta)]$, we could get $L_{2}{\theta} = \frac{S_{loss}-(1-\lambda)*L_{1}(\theta)}{\lambda}$, all the points on the convex hole can be approximated, but points on the concave hole can not be approximated. In our case, $L_{1}(\theta)$ is the std_reconstloss, $L_{2}(\theta)$ is the std_MI penalty, I want to minimimize both. Standardize both reconstloss and MI penalty is to make sure that they are on the same scale, from 0 to 1.
-<!-- #endregion -->
-
-<a id='section5'></a>
-<b><font size="+1">1.3 SCVI with mutual information penalty</font></b>
 
 
+<a id='section8'></a>
+<b><font size="+1">2.1 Batch effects remained partially after scVI treatment of artificial datasets and real datasets with a large batch effects to demonstrate that there is room to extend scVI for batch effect removal.</font></b>
 
-
-<a id='section6'></a>
-<b><font size="+1">2.1 Break SCVI</font></b>
+Artificially datasets
 
 <b><font size="3">2.1.1 Goal</font></b> 
 
-<b><font size="3">2.1.2 Design</font></b>
+<b><font size="3">2.1.1 Design</font></b>
 
-<b><font size="3">2.1.3 Get Data</font></b>
+<b><font size="3">2.1.1 Get Data</font></b>
 
-<b><font size="3">2.1.4 Code</font></b>
+<b><font size="3">2.1.1 Code</font></b>
 
-<b><font size="3">2.1.5 Result and Lab Meeting Discussion</font></b>
+<b><font size="3">2.1.1 Result and Lab Meeting Discussion</font></b>
 
-<b><font size="3">2.1.5.1 Change Library Size</font></b>
+<b><font size="3">2.1.1.1 Change Library Size</font></b>
 
-<b><font size="3">2.1.5.2 Change number of genes with expression</font></b>
+<b><font size="3">2.1.1.2 Change number of genes with expression</font></b>
 
-<b><font size="3">2.1.5.3 Change gene's expression proportion</font></b>
+<b><font size="3">2.1.1.3 Change gene's expression proportion</font></b>
 
 Because only 9 genes are expressed in all cells, genes that are expressed in 80% cells (58 genes), 60% cells (117 genes) and 50% cells (168 genes) are selected respectively. All these 58, 117 and 168 genes have median expression in the first 200 places. All the other unselected genes will remain unchanged. Among the 58 (117/168) genes, arrange their expression levels in descending order, increase the last 1/4 of the genes' expression proportion by a certain times in a specific batch so that the expression ratio for a certain gene in batch0:batch1 is 0.2, 0.5, 2, 5, and rescale the rest of the genes among the 58 (117/168) genes. For example, in order to make batch0:batch1 be 0.2, increase the last 1/4 genes' expression proportion by 5 times in batch 1. in order to make batch0:batch1 be 5, increase the last 1/4 genes' expression proportion by 5 times in batch 0.
 
@@ -217,14 +280,13 @@ SummarizeResult('image',file_paths,subfile_titles,'Fig1: Clustering metrics of t
 Why when the ratio is 5, batch mixing entropy is even higher than that when the ratio is 2? Maybe it is because scvi is not stable, run different iterations.
 
 <!-- #region -->
-<a id='section7'></a>
-<b><font size="+1">2.3 Compare SCVI and SCVI+MI_Penalty: strategy 1</font></b>
+Real datasets
 
-<b><font size="3">2.3.1 Goal</font></b> 
+<b><font size="3">2.1.2 Goal</font></b> 
 
 Compare SCVI and SCVI with penalty of mutual information(MI) between nuisance factor and latent factor, using cluster metrics, and tsne plots as the comparison criteria.  
 
-<b><font size="3">2.3.2 Design</font></b>
+<b><font size="3">2.1.2 Design</font></b>
 
 Apply SCVI, SCVI with penalty of mutual information to the datasets: MouseMarrow, pbmc, retina.
 When the nuisance factor is 'batch', as batch is a categorical variable, use nearest neighbor method to estimate the mutual information between batch and the latent factor. When the nuisance factor is 'library size', use Mine_Net4 to estimate the mutual information between library size and the latent factor, as library size is a lognormal variable.
@@ -247,6 +309,7 @@ NMI is defined as $NMI=\frac{I(P;T)}{\sqrt{H(P)H(T)}}$, where $P$, $T$ are the e
 
 Calculate a similarity matrix for the cells and make U be a uniform random variable on the population of cells. Take $B_{U}$ as the empirical frequencies for the 50 nearest neighbors of cell $U$ being a in batch b. Get the entropy of this categorical variable and average over $T=100$ values of $U$. In this study, for BE, the higher the better.
 
+Compare neural network (SAUCI), PCA, Diffusion maps, tSNE, PHATE in visualizing single-cell RNA data in exploratory analysis. (Matthew, [2019](https://www.biorxiv.org/content/10.1101/237065v4))
 
 <b><font size="3">a. MouseMarrow</font></b>
 
@@ -351,13 +414,13 @@ The values for the following hyperparameters: n_layers, n_hidden, n_latent, drop
 
 
 
-<b><font size="3">2.3.3 Code</font></b>
+<b><font size="3">2.1.2 Code</font></b>
 
 In the shell,  git clone the Hui_Li branch of the github page https://github.com/susanwe/single-cell-rna-seq.git. Then in the working directory, create a virtual environment named venv, activate venv, and install all required packages with specific versions listed in Project1_Modify_SCVI-requirements.txt in the venv environment. Use command: cp code/tune_hyperparameter_for_MineNet4_MonteCarlo.sh tune_hyperparameter_for_MineNet4_MonteCarlo.sh to copy the tune_hyperparameter_for_MineNet4_MonteCarlo.sh file to the working directory. Use command: cp code/tune_hyperparameter_for_MineNet4_MonteCarlo.py tune_hyperparameter_for_MineNet4_MonteCarlo.py to copy the tune_hyperparameter_for_MineNet4_MonteCarlo.py to the working directory. Then in the working directory use command: sh tune_hyperparameter_for_MineNet4_MonteCarlo.sh to run tune_hyperparameter_for_MineNet4_MonteCarlo.py 100 times.
 
 After all jobs finish on spartan, git clone the Hui_Li branch of the github page https://github.com/susanwe/single-cell-rna-seq.git to local computer. Use the command: scp myusername@spartan.hpc.unimelb.edu.au:/data/projects/myproject/remote.dat local.dat to copy the results on spartan to local computer.
 
-<b><font size="3">2.3.4 Result</font></b>
+<b><font size="3">2.1.2 Result</font></b>
 
 <b><font size="3">a MouseMarrow</font></b>
 
@@ -527,302 +590,6 @@ for i,MineLoss_Scale in enumerate(MineLoss_Scales):
         subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s trainset'%('Pbmc', 'batch', MineLoss_Scale)]
         subfile_titles += ['scVI+MI_penalty %s %s MineLoss_Scale%s testset'%('Pbmc', 'batch', MineLoss_Scale)] 
 SummarizeResult('image',file_paths,subfile_titles,'Fig9: tsne plot of scVI and scVI+MI_penalty for pbmc dataset, batch nuisance factor')
-```
-
-<b><font size="3">2.2.5 Questions</font></b> 
-
-When clustering metrics demonstrate that SCVI+MINE works better than SCVI, however, tsne plot of scVI+MINE seems worse than that of scVI. One reason could be tsne plots are not very accurate, after all it only shows two components of latent vector z's variation (check tsne's paper, and say this sentence in a professional way). The other reason could be that the clustering metrics used here are not appropriate. <font color=red>Which one is correct or is there other explanation???????? Maybe know about manifold learning clustering metrics could help?? Not using euclidean distance</font>
-
-tsne is applied mainly in computer vision, and is introduced into computation biology due to single cell RNA seq research. <font color=red>susan talked something more here, what is it?</font>
-
-In reality, usually the batch effect in the dataset is unknown. The independence between batch and latent factor z is a more important problem than the independence between library size and latent factor z. <font color=red>Why???</font>. Heejung explained batch s is not included in z, but l is???. <font color=red>Make sure again.</font>
-
-Is deep learning only appropriate when dimension of input is at least 70? The answer from susan is no. Actually linear
-regression, logistic regression etc can be also considered as a type of simple deep learning neural network. 
-<font color=red>But how to consider linear regresion or logistic regression as deep learning neural network?Be clear about the details</font>
-
-<!-- #region -->
-<a id='section7'></a>
-<b><font size="+1">2.4 Compare SCVI and SCVI+MI_Penalty: strategy 2</font></b>
-
-<b><font size="3">2.4.1 Goal</font></b> 
-
-Compare SCVI and SCVI with penalty of mutual information(MI) between nuisance factor and latent factor, using cluster metrics, and tsne plots as the comparison criteria.  
-
-<b><font size="3">2.4.2 Design</font></b>
-
-Apply SCVI, SCVI with penalty of mutual information(MI) to the datasets: MouseMarrow, pbmc, retina.
-Use Mine_Net architecture to estimate the mutual information no matter whether the nuisance factor is batch or library size.
-Although Nearest_neighbor method can get a good estimator for MI when nuisance factor is batch, the MI estimator can not be back-propogated because of the sorting and counting steps in the nearest-neighbor method. This means although the nearest-neighbor estimator of MI is added to the reconstruction loss, it can not have any influence to update the weights of the vae network. Fortunately, we can use Mine_Net architecture to estimate the MI even when the nuisance factor is batch, a categorical variable. The rational is that when batch is independent with latent vector, then the K-L divergence between $P(z|s=0)$ and $p(z|s=1)$ is zero. The more dependent batch and latent vector is, the larger the K-L divergence between $P(z|s=0)$ and $p(z|s=1)$ is. Therefore, we can use the K-L divergence between $P(z|s=0)$ and $p(z|s=1)$ as the penalty. (Refer to the introductory section for the mathematical equations)
-
-Refer to Section 2.3 for the four clustering metrics.
-
-<b><font size="3">a. MouseMarrow</font></b>
-
-Refer to Section 2.3 for how to get the MouseMarrow dataset
-
-Based on all the former experience (check ./error_part1_Tune_Hyperparameter_for_SCVI_MI.ipynb and the last commit version of Project1_Modify_SCVI.ipynb), I plan to use std_reconstloss as loss for vae, and std_MI for MI penalty, as the scale for reconstloss and MI are quite different, millions vs 1/10~1/1000. reconstloss = -ELBO
-
-I answer the following questions:
-
-Question1, what is the best hyperparameters (esp: lr, n_epochs, n_layer_encoder, n_layer_decoder) for scvi when std_reconstloss is the loss? And what is relationship between cluster metrics and reconstloss. Giving the best clustering metrics and lowest reconstloss is the standard to choose the best hyperparameters. Plots with clustering metrics vs reconstloss for every 10 epochs are provided, reconstloss is on the whole trainset or testset instead of a minibatch. The hyperparameter is as:
-
-            'n_layers_encoder': [2, 10],
-            'n_layers_decoder': [10, 2],
-            'n_hidden': [128],
-            'n_latent': [10],
-            'dropout_rate': [0.1],
-            'reconstruction_loss': ['zinb'],
-            'use_batches': [True],
-            'use_cuda': [False],
-            'train_size': [0.8],
-            'lr': [1e-2, 1e-3],
-            'n_epochs': [350],
-            'nsamples_z': [200],
-            'adv': [False],
-            'std': [True, False] # whether use standardized ELBO or not
-Here the minibatch size for vae is 128.The result is stored in clustermetrics_vs_ELBO, the plot is in figure20. It can be seen that when n_layers_encoder=10, n_layers_decoder=10 or 2, lr=1e-3, and std=False, after several tens of epochs, all 4 clustering metrics and BE increase as reconstloss decrease. But there is not such relationship when std=True for the same architecture of deep neural network and learning rate. The reason could be when std=True, the learning process becomes slower, which can be seen from the minimal reconstloss reached when std=True, compared with when std=False, therefore what I can do next is try to increase the learning rate or n_epoches to see whether the minimal reconstloss and the clustering metrics for std=False can reach the same value as when std=True for the same other hyperparameters. I try the following hyperparameters:
-     
-            'n_layers_encoder': [2, 10],
-            'n_layers_decoder': [10, 2],
-            'n_hidden': [128],
-            'n_latent': [10],
-            'dropout_rate': [0.1],
-            'reconstruction_loss': ['zinb'],
-            'use_batches': [True],
-            'use_cuda': [False],
-            'train_size': [0.8],
-            'lr': [1, 1e-1, 1e-2, 1e-3],
-            'n_epochs': [350, 800],
-            'nsamples_z': [200],
-            'adv': [False],
-            'std': [True]
-Here the minibatch size for vae is 128. The result is stored in clustermetric_vs_ELBO2, the plot is in figure21. When lr=1, and 1e-1, ELBO will become nan, therefore produce invalid result. (Note: later on, I also try lr=5e-2 for 10 layer encoder, 2 layer decoder, ELBO also turns into nan). From figure11, higher learning rate(1e-2) is better than lower learning rate (1e-3), larger n_epochs (800) is better than smaller n_epochs (350), with the standard of smaller reconstloss and better clustering metrics. I want to see whether the ELBO and clustering metrics can be improved further, as there is not much space to increase the learning rate, I increase the n_epochs to 1200, and try the following hyperparameters:
-
-            'n_layers_encoder': [2, 10],
-            'n_layers_decoder': [10, 2],
-            'n_hidden': [128],
-            'n_latent': [10],
-            'dropout_rate': [0.1],
-            'reconstruction_loss': ['zinb'],
-            'use_batches': [True],
-            'use_cuda': [False],
-            'train_size': [0.8],
-            'lr': [1e-2],
-            'n_epochs': [1200],
-            'nsamples_z': [200],
-            'adv': [False],
-            'std': [True]
-The result is stored in clustermetric_vs_ELBO3, the plot is in figure22. Yes, n_epochs=1200 will produce better clustering metrics and lower reconstloss than n_epochs=800. But considering the computation time and the result, n_epochs = 800 is enough for later on analysis. 
-            
-Besides, combined the results in figure20, 21, 22, the first conclusion is that n_layer_decoder=10 will produce higher batch entropy and lower clustering metrics than n_layer_decoder=2, no matter n_layer_encoder=2 or 10 when lr=1e-2. This phenomenon is only obvious when n_epochs=1200 (Need to repeat to see it is not because of variation). Second, n_layer_encoder=10 will produce higher BE and lower clustering metrics than n_layer_encoder=2, no matter n_layer_decoder=10 or 2. It seems that when the network is deeper, no matter in encoder or decoder, BE will be higher and clustering metrics will be lower. I don't know whether it is because when network is deeper, the optimal is reached slower than when network is shallower. If that is the case, when we elongate the training process futher, the more deeper network may produce higher BE and higher clustering metrics. 
-
-For later on analysis, I'll choose the hyperparameters for vae, because our goal is to increase BE with some penalty in clustering metrics, these combinations of hyperparameters produces lower BE and higher clustering metrics within limited n_epochs, especially when n_layers_encoder=2 and n_layers_decoder=2, 
- 
-            'n_layers_encoder': [2,10],
-            'n_layers_decoder': [2],
-            'n_hidden': [128],
-            'n_latent': [10],
-            'dropout_rate': [0.1],
-            'reconstruction_loss': ['zinb'],
-            'use_batches': [True],
-            'use_cuda': [False],
-            'train_size': [0.8],
-            'lr': [1e-2],
-            'n_epochs': [800],
-            'std': [True]
-
-
-Question2, what is the parento front of std_MI and std_reconstloss using chebyshev optimization? Whether when the scale for MI ,denoted as $\lambda$, increases, std_reconstloss increases and std_MI decreases. What does the std_reconstloss increase and std_MI decrease mean in clustering metrics, does it mean better BE and worse clustering metrics.
-
-First, I need to get the hyperparameter for MI_net (esp: adv_lr), and the minimum and maximum value of MI for MI standardization. The loss is torch.max((1-MI_Scale)*std_reconstloss, MI_Scale*MI). Here MI is not standardized, because I need first to figure out MI's minimum and maximum value based on the MI estimator of the minibatches over the training process. I use the following hyperparameter combinations: 
-
-            'n_layers_encoder': [2,10],
-            'n_layers_decoder': [2],
-            'n_hidden': [128],
-            'n_latent': [10],
-            'dropout_rate': [0.1],
-            'reconstruction_loss': ['zinb'],
-            'use_batches': [True],
-            'use_cuda': [False],
-            'MIScale': [0, 0.9],
-            'train_size': [0.8],
-            'lr': [1e-2],
-            'adv_lr': [1, 1e-1, 1e-2, 5e-3, 1e-3, 5e-4],
-            'pre_n_epochs': [100], 
-            'n_epochs': [700],
-            'nsamples_z': [200],
-            'adv': [True],
-            'Adv_Net_architecture': [[256] * 10],
-            'pre_adv_epochs': [350],
-            'adv_epochs': [3],
-            'activation_fun': ['ELU'], 
-            'unbiased_loss': [True], 
-            'initial': ['xavier_normal'], 
-            'adv_model' : ['MI'],
-            'optimiser': ['Adam'],
-            'adv_drop_out': [0.2],
-            'std': [False],
-            'taskid': [0]
-Here the minibatch size for vae is 128, the minibatch size for MINE net is 256, because when sample size is larger, MINE net will give a better estimator, and when sample size is larger, there is a lower chance to get a minibatch which is extremely uneven between the two batches. For MIScale, I try 0, and 0.9, because theorectically, when MIScale=0, it produces the maximum value of MI, when MIScale=0.9, it produces the minimum value of MI.
-
-The result is stored in adv_lr_min_max_MI, and plot in figure 25. Note that the horizontal line in the plot means the configuration returns NaN. From figure 25, when adv_lr=0.01, MI is relatively larger when MIScale=0 than MIScale=0.9, no matter the n_layer_encoder=2 or 10, as I expect. The phenomenon disappears when adv_lr decreases to 0.001 and 0.0005. And the MI estimator of adv_lr=0.01 is relatively larger than the MI estimator of adv_lr=0.005, when MIScale=0, no matter n_layer_encoder=2 or 10. Therefore, I choose adv_lr to be 0.01. When n_layer_encoder=2, I choose 0.6 and -0.2 as the max and mim values to standardize MI. When n_layer_encoder=10, the MI estimator becomes smaller, especially when adv_lr=0.01 and 0.005, it could be because n_layer_encoder=10 gives higher BE which means less batch effect. Therefore, when n_layer_encoder=10, I choose 0.3 and -2 as the max and mim values to standardize MI.
-
-
-Next I try the following hyperparameter configurations to draw the std_MI vs std_reconstloss, here the loss is torch.max((1-MI_Scale)*std_reconstloss, MI_Scale*std_MI), here std_MI and std_reconstloss is on the whole trainset and testset instead of minibatch:
-            
-            'n_layers_encoder': [2,10],
-            'n_layers_decoder': [2],
-            'n_hidden': [128],
-            'n_latent': [10],
-            'dropout_rate': [0.1],
-            'reconstruction_loss': ['zinb'],
-            'use_batches': [True],
-            'use_cuda': [False],
-            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-            'train_size': [0.8],
-            'lr': [1e-2],
-            'adv_lr': [1e-2],
-            'pre_n_epochs': [100], 
-            'n_epochs': [700],
-            'nsamples_z': [200],
-            'adv': [True],
-            'Adv_Net_architecture': [[256] * 10],
-            'pre_adv_epochs': [350],
-            'adv_epochs': [3],
-            'activation_fun': ['ELU'], 
-            'unbiased_loss': [True], 
-            'initial': ['xavier_normal'], 
-            'adv_model' : ['MI'],
-            'optimiser': ['Adam'],
-            'adv_drop_out': [0.2],
-            'std': [True],
-            'taskid': [0, 10, 50, 80]
-            
-
-The minibatch size for vae is 128, the minibatch size for MINE net is 256. For each MIScale, I repeat 4 times. Therefore, get the std_MI vs std_reconstloss plot 4 times, to get a preliminary idea that whether I should choose the MIScale evenly from 0 to 1, or unevenly from 0 to 1. Here the minibatch size for vae is 128, the minibatch size for MINE net is 256.
-
-The result is stored in , plot in . 
-
-
-
-Next, 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<b><font size="3">2.4.3 Code</font></b>
-
-copy code/tune_hyperparameter_for_SCVI_MI.sh and code/tune_hyperparameter_for_SCVI_MI.py to the directory containing the code directory. Then in the directory containing code directory, submit tune_hyperparameter_for_SCVI_MI.sh for job submission which will run the tune_hyperparameter_for_SCVI_MI.py 108 times. For muris_tabula dataset and batch nuisance factor, the parameters for the main function in the tune_hyperparameter_for_SCVI_MI.py is taskid=0, dataset_name='muris_tabula', nuisance_variable='batch', MI_estimator='MINE_Net4_3', config_id=a number from range(0, 108). The result of different configurations are downloaded from spartan and stored in local computer.
-
-<b><font size="3">2.4.4 Result</font></b>
-
-Among the 108 configurations for SCVI+Mine_estimated_MI, only 23 configurations complete successfully, among which none gives a better BE clustering metric than SCVI alone with the same hyperparameter for the SCVI part as the SCVI+Mine_estimated_MI here. And the MI_loss of minibatch of size 256 during the whole training process is very small. Refer to figure 9.
-
-Figure 10 shows when the epoch increases to 500 and 750, 44 among 216 configs run successfully. By analyzing figure 10, in the plot of the clustering metrics, there are cyclic phenomena for the right half of the plot, which is three consective configs giving drastically small clustering metrics, two consecutive configs give similar large clustering metrics compared with the three consecutive configs. When comparing their corresponding hyperparameters between the three consective configs and the two consective configs, I find that the main difference is the activation function. For the two consective configs, the activation fuction is either ReLU or leaky_ReLU, while for the three consecutive configs, the activation function is ELU. The MI_loss plots show that when the activation function is ELU, MI_loss of minibatch will decrease fast, however, when activation function is ReLU or leaky_ReLU, the MI_loss of minibatch will either remain almost stable or increases. The conclusion here is that activation function is important ELU vs ReLU/leaky_ReLU, however ReLU and leaky_ReLU are similar. When analyzing the three consective configs, another finding is that MINE_Net with 50 layers are almost similar as MINE_Net with 100 layers.
-
-Then another phenomenon to notice is that the left half of the clustering metric plot doesn't have such cyclic phenomenon, when comparing the single peak in the left half and the two consecutive peaks of clustering metrics in the right half, the main difference is the adv_lr, from left, to right are 5e-6, 1e-8, 1e-10. Therefore, when adv_lr is smaller, the MINE_Net4 is less sensitive to initiation strategies.
-
-
-<!-- #endregion -->
-
-```python
-import os
-%matplotlib inline
-import itertools
-import pandas as pd
-exec(open('code\\SummarizeResult.py').read())
-clustermetric_vs_ELBO(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO/',
-            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO/',
-            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=16, hyperparameter_index=1)
-
-file_paths = []
-for config in range(16):
-    for k in [0, 7]:
-        if config==9 and k==7:
-           one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\clustermetric_vs_ELBO\\scviconfig%s\\muris_tabula_batch_config%s_trainset_clustervsELBO_epoch100.png'%(config, config)
-        else:
-           one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\clustermetric_vs_ELBO\\scviconfig%s\\muris_tabula_batch_config%s_trainset_clustervsELBO_epoch%s.png'%(config, config, k*10) 
-        if os.path.isfile(one_file_path):
-            file_paths += [one_file_path]
-       
-SummarizeResult('image',file_paths,'Fig20: Clustering metrics of trainset vs reconstloss for different configs of scvi')
-hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO/muris_tabula_batch_configs_hyperparameters.csv')
-print(hyperparameters_dataframe)
-```
-
-```python
-import os
-%matplotlib inline
-import itertools
-import pandas as pd
-exec(open('code\\SummarizeResult.py').read())
-clustermetric_vs_ELBO(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO2/',
-            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO2/',
-            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=32, hyperparameter_index=2, starting_epoch=10)
-file_paths = []
-for config in range(32):
-    for k in [10]:
-        one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\clustermetric_vs_ELBO2\\scviconfig%s\\muris_tabula_batch_config%s_trainset_clustervsELBO_epoch%s.png'%(config, config, k*10) 
-        if os.path.isfile(one_file_path):
-            file_paths += [one_file_path]
-       
-SummarizeResult('image',file_paths,'Fig21: Clustering metrics of trainset vs ELBO for different configs of scvi')
-hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO2/muris_tabula_batch_configs_hyperparameters.csv')
-print(hyperparameters_dataframe)
-
-```
-
-```python
-import os
-%matplotlib inline
-import itertools
-import pandas as pd
-exec(open('code\\SummarizeResult.py').read())
-clustermetric_vs_ELBO(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO3/',
-            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO3/',
-            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=4, hyperparameter_index=3, starting_epoch=10)
-file_paths = []
-for config in range(4):
-    for k in [10]:
-        one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\clustermetric_vs_ELBO3\\scviconfig%s\\muris_tabula_batch_config%s_trainset_clustervsELBO_epoch%s.png'%(config, config, k*10) 
-        if os.path.isfile(one_file_path):
-            file_paths += [one_file_path]
-       
-SummarizeResult('image',file_paths,'Fig22: Clustering metrics of trainset vs ELBO for different configs of scvi')
-hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO3/muris_tabula_batch_configs_hyperparameters.csv')
-print(hyperparameters_dataframe)
-```
-
-```python
-import os
-%matplotlib inline
-import itertools
-import pandas as pd
-exec(open('code\\SummarizeResult.py').read())
-choose_adv_lr_min_max_MI(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/adv_lr_min_max_MI/',
-                  results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/adv_lr_min_max_MI/',
-                  dataset_name='muris_tabula', nuisance_variable='batch', config_numbers=12)
-file_paths = []
-for encoder in [2,10]:
-    one_file_path = 'D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/adv_lr_min_max_MI/muris_tabula_batch_encoder%s_MI_adv_lr.png' % (encoder)
-    if os.path.isfile(one_file_path):
-       file_paths += [one_file_path]
-```
-
-```python
-from IPython.display import HTML
-HTML('<img src="D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss.gif">')
 ```
 
 <a id='section9'></a>
@@ -1056,7 +823,987 @@ file_paths += [image_dict + '\\nearest_neighbor_categorical_gaussian_dim2.png']
 SummarizeResult(result_type='image', file_paths=file_paths, figtitle="Fig7: Compare estimated and true MI between categorical and gaussian mixture")
 ```
 
+<b><font size="3">2.2.5 Questions</font></b> 
+
+When clustering metrics demonstrate that SCVI+MINE works better than SCVI, however, tsne plot of scVI+MINE seems worse than that of scVI. One reason could be tsne plots are not very accurate, after all it only shows two components of latent vector z's variation (check tsne's paper, and say this sentence in a professional way). The other reason could be that the clustering metrics used here are not appropriate. <font color=red>Which one is correct or is there other explanation???????? Maybe know about manifold learning clustering metrics could help?? Not using euclidean distance</font>
+
+tsne is applied mainly in computer vision, and is introduced into computation biology due to single cell RNA seq research. <font color=red>susan talked something more here, what is it?</font>
+
+In reality, usually the batch effect in the dataset is unknown. The independence between batch and latent factor z is a more important problem than the independence between library size and latent factor z. <font color=red>Why???</font>. Heejung explained batch s is not included in z, but l is???. <font color=red>Make sure again.</font>
+
+Is deep learning only appropriate when dimension of input is at least 70? The answer from susan is no. Actually linear
+regression, logistic regression etc can be also considered as a type of simple deep learning neural network. 
+<font color=red>But how to consider linear regresion or logistic regression as deep learning neural network?Be clear about the details</font>
+
+
 <a id='section10'></a>
+<b><font size="+1">2.3 scVI+MI_Penalty</font></b>
+
+<b><font size="3">2.3.1 Goal</font></b> 
+
+Compare SCVI and SCVI with penalty of mutual information(MI) between nuisance factor and latent factor, using cluster metrics, and tsne plots as the comparison criteria.  
+
+<b><font size="3">2.3.2 Design</font></b>
+
+Apply SCVI, SCVI with penalty of mutual information(MI) to the datasets: MouseMarrow, pbmc, retina.
+Use Mine_Net architecture to estimate the mutual information no matter whether the nuisance factor is batch or library size.
+Although Nearest_neighbor method can get a good estimator for MI when nuisance factor is batch, the MI estimator can not be back-propogated because of the sorting and counting steps in the nearest-neighbor method. This means although the nearest-neighbor estimator of MI is added to the reconstruction loss, it can not have any influence to update the weights of the vae network. Fortunately, we can use Mine_Net architecture to estimate the MI even when the nuisance factor is batch, a categorical variable. The rational is that when batch is independent with latent vector, then the K-L divergence between $P(z|s=0)$ and $p(z|s=1)$ is zero. The more dependent batch and latent vector is, the larger the K-L divergence between $P(z|s=0)$ and $p(z|s=1)$ is. Therefore, we can use the K-L divergence between $P(z|s=0)$ and $p(z|s=1)$ as the penalty. (Refer to the introductory section for the mathematical equations)
+
+Refer to Section 2.3 for the four clustering metrics.
+
+<b><font size="3">a. MouseMarrow</font></b>
+
+Refer to Section 2.3 for how to get the MouseMarrow dataset
+
+Based on all the former experience (check ./error_part1_Tune_Hyperparameter_for_SCVI_MI.ipynb and the last commit version of Project1_Modify_SCVI.ipynb), I plan to use std_reconstloss as loss for vae, and std_MI for MI penalty, as the scale for reconstloss and MI are quite different, millions vs 1/10~1/1000. reconstloss = -ELBO
+
+I answer the following questions:
+
+Question1, what is the best hyperparameters (esp: lr, n_epochs, n_layer_encoder, n_layer_decoder) for scvi when std_reconstloss is the loss? And what is relationship between cluster metrics and reconstloss. Giving the best clustering metrics and lowest reconstloss is the standard to choose the best hyperparameters. Plots with clustering metrics vs reconstloss for every 10 epochs are provided, reconstloss is on the whole trainset or testset instead of a minibatch. The hyperparameter is as:
+
+            'n_layers_encoder': [2, 10],
+            'n_layers_decoder': [10, 2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'train_size': [0.8],
+            'lr': [1e-2, 1e-3],
+            'n_epochs': [350],
+            'nsamples_z': [200],
+            'adv': [False],
+            'std': [True, False] # whether use standardized ELBO or not
+Here the minibatch size for vae is 128.The result is stored in clustermetrics_vs_ELBO, the plot is in figure20. It can be seen that when n_layers_encoder=10, n_layers_decoder=10 or 2, lr=1e-3, and std=False, after several tens of epochs, all 4 clustering metrics and BE increase as reconstloss decrease. But there is not such relationship when std=True for the same architecture of deep neural network and learning rate. The reason could be when std=True, the learning process becomes slower, which can be seen from the minimal reconstloss reached when std=True, compared with when std=False, therefore what I can do next is try to increase the learning rate or n_epoches to see whether the minimal reconstloss and the clustering metrics for std=False can reach the same value as when std=True for the same other hyperparameters. I try the following hyperparameters:
+     
+            'n_layers_encoder': [2, 10],
+            'n_layers_decoder': [10, 2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'train_size': [0.8],
+            'lr': [1, 1e-1, 1e-2, 1e-3],
+            'n_epochs': [350, 800],
+            'nsamples_z': [200],
+            'adv': [False],
+            'std': [True]
+Here the minibatch size for vae is 128. The result is stored in clustermetric_vs_ELBO2, the plot is in figure21. When lr=1, and 1e-1, ELBO will become nan, therefore produce invalid result. (Note: later on, I also try lr=5e-2 for 10 layer encoder, 2 layer decoder, ELBO also turns into nan). From figure11, higher learning rate(1e-2) is better than lower learning rate (1e-3), larger n_epochs (800) is better than smaller n_epochs (350), with the standard of smaller reconstloss and better clustering metrics. I want to see whether the ELBO and clustering metrics can be improved further, as there is not much space to increase the learning rate, I increase the n_epochs to 1200, and try the following hyperparameters:
+
+            'n_layers_encoder': [2, 10],
+            'n_layers_decoder': [10, 2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'n_epochs': [1200],
+            'nsamples_z': [200],
+            'adv': [False],
+            'std': [True]
+The result is stored in clustermetric_vs_ELBO3, the plot is in figure22. Yes, n_epochs=1200 will produce better clustering metrics and lower reconstloss than n_epochs=800. But considering the computation time and the result, n_epochs = 800 is enough for later on analysis. 
+            
+Besides, combined the results in figure20, 21, 22, the first conclusion is that n_layer_decoder=10 will produce higher batch entropy and lower clustering metrics than n_layer_decoder=2, no matter n_layer_encoder=2 or 10 when lr=1e-2. This phenomenon is only obvious when n_epochs=1200 (Need to repeat to see it is not because of variation). Second, n_layer_encoder=10 will produce higher BE and lower clustering metrics than n_layer_encoder=2, no matter n_layer_decoder=10 or 2. It seems that when the network is deeper, no matter in encoder or decoder, BE will be higher and clustering metrics will be lower. I don't know whether it is because when network is deeper, the optimal is reached slower than when network is shallower. If that is the case, when we elongate the training process futher, the more deeper network may produce higher BE and higher clustering metrics. 
+
+For later on analysis, I'll choose the hyperparameters for vae, because our goal is to increase BE with some penalty in clustering metrics, these combinations of hyperparameters produces lower BE and higher clustering metrics within limited n_epochs, especially when n_layers_encoder=2 and n_layers_decoder=2, 
+ 
+            'n_layers_encoder': [2,10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'n_epochs': [800],
+            'std': [True]
+
+
+Question2, what is the parento front of std_MI and std_reconstloss using chebyshev optimization? Whether when the scale for MI ,denoted as $\lambda$, increases, std_reconstloss increases and std_MI decreases. What does the std_reconstloss increase and std_MI decrease mean in clustering metrics, does it mean better BE and worse clustering metrics.
+
+First, I need to get the hyperparameter for MI_net (esp: adv_lr), and the minimum and maximum value of MI for MI standardization. The loss is torch.max((1-MI_Scale)*std_reconstloss, MI_Scale*MI). Here MI is not standardized, because I need first to figure out MI's minimum and maximum value based on the MI estimator of the minibatches over the training process. I use the following hyperparameter combinations: 
+
+            'n_layers_encoder': [2,10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [1, 1e-1, 1e-2, 5e-3, 1e-3, 5e-4],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [350],
+            'adv_epochs': [3],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [False],
+            'taskid': [0, 10, 50, 80]
+Here the minibatch size for vae is 128, the minibatch size for MINE net is 256, because when sample size is larger, MINE net will give a better estimator, and when sample size is larger, there is a lower chance to get a minibatch which is extremely uneven between the two batches. For MIScale, I try 0, and 0.9, because theorectically, when MIScale=0, it produces the maximum value of MI, when MIScale=0.9, it produces the minimum value of MI.
+
+The result is stored in adv_lr_min_max_MI, and plot in figure 25. Note that the horizontal line in the plot means the configuration returns NaN. From figure 25, although when adv_lr=0.01 can give higher MI estimator, but it is rather unstable, and has convergent issues. I choose adv_lr-0.005. I choose 0.3, -0.3 as the max and min for MI, no matter the n_layer_encoder=2 or 10.
+
+Next I try the following hyperparameter configurations to draw the std_MI vs std_reconstloss, here the loss is torch.max((1-MI_Scale)*std_reconstloss, MI_Scale*std_MI), here std_MI and std_reconstloss is on the whole trainset and testset instead of minibatch:
+            
+            'n_layers_encoder': [2,10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [350],
+            'adv_epochs': [3],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True],
+            'taskid': [0, 10, 50, 80]            
+The minibatch size for vae is 128, the minibatch size for MINE net is 256. For each MIScale, I repeat 4 times. Therefore, get the std_MI vs std_reconstloss plot 4 times, to get a preliminary idea that whether I should choose the MIScale evenly from 0 to 1, or unevenly from 0 to 1. Here for standardize reconstloss, min and max value I use is 10000 and 30000. To standardize mutual information, min and max value I use is -0.3 and 0.3. 
+
+The result is stored in stdMI_stdreconstloss, plot in Figure26. Unfortunately, I can not observe the trend that when MIScale increase, stdMI decrease and stdreconstloss increase. It could be because of convergence issue. I can try another learning rate for minenet. 
+
+Remember that previously, there is a hyperparameter combination which gives me the trend that when MIScale increase, stdreconstloss increase, stdMI decrease. I repeat it again.
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6,0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-3],
+            'adv_lr': [5e-4],
+            'pre_n_epochs': [50],
+            'n_epochs': [350],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [5],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'],
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+
+The minibatch size for vae is 128, the minibatch size for MINE net is 256. For each MIScale, I repeat 10 times. Here to standardize reconstloss, min and max value I use is 10000 and 30000. To standardize mutual information, min and max value I use is -0.02 and 0.03. The result is stored in stdMI_stdreconstloss2, plot in Figure27. So we can observe the trend that when MIScale increase, stdMI decrease and stdreconstloss increase. But the problem for this result is although the trend is OK, when MIScale=0, the loss is just stdreconstloss, this gives bad clustering metrics. Considering about practical usage, I want to start from a good clustering metrics when MIScale=0.
+
+Pay attention, for figure26, I use a new subset method for minibatch when calculating mutual information. Because when calculating mutual information, I need to get latent vector z from batch 0 and from batch 1 separately. Formerly and for figure 27, I used 
+      #z_batch0_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]], :]
+      #z_batch1_tensor = z[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]], :]
+      #l_batch0_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [0]], :]
+      #l_batch1_tensor = library[[i for i in range(len(batch_index_list)) if batch_index_list[i] == [1]], :]
+Now for figure26 and figure 28, I use the code:
+      z_batch0_tensor = z[(Variable(torch.LongTensor([1])) - batch_index).squeeze(1).byte()]
+      z_batch1_tensor = z[batch_index.squeeze(1).byte()]
+      l_batch0_tensor = library[(Variable(torch.LongTensor([1])) - batch_index).squeeze(1).byte()]
+      l_batch1_tensor = library[batch_index.squeeze(1).byte()]
+      l_z_batch0_tensor = torch.cat((l_batch0_tensor, z_batch0_tensor), dim=1)
+      l_z_batch1_tensor = torch.cat((l_batch1_tensor, z_batch1_tensor), dim=1)
+In order to make sure that this code is OK, for figure28, I repeat the experiment in figure27 using the same hyperparameters, but use the new code in the inference.py and trainer.py for the adversarial training process, the result is stored in stdMI_stdreconstloss3, plot in Figure28. Compared with Figure27, it seems that the code is OK, I can still observe the trend that when MIScale increases, stdreconstloss increases, stdMI decreases. Therefore in figure26, when I can not observe the trend, maybe it is because of the hyperparameters. 
+
+From now on, I'll use the code used for figure28 to subset latent vector z for batch 0 and batch 1. 
+
+In order to optimize hyperparameters either for result in figure 26 and figure 27, I try to use a different standardization scheme or/and different learning rate for minenet.
+
+For example, in order to optimize the result in figure26, I try the same hyperparameters as in figure26, but a different standardization scheme for both vae and Minenet, the hyperparameters are:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [350],
+            'adv_epochs': [3],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The min and max to standardize reconstloss is 12000 and 18000 respectively. The min and max to standardize MI is -0.2 and 0.2 respectively. The result is stored in stdMI_stdreconstloss4, plot in figure29. Still the stdreconstloss changes dramatically, and when MIScale becomes large, stdMI even increases. Some jobs among the 100 jobs don't finish running on clusters, but I cancel them because the finished jobs have already demonstrated that I need to adjust the hyperparameters to make the trend of stdMI vs stdreconstloss to be better.
+
+Moreover, to optimize the result in figure26, I also try to decrease the learning rate for minenet, the hyperparameters are:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [1e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [350],
+            'adv_epochs': [3],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The learning rate for minenet has decreased from 5e-3 to 1e-3, the min and max to standardize reconstloss are 12000 and 18000, respectively. However, as lr for minenet decreases, the min and max to standardize MI has become -0.06 and 0.06. The result is stored in stdMI_stdreconstloss5, plot in figure30. Still the stdreconstloss changes dramatically, and when MIScale becomes large, stdMI even increases. Some jobs among the 100 jobs don't finish running on clusters, but I cancel them because the finished jobs have already demonstrated that I need to adjust the hyperparameters to make the trend of stdMI vs stdreconstloss to be better. When I checked the MI value for MIScale=0 in stdMI_stdreconstloss5, min of MI is about -0.03, max of MI is about 0.03 (in most cases).       
+
+For figure29, to standardize MI, I use -0.2 and 0.2, actually when I checked the real MI value when MIScale=0 in stdMI_stdreconstloss4 directory, min of MI is -0.1, max of MI is 0.1. Therefore, I try to use the same hyperparameters as in figure29, but use a different min and max of MI:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [350],
+            'adv_epochs': [3],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The min and max to standardize reconstloss is 12000 and 18000 respectively. The min and max to standardize MI used here is -0.07 and 0.07 respectively. The result is stored in stdMI_stdreconstloss6, plot in figure31. 
+
+Also I try to dampen the minenet using a smaller pre_adv_epochs, and smaller adv_epochs, but adv_lr is still 5e-3 as in figure29:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [150],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The min and max to standardize reconstloss is 12000 and 18000 respectively. The min and max to standardize MI used here is smaller than figure31, they are -0.03 and 0.03 respectively. The result is stored in stdMI_stdreconstloss7, plot in figure32. 
+
+To my surprise, in check the true MI value in stdMI_stdreconstloss7, max of MI is even a little bigger than that in stdMI_stdreconstloss6. Therefore -0.03 and 0.03 are two narrow to standardize MI. I try the following hyperparameters, but use -0.03 and 0.06 to standardize MI, and the pre_adv_epochs changes to 100.:
+           
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The result is stored in stdMI_stdreconstloss8, plot in figure33. Still have the convergence issue at 0.9.
+
+In order to decrease the stdMI so that stdreconstloss will increase less, I use -0.01 and 0.05 to standardize MI. The hyperparameters are the same as in figure33. They are:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The result is in stdMI_stdreconstloss9, plot in figure34. This time, convergence issue seems better, however, when MIScale=0, stdMI is even smaller than 0, and stdMI at MIScale=0 varies a lot. This may be because our learning rate for adv_lr is a bit high, the MI estimator for MI varies a lot, and the min for MI we use is -0.01, which has a relatively small absolute value, therefore, the stdMI is very sensitive to the variation in MI estimator.
+
+There, I try to increase max to standardize MI, so that stdMI can be decreased, and stdreconstloss will increase less, while the absolute value for min becomes larger so that the stdMI doesn't vary so much, the hyperparameters are the same:
+           
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The min and max to standardize MI are -0.03 and 0.08. The result is stored in stdMI_stdreconstloss10, plot in figure35. Still not solved the former problem, when MIScale=0.8 and/or 0.9, there are convergence issue. 
+
+Try the following hyperparameter:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(10)),
+            'MIScale': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100], 
+            'n_epochs': [700],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'], 
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]        
+The min and max to standardize reconstloss changes to 12000, and 16000. The min and max to standardize MI is -0.02, and 0.06. The result is stored in stdMI_stdreconstloss11, plot in figure36. Figure36 have 6 repetitions out of 10 give a satisfactory image compared to 2 repetitions out out of 10 in figure 35. But in figure36, there are new problems, for repid=8, MIScale=0.5 even gives a smaller stdreconstloss than when MIScale=0, that is because I've decreased the max value used to standardize reconstructloss from 18000 to 16000, then the stdreconstloss is more sensitive to the variability of reconstloss.
+
+I'll use the hyperparameters in figure35 or figure36 for larger scale of repetitions. But before that, I need to decrease the computation times. Now the time is much longer than standard SCVI alone.
+
+I first tried the following hyperparameters to see  when MIScale=0, whether the pretrained-scvi and then trained std_scvi can have the same effects as scvi, the hyperparameters are:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(3)),
+            'MIScale': [0],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100, 150, 200],
+            'n_epochs': [200,300,400],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'],
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The result is stored in shorten_time directory, plot in figure37. It can be seen that all the configurations can recover the same effect as scvi. Therefore, pre_n_epochs=100, n_epochs=200 is the best one, because it is the shortest. Maybe we can decrease n_epochs even further, perhaps to 150 after checking the clustering metrics during training for config0.
+
+Next I try to see under these pre_n_epochs and n_epochs (try both 150 and 200 for n_epochs), whether the trend that when MIScale increases, stdreconstloss increase, and stdMI decrease remains. The hyperparameters are:
+
+           'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(5)),
+            'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100],
+            'n_epochs': [150, 200],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'],
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+The result is stored in shorten_time1, and plot in figure38. It seems that when n_epochs=200, the result is better than when n_epochs=150. But the phenomenon that when MIScale increase, the stdreconstloss even decrease. This is because of the max value to standardize reconstloss is a little small.
+
+Next, I tried the following hyperparameters (the same hyperparameters as above but n_epochs=200):
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(5)),
+            'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100],
+            'n_epochs': [200],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'],
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+But try both 16500 and 17000 to standardize reconstloss. The min to standardize reconstloss is 12000. The min and max to standardize MI is -0.02 and 0.06. The result is stored in shorten_time2, plot in figure39. But when I checked the MI estimation when MIScale=0, the max is about 0.03, the min is about -0.03. 
+
+Therefore, I tried the following hyperparameters:
+
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'taskid': list(range(5)),
+            'MIScale': [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100],
+            'n_epochs': [200],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'],
+            'unbiased_loss': [True], 
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True]
+Use 12000 and 17000 as min and max to standardize reconstloss. Use 0.045 and -0.015 as min and max to standardize MI. Results are stord in shorten_time3, plot in figure 40. It appears that this is not better than result in figure39 for when min and max to standardize reconstloss is 12000 and 17000, min and max to standardize MI is 0.06 and -0.02, respectively.         
+
+<b><font size="3">2.3.3 Code</font></b>
+
+copy code/tune_hyperparameter_for_SCVI_MI.sh and code/tune_hyperparameter_for_SCVI_MI.py to the directory containing the code directory. Then in the directory containing code directory, submit tune_hyperparameter_for_SCVI_MI.sh for job submission which will run the tune_hyperparameter_for_SCVI_MI.py 108 times. For muris_tabula dataset and batch nuisance factor, the parameters for the main function in the tune_hyperparameter_for_SCVI_MI.py is taskid=0, dataset_name='muris_tabula', nuisance_variable='batch', MI_estimator='MINE_Net4_3', config_id=a number from range(0, 108). The result of different configurations are downloaded from spartan and stored in local computer.
+
+<b><font size="3">2.3.4 Result</font></b>
+
+Among the 108 configurations for SCVI+Mine_estimated_MI, only 23 configurations complete successfully, among which none gives a better BE clustering metric than SCVI alone with the same hyperparameter for the SCVI part as the SCVI+Mine_estimated_MI here. And the MI_loss of minibatch of size 256 during the whole training process is very small. Refer to figure 9.
+
+Figure 10 shows when the epoch increases to 500 and 750, 44 among 216 configs run successfully. By analyzing figure 10, in the plot of the clustering metrics, there are cyclic phenomena for the right half of the plot, which is three consective configs giving drastically small clustering metrics, two consecutive configs give similar large clustering metrics compared with the three consecutive configs. When comparing their corresponding hyperparameters between the three consective configs and the two consective configs, I find that the main difference is the activation function. For the two consective configs, the activation fuction is either ReLU or leaky_ReLU, while for the three consecutive configs, the activation function is ELU. The MI_loss plots show that when the activation function is ELU, MI_loss of minibatch will decrease fast, however, when activation function is ReLU or leaky_ReLU, the MI_loss of minibatch will either remain almost stable or increases. The conclusion here is that activation function is important ELU vs ReLU/leaky_ReLU, however ReLU and leaky_ReLU are similar. When analyzing the three consective configs, another finding is that MINE_Net with 50 layers are almost similar as MINE_Net with 100 layers.
+
+Then another phenomenon to notice is that the left half of the clustering metric plot doesn't have such cyclic phenomenon, when comparing the single peak in the left half and the two consecutive peaks of clustering metrics in the right half, the main difference is the adv_lr, from left, to right are 5e-6, 1e-8, 1e-10. Therefore, when adv_lr is smaller, the MINE_Net4 is less sensitive to initiation strategies.
+
+
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+clustermetric_vs_ELBO(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=16, hyperparameter_index=1)
+
+file_paths = []
+for config in range(16):
+    for k in [0, 7]:
+        if config==9 and k==7:
+           one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\clustermetric_vs_ELBO\\scviconfig%s\\muris_tabula_batch_config%s_trainset_clustervsELBO_epoch100.png'%(config, config)
+        else:
+           one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\clustermetric_vs_ELBO\\scviconfig%s\\muris_tabula_batch_config%s_trainset_clustervsELBO_epoch%s.png'%(config, config, k*10) 
+        if os.path.isfile(one_file_path):
+            file_paths += [one_file_path]
+       
+SummarizeResult('image',file_paths,'Fig20: Clustering metrics of trainset vs reconstloss for different configs of scvi')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+clustermetric_vs_ELBO(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO2/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO2/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=32, hyperparameter_index=2, starting_epoch=10)
+file_paths = []
+for config in range(32):
+    for k in [10]:
+        one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\clustermetric_vs_ELBO2\\scviconfig%s\\muris_tabula_batch_config%s_trainset_clustervsELBO_epoch%s.png'%(config, config, k*10) 
+        if os.path.isfile(one_file_path):
+            file_paths += [one_file_path]
+       
+SummarizeResult('image',file_paths,'Fig21: Clustering metrics of trainset vs ELBO for different configs of scvi')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO2/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+clustermetric_vs_ELBO(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO3/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset','testset'], config_numbers=4, hyperparameter_index=3, starting_epoch=10)
+file_paths = []
+for config in range(4):
+    for k in [10]:
+        one_file_path = 'result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\clustermetric_vs_ELBO3\\scviconfig%s\\muris_tabula_batch_config%s_trainset_clustervsELBO_epoch%s.png'%(config, config, k*10) 
+        if os.path.isfile(one_file_path):
+            file_paths += [one_file_path]
+       
+SummarizeResult('image',file_paths,'Fig22: Clustering metrics of trainset vs ELBO for different configs of scvi')
+hyperparameters_dataframe=pd.read_csv('D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/clustermetric_vs_ELBO3/muris_tabula_batch_configs_hyperparameters.csv')
+print(hyperparameters_dataframe)
+```
+
+```python
+#Figure25
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_adv_lr_min_max_MI(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/adv_lr_min_max_MI/',
+                  results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/adv_lr_min_max_MI/',
+                  dataset_name='muris_tabula', nuisance_variable='batch', n_layer_number=2, adv_lr_number=6, MIScale_number=2, repetition_id=[0,10,50,80])
+```
+
+```python
+#Figure26
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+#choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], hyperparameter_config_index=1, 
+#            adv='MI', n_layer_number=2, repetition_id=[0, 10, 50, 80])
+#choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'], hyperparameter_config_index=1, 
+#            adv='MI', n_layer_number=2, repetition_id=[0, 10, 50, 80])
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure27
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss2/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss2/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], hyperparameter_config_index=1, 
+            adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss2/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss2/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'], hyperparameter_config_index=1, 
+            adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss2/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure28
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss3/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], hyperparameter_config_index=1, 
+            adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss3/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'], hyperparameter_config_index=1, 
+            adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss3/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure29
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss4/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss4/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss4/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss4/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'], adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss4/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure30
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss5/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss5/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss5/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss5/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss5/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure31
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss6/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss6/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss6/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss6/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss6/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure32
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss7/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss7/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss7/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss7/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss7/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure33
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss8/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss8/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss8/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss8/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss8/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure34
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss9/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss9/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss9/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss9/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss9/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure35
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss10/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss10/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss10/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss10/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss10/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure36
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss11/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss11/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_layer_number=1, repetition_number=10)
+choose_config(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss11/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss11/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_layer_number=1, repetition_number=10)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/stdMI_stdreconstloss11/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+
+```
+
+```python
+#Figure38
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+#shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time1/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time1/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', n_epochs_number=2, repetition_number=5)
+#shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time1/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time1/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', n_epochs_number=2, repetition_number=5)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time1/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure39
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+#shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time2/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time2/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', max_reconstloss_number=2, repetition_number=5)
+#shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time2/',
+#            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time2/',
+#            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', max_reconstloss_number=2, repetition_number=5)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time2/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure40
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time3/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['trainset'], adv='MI', max_reconstloss_number=1, repetition_number=5)
+shorten_time(input_dir_path='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time3/',
+            results_dict='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time3/',
+            dataset_name='muris_tabula', nuisance_variable='batch', Label_list=['testset'],adv='MI', max_reconstloss_number=1, repetition_number=5)
+from IPython.display import Video
+Video("./result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/shorten_time3/trainset/trainset_stdMI_stdreconstloss.mp4")
+```
+
+```python
+#Figure40
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+pareto_front(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
+            output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
+            rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch', Label='trainset')
+pareto_front(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
+            output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
+            rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch', Label='testset')
+file_paths = []
+for Label in ['trainset','testset']:
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front\\muris_tabula_batch_%s_pareto_front.png'%(Label)] 
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front\\muris_tabula_batch_%s_std_penalty_full_pareto_front.png'%(Label)]
+
+SummarizeResult('image',file_paths,'Fig40: pareto_front')
+```
+
+<a id='section11'></a>
+<b><font size="+1">2.4 automate the process for finding the hyperparameters of MI_penalized SCVI for different datasets</font></b>
+
+
+
+<a id='section12'></a>
+<b><font size="+1">2.5 scVI and scVI+MI_Penalty comparison for downstream analysis</font></b>
+
+
+
+
+<a id='section13'></a>
+<b><font size="+2">3. Discussion</font></b>
+
+
+
+
+<a id='section14'></a>
+<b><font size="+2">4. Reference</font></b>
+
+
+
+<a id='section15'></a>
 <b><font size="+2">3. To Does</font></b>
 
 <b><font size="+1">3.1 Tune Hyperparameter For MineNet</font></b>
@@ -1076,7 +1823,7 @@ Also check how the mutual inforamtion network estimator works between a categori
 Find real data set with obvious batch effect. Because the pbmc dataset used now do not have obvious batch effect. The dataset  ,harmonizing datasets with different composition of cell types,used in the paper [Harmonization and Annotation of Single-cell Transcriptomics data with Deep Generative Models](https://www.biorxiv.org/content/10.1101/532895v1) could be a resource. And another thing is to simulate data set with obvious batch effect from ZINB model.
 
 
-<a id='section11'></a>
+<a id='section16'></a>
 <b><font size="+2">4. Useful Tools and Information</font></b>
 
 <b><font size="+1">4.1 Version control for jupyter notebook</font></b>
@@ -1181,6 +1928,12 @@ learned from natural videos not only apply to still images, but also give compet
 number of object recognition benchmarks. Since our features can be extracted using a feed-forward
 neural network, they are also easy to use and efficient to compute.
 <!-- #endregion -->
+
+Deep learning has been widely used in many pattern recognition tasks, like image classification, object detection, and segmentation. During the process of deep learning, invariance could be imposed such that a pattern can still be correctly recognized when there are many confounding properties. For example, a cat in an image can still be classified correctly as a cat even when the image is rotated, enlarged or brightened. There are many researches, especially in computer vision field, about how to make deep learning network selects the complex, high level invariant features of the input, yet robust to irrelevant input transformations, which can be summarized in two aspects. 
+
+One aspect to achieve invariability is to increase the amount of training data. Le et al.([2013](http://static.googleusercontent.com/media/research.google.com/en//archive/unsupervised_icml2012.pdf)) devoted enormous unlabeled image data and computation power to train a large neuron network with billions of parameters. The face feature detector learnt from the neuron network without labeling images as containing a face or not is robust not only to translation but also to scaling and out-of-plane rotation. Small training dataset can be expanded by generating new samples in the way of applying small random deformations to the original training examples, using deformations like rotations, scaling, translation or shearing, which are known not to change the target variables of interest. Ciresan et al. ([2010](https://arxiv.org/pdf/1003.0358.pdf)) applied large deep neural network on deformed MNIST digits and reached 0.35% classification error rate. Simard et al. ([2003](http://cognitivemedium.com/assets/rmnist/Simard.pdf)) trained convolutional neural network on MNIST English digit images with both affine and elastic deformations, and reached a record of 0.32% classification error rate. The other aspect to achieve invariability is to model general (e.g. a hierarchical organization of explanatory factors as the depth of neural network grows) or domain-specific prior information (e.g. the topological 2D structure of image data in computer vision, penalty) into deep learning network in the form of network structures before any data is fed in ([Bengio, Courville, & Vincent, 2012](https://arxiv.org/pdf/1206.5538.pdf)). <font color=red>can we learn nuisance factor effect from house keeping genes, and delete these effects for other genes???</font>
+
+Although imposing invariance to the patterns identified by deep learning is extremely investigated in computer vision, it is also a general, or even more important problem in biology research when data is relatively expensive to obtain and difficult to deform to generate new data.
 
 ```python
 
