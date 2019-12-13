@@ -179,14 +179,16 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
     trainer_vae_MI.train(n_epochs=pre_n_epochs, lr=1e-3)
     torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
 
-    MIScales = [0,1,2,3,4,5,6,7,8,9]
-    for MIScale in MIScales:
-        clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO', 'std_penalty_fully'])
+    MIScales = [0, 0.2 , 0.4, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
+    for MIScale_index in range(10):
+        MIScale = MIScales[MIScale_index]
+        clustering_metric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO', 'penalty_fully'])
 
         vae_MI2 = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,
                         n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder, n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,
-                        reconstruction_loss=reconstruction_loss, MI_estimator=adv_model, MIScale=MIScale/10, nsamples_z=nsamples_z, adv=adv,
-                        Adv_MineNet4_architecture=Adv_Net_architecture, save_path=result_save_path + '/rep%s/' % (taskid), std=std, mini_ELBO=12000, max_ELBO=max_reconst)  # mini_ELBO=15000, max_ELBO=20000
+                        reconstruction_loss=reconstruction_loss, MI_estimator=adv_model, MIScale=MIScale, nsamples_z=nsamples_z, adv=adv,
+                        Adv_MineNet4_architecture=Adv_Net_architecture, save_path=result_save_path + '/rep%s/' % (taskid),
+                        std=std, mini_ELBO=12000, max_ELBO=max_reconst, MIScale_index=MIScale_index)  # mini_ELBO=15000, max_ELBO=20000
         trainer_vae_MI2 = UnsupervisedTrainer(vae_MI2, gene_dataset, train_size=train_size, seed=desired_seed, use_cuda=use_cuda, frequency=5, kl=1)
         trainer_vae_MI2.model.load_state_dict(torch.load(vae_MI_file_path))
         #trainer_vae_MI2.model.adv = adv
@@ -234,7 +236,7 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
            plt.ylim(1150, 1600)
         plt.title("Blue for training error and orange for testing error")
 
-        fig1_path = '%s/rep%s/training_testing_error_SCVI+MI_%s_%s_MIScale%s.png'%(result_save_path, taskid, dataset_name, nuisance_variable, MIScale)
+        fig1_path = '%s/rep%s/training_testing_error_SCVI+MI_%s_%s_MIScale%s.png'%(result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index)
         fig.savefig(fig1_path)
         plt.close(fig)
         '''
@@ -247,37 +249,37 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
         fig = plt.figure(figsize=(14, 7))
         plt.plot([i for i in range(len(ELBO_list))], [np.mean(i) for i in ELBO_list])
         plt.ylim(12000, 60000)
-        plt.title("reconst_loss_%s_%s_MIScale%s"%(dataset_name, nuisance_variable, MIScale))
-        fig1_path = '%s/rep%s/reconst_loss_%s_%s_MIScale%s.png' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale)
+        plt.title("reconst_loss_%s_%s_MIScale%s"%(dataset_name, nuisance_variable, MIScale_index))
+        fig1_path = '%s/rep%s/reconst_loss_%s_%s_MIScale%s.png' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index)
         fig.savefig(fig1_path)
         plt.close(fig)
 
         fig = plt.figure(figsize=(14, 7))
         plt.plot([i for i in range(len(std_ELBO_list))], [np.mean(i) for i in std_ELBO_list])
-        plt.title("std_reconst_loss_%s_%s_MIScale%s" % (dataset_name, nuisance_variable, MIScale))
-        fig1_path = '%s/rep%s/std_reconst_loss_%s_%s_MIScale%s.png' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale)
+        plt.title("std_reconst_loss_%s_%s_MIScale%s" % (dataset_name, nuisance_variable, MIScale_index))
+        fig1_path = '%s/rep%s/std_reconst_loss_%s_%s_MIScale%s.png' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index)
         fig.savefig(fig1_path)
         plt.close(fig)
 
         fig = plt.figure(figsize=(14, 7))
         plt.plot([i for i in range(len(penalty_list))], penalty_list)
-        plt.title("penalty_%s_%s_MIScale%s" % (dataset_name, nuisance_variable, MIScale))
-        fig1_path = '%s/rep%s/penalty_%s_%s_MIScale%s.png' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale)
+        plt.title("penalty_%s_%s_MIScale%s" % (dataset_name, nuisance_variable, MIScale_index))
+        fig1_path = '%s/rep%s/penalty_%s_%s_MIScale%s.png' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index)
         fig.savefig(fig1_path)
         plt.close(fig)
 
         fig = plt.figure(figsize=(14, 7))
         plt.plot([i for i in range(len(std_penalty_list))], std_penalty_list)
-        plt.title("std_penalty_%s_%s_MIScale%s" % (dataset_name, nuisance_variable, MIScale))
-        fig1_path = '%s/rep%s/std_penalty_%s_%s_MIScale%s.png' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale)
+        plt.title("std_penalty_%s_%s_MIScale%s" % (dataset_name, nuisance_variable, MIScale_index))
+        fig1_path = '%s/rep%s/std_penalty_%s_%s_MIScale%s.png' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index)
         fig.savefig(fig1_path)
         plt.close(fig)
 
         minibatch_info = pd.DataFrame.from_dict({'minibatch_ELBO': ELBO_list, 'minibatch_penalty': penalty_list})
-        minibatch_info.to_csv('%s/rep%s/%s_%s_MIScale%s_minibatch_info.csv' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale), index=None, header=True)
+        minibatch_info.to_csv('%s/rep%s/%s_%s_MIScale%s_minibatch_info.csv' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index), index=None, header=True)
 
-        trainer_vae_MI2.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/rep%s/trainset_tsne_SCVI+MI_%s_%s_MIScale%s' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale))
-        trainer_vae_MI2.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/rep%s/testset_tsne_SCVI+MI_%s_%s_MIScale%s' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale))
+        trainer_vae_MI2.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/rep%s/trainset_tsne_SCVI+MI_%s_%s_MIScale%s' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index))
+        trainer_vae_MI2.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/rep%s/testset_tsne_SCVI+MI_%s_%s_MIScale%s' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index))
 
         asw, nmi, ari, uca = trainer_vae_MI2.train_set.clustering_scores()
         be = trainer_vae_MI2.train_set.entropy_batch_mixing()
@@ -367,7 +369,7 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
 
             advnet2 = MINE_Net4_3(input_dim=vae_MI2.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='None',data_loader=trainer_vae_MI2_adv, drop_out=adv_drop_out, net_name=adv_model, min=-0.02, max=0.06)
-            adv_optimizer2 = torch.optim.Adam(advnet.parameters(), lr=adv_lr)
+            adv_optimizer2 = torch.optim.Adam(advnet.parameters(), lr=5e-4)
             #To fully train MineNet
             for full_epoch in tqdm(range(400)):
                 advnet2.train()
@@ -413,7 +415,6 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
         pred_xz_train_fully = advnet2(input=l_z_batch0_tensor_train)
         pred_x_z_train_fully = advnet2(input=l_z_batch1_tensor_train)
         predicted_mutual_info_fully = (torch.mean(pred_xz_train_fully) - torch.log(torch.mean(torch.exp(pred_x_z_train_fully)))).detach().cpu().numpy()
-        std_predicted_mutual_info_fully = (predicted_mutual_info_fully - (-0.02)) / (0.06 - (-0.02))
 
         ELBO_list_train = []
         number_samples = 0
@@ -425,10 +426,10 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
             number_samples += sample_batch.shape[0]
         std_ELBO_train = (sum(ELBO_list_train)/number_samples - 12000)/(max_reconst - 12000)
 
-        label = '%s_%s_MIScale%s_VaeMI_trainset' % (dataset_name, nuisance_variable, MIScale)
+        label = '%s_%s_MIScale%s_VaeMI_trainset' % (dataset_name, nuisance_variable, MIScale_index)
 
         if adv_model == 'MI':
-            intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be], 'std_penalty': [std_predicted_mutual_info], 'std_ELBO':[std_ELBO_train], 'std_penalty_fully': [std_predicted_mutual_info_fully]})
+            intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be], 'std_penalty': [std_predicted_mutual_info], 'std_ELBO':[std_ELBO_train], 'penalty_fully': [predicted_mutual_info_fully]})
         elif adv_model == 'Classifier':
             intermediate_dataframe1 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be], 'std_penalty': [std_cross_entropy], 'std_ELBO':[std_ELBO_train]})
         clustering_metric = pd.concat([clustering_metric, intermediate_dataframe1], axis=0)
@@ -467,7 +468,6 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
             pred_xz_test_fully = advnet2(input=l_z_batch0_tensor_test)
             pred_x_z_test_fully = advnet2(input=l_z_batch1_tensor_test)
             predicted_mutual_info_fully = (torch.mean(pred_xz_test_fully) - torch.log(torch.mean(torch.exp(pred_x_z_test_fully)))).detach().cpu().numpy()
-            std_predicted_mutual_info_fully = (predicted_mutual_info_fully - (-0.02)) / (0.06 - (-0.02))
 
         elif adv_model == 'Classifier':
             z_l_test = torch.cat((library_tensor_test, z_tensor_test), dim=1)
@@ -486,13 +486,13 @@ def main(dataset_name, nuisance_variable, adv_model, taskid):
             number_samples += sample_batch.shape[0]
         std_ELBO_test = (sum(ELBO_list_test) / number_samples - 12000) / (max_reconst - 12000)
 
-        label = '%s_%s_MIScale%s_VaeMI_testset' % (dataset_name, nuisance_variable, MIScale)
+        label = '%s_%s_MIScale%s_VaeMI_testset' % (dataset_name, nuisance_variable, MIScale_index)
         if adv_model == 'MI':
-            intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'std_penalty': [std_predicted_mutual_info], 'std_ELBO': [std_ELBO_test], 'std_penalty_fully': [std_predicted_mutual_info_fully]})
+            intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be],'std_penalty': [std_predicted_mutual_info], 'std_ELBO': [std_ELBO_test], 'penalty_fully': [predicted_mutual_info_fully]})
         elif adv_model == 'Classifier':
             intermediate_dataframe2 = pd.DataFrame.from_dict({'Label': [label], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be], 'std_penalty': [std_cross_entropy], 'std_ELBO':[std_ELBO_test]})
         clustering_metric = pd.concat([clustering_metric, intermediate_dataframe2], axis=0)
-        clustering_metric.to_csv('%s/rep%s/%s_%s_MIScale%s_ClusterMetric.csv' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale), index=None, header=True)
+        clustering_metric.to_csv('%s/rep%s/%s_%s_MIScale%s_ClusterMetric.csv' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index), index=None, header=True)
 
 # Run the actual program
 if __name__ == "__main__":

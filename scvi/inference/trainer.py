@@ -318,7 +318,7 @@ class Trainer:
                             ELBO_test = sum(ELBO_test_oneepoch) / number_samples_test
                         clustermetrics_dataframe_oneepoch = pd.DataFrame.from_dict({'nth_epochs':[self.epoch, self.epoch], 'Label':['trainset','testset'], 'asw': [asw_train, asw_test], 'nmi': [nmi_train, nmi_test], 'ari': [ari_train, ari_test], 'uca': [uca_train, uca_test], 'be': [be_train, be_test], 'ELBO': [ELBO_train, ELBO_test]})
                         clustermetrics_trainingprocess = pd.concat([clustermetrics_trainingprocess, clustermetrics_dataframe_oneepoch], axis=0)
-                        clustermetrics_trainingprocess.to_csv(self.model.save_path + 'MIScale%s_clustermetrics_duringtraining.csv'%(int(self.model.MIScale*10)),index=None, header=True)
+                        clustermetrics_trainingprocess.to_csv(self.model.save_path + 'MIScale%s_clustermetrics_duringtraining.csv'%(int(self.model.MIScale_index)),index=None, header=True)
 
 
                 if not self.on_epoch_end():
