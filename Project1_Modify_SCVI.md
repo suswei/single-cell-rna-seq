@@ -24,7 +24,7 @@ jupyter:
 
 <p style="margin-left: 60px">Generalized linear model methods and other neural network</p>
 
-<p style="margin-left: 60px">scVI is superior than previous methods</p>
+<p style="margin-left: 60px">scVI is superior than previous methods. Mention that at the same time of our research, another network named saucie was proposed, which is better than scVI. But our MineNet can also be combined with saucie</p>
 
 <a href='#section4'><p style="margin-left: 40px"><b><font size="+1">1.3 scVI</font></b></p></a>
 
@@ -32,30 +32,30 @@ jupyter:
 
 <p style="margin-left: 60px">Although superior, there is still remaining problem of scVI in dealing with the invariance problem in single-cell RNA seq analysis.</p>
 
-<a href='#section5'><p style="margin-left: 40px"><b><font size="+1">1.4 Existing Penalized scVI to extend scVI in dealing with the invariance problem in single-cell RNA seq analysis</font></b></p></a>
+<a href='#section5'><p style="margin-left: 40px"><b><font size="+1">1.4 Use dependency between latent vectors and batch as the loss penalty to extend scVI in dealing with the batch effects</font></b></p></a>
 
-<p style="margin-left: 60px">HISC (scVI penalized by MMD), saucie network penalized by MMD. The problem of using MMD as the penalty.</p>
+<p style="margin-left: 60px">Different ways to get the dependency measures: explain MMD and mutual information</p>
+
+<p style="margin-left: 60px">MMD has been used together with scVI, HISC (scVI penalized by MMD), saucie network penalized by MMD. The problem of using MMD as the penalty is the high dimensional problem for non-parametric kernel estimator.</p>
 
 <a href='#section6'><p style="margin-left: 40px"><b><font size="+1">1.5 Use Mutual information as the penalty</font></b></p></a>
 
-<p style="margin-left: 60px">Explain mutual information.</p>
+<p style="margin-left: 60px">Explain ways to calculate mutual information, Explain the theory and algorithms of MineNet to estimate mutual information</p>
 
-<p style="margin-left: 60px">Explain the theory and algorithms of MineNet to estimate mutual information</p>
-
-<p style="margin-left: 60px">Explain how to calculate MI when combined with scVI</p>
+<p style="margin-left: 60px">Explain how to calculate MI when combined with scVI: not using latent vector and batch as two variables</p>
 
 <a href='#section7'><p style="margin-left: 40px"><b><font size="+1">1.6 How to build MineNet and train MI_penalized scVI</font></b></p></a>
 
 <p style="margin-left: 60px">Explain basics for deep learning: why updating weights in the direction of gradient? how to establish the architecture and choose hyperparameters for MineNet: including the lr, initialization, activation, drop out, batch_normalization, optimizer. loss function for MI_penalized scVI</p>
 
-<p style="margin-left: 60px">Multi-task optimization and Parento front</p>
+<p style="margin-left: 60px">Multi-task optimization and Pareto front (convergence issues for pareto front? check papers)</p>
 
 <b><font size="+2">2. Have Done</font></b>
 <a href='#section8'><p style="margin-left: 40px"><b><font size="+1">2.1 Batch effects remained partially after scVI treatment of real datasets, and artificial datasets with a large batch effects to demonstrate that there is room to extend scVI for batch effect removal.</font></b></p></a>
 
-<a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.2 Compare estimated mutual inforamtion with true mutual inforamtion to demonstrate that MineNet can get an appropriate estimator for mutual inforamtion</font></b></p></a>
+<a href='#section9'><p style="margin-left: 40px"><b><font size="+1">2.2 Compare estimated mutual inforamtion with true mutual inforamtion to demonstrate that MineNet can get an appropriate estimator for mutual inforamtion. This result is not necessary to be presented as they already exist in the original research paper.</font></b></p></a>
 
-<p style="margin-left: 60px">Do I also need to compare MMD estimator with MineNet estimator as the penalty?</p>
+<p style="margin-left: 60px">Do I also need to compare MMD estimator with MineNet estimator as the penalty? Maybe later</p>
 
 <a href='#section10'><p style="margin-left: 40px"><b><font size="+1">2.3 scVI+MI_Penalty</font></b></p></a>
 
@@ -79,7 +79,7 @@ jupyter:
 <a id='section2'></a>
 <b><font size="+1">1.1 The Invariance Problem in single-cell RNA seq analysis</font></b>
 
-scRNA-seq data analysis has gained enormous attention recently and is contributing significantly to diverse research areas such as cancer(Patel et al., [2014](https://science-sciencemag-org.ezp.lib.unimelb.edu.au/content/344/6190/1396)), development (Semrau et al., [2017](https://www.nature.com/articles/s41467-017-01076-4)), autoimmunity (Gaublomme et al., [2015](https://www-sciencedirect-com.ezp.lib.unimelb.edu.au/science/article/pii/S0092867415014890)). One major interest is to represent the single-cell RNA sequencing (scRNA-seq) data in a way invariant to diverse confounding factors including transcriptional noise (Wagner et al., [2016](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nbt.3711), capture efficiency and sequnencing depth (Vallejos et al., [2017](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nmeth.4292)), amplication bias, and batch effects (Shaham et al., [2017](https://academic-oup-com.ezp.lib.unimelb.edu.au/bioinformatics/article/33/16/2539/3611270)), such that only true biological variance is left for downstream analysises including imputation of missing data in the scRNA-seq datasets with highly abundant 'drop-out' events, visualization and clustering, differential gene expression analysis. 
+Single cell RNA sequence (scRNA-seq) data analysis has gained enormous attention recently and is contributing significantly to diverse research areas such as cancer(Patel et al., [2014](https://science-sciencemag-org.ezp.lib.unimelb.edu.au/content/344/6190/1396)), development (Semrau et al., [2017](https://www.nature.com/articles/s41467-017-01076-4)), autoimmunity (Gaublomme et al., [2015](https://www-sciencedirect-com.ezp.lib.unimelb.edu.au/science/article/pii/S0092867415014890)). One major interest in scRNA-seq data analysis is to represent the data in a way invariant to diverse confounding factors including transcriptional noise (Wagner et al., [2016](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nbt.3711), capture efficiency and sequnencing depth (Vallejos et al., [2017](https://www-nature-com.ezp.lib.unimelb.edu.au/articles/nmeth.4292)), amplication bias, and batch effects (Shaham et al., [2017](https://academic-oup-com.ezp.lib.unimelb.edu.au/bioinformatics/article/33/16/2539/3611270)), such that only true biological variance is left for downstream analysises including imputation of missing data in the scRNA-seq datasets with highly abundant 'drop-out' events, visualization and clustering, differential gene expression analysis. 
 
 <!-- #region -->
 <a id='section3'></a>
@@ -1417,7 +1417,39 @@ Therefore, I tried the following hyperparameters:
             'optimiser': ['Adam'],
             'adv_drop_out': [0.2],
             'std': [True]
-Use 12000 and 17000 as min and max to standardize reconstloss. Use 0.045 and -0.015 as min and max to standardize MI. Results are stord in shorten_time3, plot in figure 40. It appears that this is not better than result in figure39 for when min and max to standardize reconstloss is 12000 and 17000, min and max to standardize MI is 0.06 and -0.02, respectively.         
+Use 12000 and 17000 as min and max to standardize reconstloss. Use 0.045 and -0.015 as min and max to standardize MI. Results are stord in shorten_time3, plot in figure 40. It appears that this is not better than result in figure39 for when min and max to standardize reconstloss is 12000 and 17000, min and max to standardize MI is 0.06 and -0.02, respectively. 
+
+To get the pareto frontier, I used the following hyperparameters:
+
+       hyperparameter_config = {
+            'n_layers_encoder': [10],
+            'n_layers_decoder': [2],
+            'n_hidden': [128],
+            'n_latent': [10],
+            'dropout_rate': [0.1],
+            'reconstruction_loss': ['zinb'],
+            'use_batches': [True],
+            'use_cuda': [False],
+            'train_size': [0.8],
+            'lr': [1e-2],
+            'adv_lr': [5e-3],
+            'pre_n_epochs': [100],
+            'n_epochs': [200],
+            'nsamples_z': [200],
+            'adv': [True],
+            'Adv_Net_architecture': [[256] * 10],
+            'pre_adv_epochs': [100],
+            'adv_epochs': [1],
+            'activation_fun': ['ELU'],  
+            'unbiased_loss': [True],  
+            'initial': ['xavier_normal'], 
+            'adv_model' : ['MI'],
+            'optimiser': ['Adam'],
+            'adv_drop_out': [0.2],
+            'std': [True],
+            'max_reconst': [17000]
+        }
+To fully train MineNet, lr is 5e-3, epochs number is 400. For each repetition, run 10 MI_scales, [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]. Run this for 100 repetitions. The result shows that the learning rate for the MineNet architecture is too high, with very positive and very negative values, and cause failure for nearly 50% repetitions. Because high MIScales like 0.8, 0.9 could have convergence issues, try to sample more MIScales between 0.7 and 0.9. And use the MI estimator not the std MI estimator for the fully trained network.
 
 <b><font size="3">2.3.3 Code</font></b>
 
@@ -1779,6 +1811,32 @@ for Label in ['trainset','testset']:
     file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front\\muris_tabula_batch_%s_std_penalty_full_pareto_front.png'%(Label)]
 
 SummarizeResult('image',file_paths,'Fig40: pareto_front')
+```
+
+```python
+#Figure41
+import os
+%matplotlib inline
+import itertools
+import pandas as pd
+exec(open('code\\SummarizeResult.py').read())
+pareto_front(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
+            output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
+            rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch', Label='trainset')
+pareto_front(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
+            output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
+            rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch', Label='testset')
+stdMI_clustermetrics(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
+                  output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
+                  scales_list=[0, 0.2, 0.4, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9], rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch')
+file_paths = []
+for Label in ['trainset','testset']:
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front2\\muris_tabula_batch_%s_pareto_front.png'%(Label)] 
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front2\\muris_tabula_batch_%s_penalty_full_pareto_front.png'%(Label)]
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front2\\muris_tabula_batch_%s_stdMI_vs_clustermetrics.png'%(Label)]
+    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front2\\muris_tabula_batch_%s_stdMI_vs_be.png'%(Label)]
+
+SummarizeResult('image',file_paths,'Fig41: pareto_front')
 ```
 
 <a id='section11'></a>

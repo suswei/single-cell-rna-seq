@@ -648,7 +648,8 @@ def dominates(row, candidateRow):
 def pareto_front(input_dir: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
                   output_dir : str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
                   rep_number: int=100, Label: str='trainset', dataset_name: str= 'muris_tabula', nuisance_variable: str='batch'):
-    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO', 'std_penalty_fully'])
+    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO', 'penalty_fully'])
+
     rep_scale = pd.DataFrame(columns=['rep','scale'])
     for i in range(rep_number):
         for j in range(10):
@@ -662,9 +663,9 @@ def pareto_front(input_dir: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/resu
     clustermetric_half = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_MIScale.*._VaeMI_' + Label)]
     std_penalty = clustermetric_half.loc[:,'std_penalty'].values.tolist()
     std_ELBO = clustermetric_half.loc[:,'std_ELBO'].values.tolist()
-    std_penalty_full = clustermetric_half.loc[:,'std_penalty_fully'].values.tolist()
+    penalty_full = clustermetric_half.loc[:,'penalty_fully'].values.tolist()
     inputPoints1 = [[std_ELBO[k],std_penalty[k]] for k in range(len(std_penalty))]
-    inputPoints2 = [[std_ELBO[k],std_penalty_full[k]] for k in range(len(std_penalty_full))]
+    inputPoints2 = [[std_ELBO[k],penalty_full[k]] for k in range(len(penalty_full))]
     paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates)
     paretoPoints2, dominatedPoints2 = simple_cull(inputPoints2, dominates)
 
@@ -686,20 +687,20 @@ def pareto_front(input_dir: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/resu
     plt.scatter(pp[:, 0], pp[:, 1], color='red')
     plt.title('%s' % (Label), fontsize=18)
     plt.xlabel('std_ELBO', fontsize=16)
-    plt.ylabel('std_penalty_full', fontsize=16)
-    fig.savefig(output_dir + '%s_%s_%s_std_penalty_full_pareto_front.png' % (dataset_name, nuisance_variable, Label))
+    plt.ylabel('penalty_full', fontsize=16)
+    fig.savefig(output_dir + '%s_%s_%s_penalty_full_pareto_front.png' % (dataset_name, nuisance_variable, Label))
     plt.close(fig)
 
 def stdMI_clustermetrics(input_dir: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
                   output_dir : str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
-                  rep_number: int=100, Label: str='trainset', dataset_name: str= 'muris_tabula', nuisance_variable: str='batch'):
+                  scales_list: list=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], rep_number: int=100, dataset_name: str= 'muris_tabula', nuisance_variable: str='batch'):
 
     rep_scale = pd.DataFrame(columns=['rep','scale'])
-    scales_clustermetric_train = pd.DataFrame(columns=['Scale', 'mean_std_penalty','mean_std_penalty_full', 'mean_asw', 'mean_nmi', 'mean_ari', 'mean_uca', 'mean_be'])
-    scales_clustermetric_test = pd.DataFrame(columns=['Scale', 'mean_std_penalty', 'mean_std_penalty_full', 'mean_asw', 'mean_nmi', 'mean_ari', 'mean_uca','mean_be'])
+    scales_clustermetric_train = pd.DataFrame(columns=['Scale', 'mean_std_penalty','mean_penalty_full', 'mean_asw', 'mean_nmi', 'mean_ari', 'mean_uca', 'mean_be'])
+    scales_clustermetric_test = pd.DataFrame(columns=['Scale', 'mean_std_penalty', 'mean_penalty_full', 'mean_asw', 'mean_nmi', 'mean_ari', 'mean_uca','mean_be'])
     for i in range(10):
         for j in range(rep_number):
-            clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO', 'std_penalty_fully'])
+            clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO', 'penalty_fully'])
             file_dir = input_dir + 'rep%s/'%(j) + 'muris_tabula_batch_MIScale%s_ClusterMetric.csv'%(i)
             if os.path.isfile(file_dir):
                 clustermetric_onerep_onescale = pd.read_csv(file_dir)
@@ -707,32 +708,47 @@ def stdMI_clustermetrics(input_dir: str='D:/UMelb/PhD_Projects/Project1_Modify_S
         clustermetric_train = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_MIScale.*._VaeMI_' + 'trainset')]
         clustermetric_test = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_MIScale.*._VaeMI_' + 'testset')]
 
-        onescale_train = pd.DataFrame.from_dict({'Scale': [i], 'mean_std_penalty': [clustermetric_train["std_penalty"].mean()], 'mean_std_penalty_full': [clustermetric_train["std_penalty_full"].mean()],
+        onescale_train = pd.DataFrame.from_dict({'Scale': scales_list[i], 'mean_std_penalty': [clustermetric_train["std_penalty"].mean()], 'mean_penalty_full': [clustermetric_train["penalty_fully"].mean()],
                                                  'mean_asw': [clustermetric_train["asw"].mean()], 'mean_nmi': [clustermetric_train["nmi"].mean()], 'mean_ari': [clustermetric_train["ari"].mean()],
                                                  'mean_uca': [clustermetric_train["uca"].mean()], 'mean_be': [clustermetric_train["be"].mean()]})
 
-        onescale_test = pd.DataFrame.from_dict({'Scale': [i], 'mean_std_penalty': [clustermetric_test["std_penalty"].mean()], 'mean_std_penalty_full': [clustermetric_test["std_penalty_full"].mean()],
+        onescale_test = pd.DataFrame.from_dict({'Scale': scales_list[i], 'mean_std_penalty': [clustermetric_test["std_penalty"].mean()], 'mean_penalty_full': [clustermetric_test["penalty_fully"].mean()],
                                                 'mean_asw': [clustermetric_test["asw"].mean()],'mean_nmi': [clustermetric_test["nmi"].mean()], 'mean_ari': [clustermetric_test["ari"].mean()],
                                                  'mean_uca': [clustermetric_test["uca"].mean()], 'mean_be': [clustermetric_test["be"].mean()]})
 
         scales_clustermetric_train = pd.concat([scales_clustermetric_train,onescale_train],axis=0)
         scales_clustermetric_test = pd.concat([scales_clustermetric_test,onescale_test],axis=0)
+
     for Label in ['trainset', 'testset']:
+        if Label=='trainset':
+            dataset = scales_clustermetric_train
+        else:
+            dataset = scales_clustermetric_test
         fig = plt.figure(figsize=(10, 7))
-        std_penalty =
-        lines1 = plt.plot(xaxis_index, clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['asw']].values,
-                          xaxis_index, clustermetric[clustermetric['Label'].str.match(
-                'muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['nmi']].values,
-                          xaxis_index, clustermetric[clustermetric['Label'].str.match(
-                'muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['ari']].values,
-                          xaxis_index, clustermetric[clustermetric['Label'].str.match(
-                'muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['uca']].values,
-                          xaxis_index, clustermetric[clustermetric['Label'].str.match(
-                'muris_tabula_batch_config.*._VaeMI_' + Label)].loc[:, ['be']].values)
-        plt.legend(('asw', 'nmi', 'ari', 'uca', 'be'), loc='upper right', fontsize=16)
-        plt.xticks(xaxis_index, xtick_labels, rotation='vertical', fontsize=14)
-        plt.xlabel('cluster_metrics', fontsize=16)
-        plt.ylabel('std_penalty', fontsize=16)
-        plt.title('%s, %s, %s, std_penalty vs clustering metrics' % (dataset_name, nuisance_variable, Label, ),fontsize=18)
-        fig.savefig(output_dir + '%s_%s_encoder%s_%s_stdMI_clustermetrics.png' % (dataset_name, nuisance_variable, Label))
+        lines1 = plt.plot(dataset.loc[:,['mean_std_penalty']].values, dataset.loc[:,['mean_asw']].values,
+                          dataset.loc[:,['mean_std_penalty']].values, dataset.loc[:,['mean_nmi']].values,
+                          dataset.loc[:,['mean_std_penalty']].values, dataset.loc[:,['mean_ari']].values,
+                          dataset.loc[:,['mean_std_penalty']].values, dataset.loc[:,['mean_uca']].values,
+                          dataset.loc[:,['mean_std_penalty']].values, dataset.loc[:,['mean_be']].values,
+                          )
+        plt.legend(('mean_asw', 'mean_nmi', 'mean_ari', 'mean_uca', 'mean_be'), loc='upper right', fontsize=16)
+        for k in range(len(scales_list)):
+            plt.text(dataset.loc[:,['mean_std_penalty']].values[k], dataset.loc[:,['mean_asw']].values[k], '%s' % (scales_list[k]), horizontalalignment='right', fontsize=12)
+        plt.xlabel('mean_std_penalty', fontsize=16)
+        plt.title('%s, %s, %s, stdMI_vs_clustermetrics' % (dataset_name, nuisance_variable, Label),fontsize=18)
+        fig.savefig(output_dir + '%s_%s_%s_stdMI_vs_clustermetrics.png' % (dataset_name, nuisance_variable, Label))
+        plt.close(fig)
+
+        #vae_MI_test_std = vae_MI_test.std().values
+
+        fig = plt.figure(figsize=(10, 7))
+        lines1 = plt.plot(
+                          dataset.loc[:, ['mean_std_penalty']].values, dataset.loc[:, ['mean_be']].values,
+                          )
+        plt.legend(('mean_be'), loc='upper right', fontsize=16)
+        for k in range(len(scales_list)):
+            plt.text(dataset.loc[:, ['mean_std_penalty']].values[k], dataset.loc[:, ['mean_be']].values[k],'%s' % (scales_list[k]), horizontalalignment='right', fontsize=12)
+        plt.xlabel('mean_std_penalty', fontsize=16)
+        plt.title('%s, %s, %s, stdMI_vs_be' % (dataset_name, nuisance_variable, Label), fontsize=18)
+        fig.savefig(output_dir + '%s_%s_%s_stdMI_vs_be.png' % (dataset_name, nuisance_variable, Label))
         plt.close(fig)
