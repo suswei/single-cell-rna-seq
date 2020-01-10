@@ -180,8 +180,8 @@ class Trainer:
                                 pred_xz = self.adv_model(input=l_z_batch0_tensor)
                                 pred_x_z = self.adv_model(input=l_z_batch1_tensor)
                                 #clip pred_x_z, but not pred_xz
-                                pred_x_z = torch.min(pred_x_z, Variable(torch.FloatTensor([10])))
-                                pred_x_z = torch.max(pred_x_z, Variable(torch.FloatTensor([-10])))
+                                pred_x_z = torch.min(pred_x_z, Variable(torch.FloatTensor([1])))
+                                pred_x_z = torch.max(pred_x_z, Variable(torch.FloatTensor([-1])))
 
                                 if self.adv_model.unbiased_loss:
                                     t = pred_xz

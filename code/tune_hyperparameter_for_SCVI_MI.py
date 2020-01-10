@@ -398,8 +398,8 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
                 pred_xz = advnet2(input=l_z_batch0_tensor)
                 pred_x_z = advnet2(input=l_z_batch1_tensor)
                 # clip pred_x_z, but not pred_xz
-                pred_x_z = torch.min(pred_x_z, Variable(torch.FloatTensor([10])))
-                pred_x_z = torch.max(pred_x_z, Variable(torch.FloatTensor([-10])))
+                pred_x_z = torch.min(pred_x_z, Variable(torch.FloatTensor([1])))
+                pred_x_z = torch.max(pred_x_z, Variable(torch.FloatTensor([-1])))
 
                 if advnet2.unbiased_loss:
                     t = pred_xz
@@ -419,8 +419,8 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
 
     pred_xz_train_fully = advnet2(input=l_z_batch0_tensor_train)
     pred_x_z_train_fully = advnet2(input=l_z_batch1_tensor_train)
-    pred_x_z_train_fully = torch.min(pred_x_z_train_fully, Variable(torch.FloatTensor([10])))
-    pred_x_z_train_fully = torch.max(pred_x_z_train_fully, Variable(torch.FloatTensor([-10])))
+    pred_x_z_train_fully = torch.min(pred_x_z_train_fully, Variable(torch.FloatTensor([1])))
+    pred_x_z_train_fully = torch.max(pred_x_z_train_fully, Variable(torch.FloatTensor([-1])))
     predicted_mutual_info_fully = (torch.mean(pred_xz_train_fully) - torch.log(torch.mean(torch.exp(pred_x_z_train_fully)))).detach().cpu().numpy()
 
     ELBO_list_train = []
@@ -474,8 +474,8 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
 
         pred_xz_test_fully = advnet2(input=l_z_batch0_tensor_test)
         pred_x_z_test_fully = advnet2(input=l_z_batch1_tensor_test)
-        pred_x_z_test_fully = torch.min(pred_x_z_test_fully, Variable(torch.FloatTensor([10])))
-        pred_x_z_test_fully = torch.max(pred_x_z_test_fully, Variable(torch.FloatTensor([-10])))
+        pred_x_z_test_fully = torch.min(pred_x_z_test_fully, Variable(torch.FloatTensor([1])))
+        pred_x_z_test_fully = torch.max(pred_x_z_test_fully, Variable(torch.FloatTensor([-1])))
         predicted_mutual_info_fully = (torch.mean(pred_xz_test_fully) - torch.log(torch.mean(torch.exp(pred_x_z_test_fully)))).detach().cpu().numpy()
 
     elif adv_model == 'Classifier':

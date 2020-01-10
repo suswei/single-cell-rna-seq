@@ -76,8 +76,8 @@ class UnsupervisedTrainer(Trainer):
                 else:
                     pred_xz = self.adv_model(input=l_z_batch0_tensor)
                     pred_x_z = self.adv_model(input=l_z_batch1_tensor)
-                    pred_x_z = torch.min(pred_x_z, Variable(torch.FloatTensor([10])))
-                    pred_x_z = torch.max(pred_x_z, Variable(torch.FloatTensor([-10])))
+                    pred_x_z = torch.min(pred_x_z, Variable(torch.FloatTensor([1])))
+                    pred_x_z = torch.max(pred_x_z, Variable(torch.FloatTensor([-1])))
                     penalty_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
             elif self.adv_model.name == 'Classifier':
                 z_l = torch.cat((library, z), dim=1)
