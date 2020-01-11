@@ -45,9 +45,11 @@ class VAE(nn.Module):
     """
 
     def __init__(self, n_input: int, n_batch: int = 0, n_labels: int = 0,
-                 n_hidden: int = 128, n_latent: int = 10, n_layers: int = 1,
+                 n_hidden: int = 128, n_latent: int = 10, n_layers_encoder: int = 1,
+                 n_layers_decoder: int = 1,
                  dropout_rate: float = 0.1, dispersion: str = "gene",
-                 log_variational: bool = True, reconstruction_loss: str = "zinb"):
+                 log_variational: bool = True, reconstruction_loss: str = "zinb", nsamples_z: int=200, adv: bool=False,
+                 save_path: str='None', minibatch_index: int=0, mini_ELBO: int=10000, max_ELBO: int=1000000, std: bool=False):
         super().__init__()
         self.dispersion = dispersion
         self.n_latent = n_latent
@@ -57,9 +59,16 @@ class VAE(nn.Module):
         self.n_batch = n_batch
         self.n_labels = n_labels
         self.n_latent_layers = 1  # not sure what this is for, no usages?
+        self.nsamples_z = nsamples_z
+        self.adv = adv
+        self.save_path = save_path
+        self.minibatch_index = minibatch_index
+        self.mini_ELBO = mini_ELBO
+        self.max_ELBO = max_ELBO
+        self.std = std
 
         if self.dispersion == "gene":
-            self.px_r = torch.nn.Parameter(torch.randn(n_input, ))
+            self.px_r = torch.nn.Parameter(torch.randn(n_input, )) #create a tensor filled with random numbers from a normal distribution, consider as module parameter
         elif self.dispersion == "gene-batch":
             self.px_r = torch.nn.Parameter(torch.randn(n_input, n_batch))
         elif self.dispersion == "gene-label":
@@ -69,12 +78,12 @@ class VAE(nn.Module):
 
         # z encoder goes from the n_input-dimensional data to an n_latent-d
         # latent space representation
-        self.z_encoder = Encoder(n_input, n_latent, n_layers=n_layers, n_hidden=n_hidden,
+        self.z_encoder = Encoder(n_input, n_latent, n_layers=n_layers_encoder, n_hidden=n_hidden,
                                  dropout_rate=dropout_rate)
         # l encoder goes from n_input-dimensional data to 1-d library size
-        self.l_encoder = Encoder(n_input, 1, n_layers=1, n_hidden=n_hidden, dropout_rate=dropout_rate)
+        self.l_encoder = Encoder(n_input, 1, n_layers=n_layers_encoder, n_hidden=n_hidden, dropout_rate=dropout_rate)
         # decoder goes from n_latent-dimensional space to n_input-d data
-        self.decoder = DecoderSCVI(n_latent, n_input, n_cat_list=[n_batch], n_layers=n_layers, n_hidden=n_hidden)
+        self.decoder = DecoderSCVI(n_latent, n_input, n_cat_list=[n_batch], n_layers=n_layers_decoder, n_hidden=n_hidden)
 
     def get_latents(self, x, y=None):
         r""" returns the result of ``sample_from_posterior_z`` inside a list

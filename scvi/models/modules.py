@@ -8,6 +8,8 @@ from torch.distributions import Normal
 from scvi.models.utils import one_hot
 
 import torch.nn.functional as F
+from torch.autograd import Variable
+from scipy.stats import multivariate_normal
 
 class FCLayers(nn.Module):
     r"""A helper class to build fully-connected layers for a neural network.
@@ -34,7 +36,7 @@ class FCLayers(nn.Module):
             self.n_cat_list = []
 
         self.fc_layers = nn.Sequential(collections.OrderedDict(
-            [('Layer {}'.format(i), nn.Sequential(
+            [('Layer{}'.format(i), nn.Sequential(
                 nn.Linear(n_in + sum(self.n_cat_list), n_out),
                 nn.BatchNorm1d(n_out, momentum=.01, eps=0.001) if use_batch_norm else None,
                 nn.ReLU(),
@@ -251,3 +253,341 @@ class MINE_Net(nn.Module):
     def forward(self, nuisance, z):
         h = F.relu(self.nn_nuisance(nuisance)+self.nn_z(z))
         return h
+
+
+class MINE_Net2(nn.Module):
+    """
+    Takes two inputs nuisance and z, implements T_\theta(nuisance,z) \in \mathbb R function in MINE paper
+    Typically applied with nuisance representing either batch or library size and z representing latent code
+    """
+
+    def __init__(self,n_input_nuisance,n_input_z,n_hidden_z,n_layers_z):
+        super(MINE_Net2, self).__init__()
+        self.nn_nuisance = FCLayers(n_in=n_input_nuisance, n_out=1,
+                                n_layers=n_layers_z,
+                                n_hidden=n_hidden_z, dropout_rate=0)
+        self.nn_z = FCLayers(n_in=n_input_z, n_out=1,
+                                n_layers=n_layers_z,
+                                n_hidden=n_hidden_z, dropout_rate=0)
+
+    def forward(self, nuisance, z):
+        h = F.relu(self.nn_nuisance(nuisance)+self.nn_z(z))
+        return h
+
+
+class MINE_Net3(nn.Module):
+    def __init__(self,n_input_nuisance, n_input_z, H):
+        super(MINE_Net3, self).__init__()
+        self.fc1 = nn.Linear(n_input_nuisance, H)
+        self.fc2 = nn.Linear(n_input_z, H)
+        self.fc3 = nn.Linear(H, 1)
+
+    def forward(self, x, y):
+        h1 = F.relu(self.fc1(x)+self.fc2(y))
+        h2 = self.fc3(h1)
+        return h2
+
+
+class MINE_Net4(nn.Module):
+    def __init__(self, xy_dim, n_latents):
+        super(MINE_Net4, self).__init__()
+        self.xy_dim = xy_dim
+
+        modules = [nn.Linear(xy_dim, n_latents[0]), nn.ReLU()]
+
+        prev_layer = n_latents[0]
+        for layer in n_latents[1:]:
+            modules.append(nn.Linear(prev_layer, layer))
+            modules.append(nn.ReLU())
+            prev_layer = layer
+
+        modules.append(nn.Linear(prev_layer, 1))
+        self.linears = nn.Sequential(*modules)
+
+    def forward(self, xy, x_shuffle, x_n_dim):
+        h = self.linears(xy)
+        y = xy[:, x_n_dim:]
+        xy_2 = torch.cat((x_shuffle, y), 1)
+        h2 = self.linears(xy_2)
+        return h, h2
+
+class MINE_Net4_2(nn.Module):
+    def __init__(self, xy_dim, n_latents,activation_fun, unbiased_loss):
+        # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+        # unbiased_loss: True or False. Whether to use unbiased loss or not
+        super(MINE_Net4_2, self).__init__()
+        self.xy_dim = xy_dim
+        self.unbiased_loss = unbiased_loss
+
+        if activation_fun=='ReLU':
+            modules = [nn.Linear(xy_dim, n_latents[0]), nn.ReLU()]
+        elif activation_fun=="ELU":
+            modules = [nn.Linear(xy_dim, n_latents[0]), nn.ELU()]
+        elif activation_fun=='Leaky_ReLU':
+            modules = [nn.Linear(xy_dim, n_latents[0]), nn.LeakyReLU(0.2)]
+
+        prev_layer = n_latents[0]
+        for layer in n_latents[1:]:
+            modules.append(nn.Linear(prev_layer, layer))
+            if activation_fun == 'ReLU':
+                modules.append(nn.ReLU())
+            elif activation_fun == "ELU":
+                modules.append(nn.ELU())
+            elif activation_fun == 'Leaky_ReLU':
+                modules.append(nn.LeakyReLU(0.2))
+            prev_layer = layer
+
+        modules.append(nn.Linear(prev_layer, 1))
+        self.linears = nn.Sequential(*modules)
+
+        if self.unbiased_loss:
+            self.ma_et = None
+            self.ma_rate = 0.001
+
+    def forward(self, x, y):
+        h = self.linears(x)
+        h2 = self.linears(y)
+        return h, h2
+
+
+class MINE_Net4_3(nn.Module):
+    def __init__(self, input_dim, n_latents, activation_fun, unbiased_loss, initial, save_path, data_loader, drop_out, net_name, min, max):
+        # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+        # unbiased_loss: True or False. Whether to use unbiased loss or not
+        # initial: could be 'None','normal', 'xavier_uniform', 'kaiming'
+        super().__init__()
+        self.activation_fun = activation_fun
+        self.unbiased_loss = unbiased_loss
+        self.n_hidden_layers = len(n_latents)
+        self.save_path = save_path
+        self.data_loader = data_loader
+        self.name = net_name
+        self.min = min
+        self.max = max
+
+        layers_dim = [input_dim] + n_latents + [1]
+        self.layers = nn.Sequential(collections.OrderedDict(
+            [('layer{}'.format(i),
+                nn.Linear(n_in, n_out)) for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))
+             ]))
+
+        if initial in ['normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse']:
+            for i in range(len(layers_dim)-1):
+                if initial == 'normal':
+                    nn.init.normal_(self.layers[i].weight, std=0.02)
+                    nn.init.constant_(self.layers[i].bias, 0)
+                elif initial == 'xavier_uniform':
+                    nn.init.xavier_uniform_(self.layers[i].weight)
+                    nn.init.zeros_(self.layers[i].bias)
+                elif initial == 'xavier_normal':
+                    nn.init.xavier_normal_(self.layers[i].weight, gain=1.0)
+                elif initial == 'kaiming_uniform':
+                    if isinstance(self.layers[i], nn.Linear):
+                        nn.init.kaiming_uniform_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
+                        nn.init.constant_(self.layers[i].bias, 0.0)
+                elif initial == 'kaiming_normal':
+                    if isinstance(self.layers[i], nn.Linear):
+                        nn.init.kaiming_normal_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
+                        nn.init.constant_(self.layers[i].bias, 0.0)
+                elif initial == 'orthogonal':
+                    nn.init.orthogonal_(self.layers[i].weight)
+                    nn.init.zeros_(self.layers[i].bias)
+                elif initial == 'sparse':
+                    nn.init.sparse_(self.layers[i].weight, sparsity=0.1)
+                    nn.init.zeros_(self.layers[i].bias)
+
+        self.bn1 = nn.BatchNorm1d(num_features=n_latents[0])
+        self.dropout = nn.Dropout(p=drop_out)
+        if self.unbiased_loss:
+            self.ma_et = None
+            self.ma_rate = 0.001
+
+    def forward(self, input):
+        for one_layer in self.layers[0:-1]:
+            if self.activation_fun == 'ReLU':
+                input_next = self.dropout(self.bn1(F.relu(one_layer(input))))
+            elif self.activation_fun == "ELU":
+                input_next = self.dropout(self.bn1(F.elu(one_layer(input))))
+            elif self.activation_fun == 'Leaky_ReLU':
+                input_next = self.dropout(self.bn1(F.leaky_relu(one_layer(input),negative_slope=2e-1)))
+            input = input_next
+        output = self.layers[-1](input)
+        return output
+
+
+class MINE_Net5(nn.Module):
+
+    def __init__(self, xy_dim, hidden_size=128):
+        super().__init__()
+        self.fc1_sample = nn.Linear(xy_dim, hidden_size, bias=False)
+        self.fc1_bias = nn.Parameter(torch.zeros(hidden_size))
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, 1)
+
+        self.ma_et = None
+        self.ma_rate = 0.001
+
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0.0)
+
+    def forward(self, input):
+        x_sample = self.fc1_sample(input)
+        x = F.leaky_relu(x_sample + self.fc1_bias, negative_slope=2e-1)
+        x = F.leaky_relu(self.fc2(x), negative_slope=2e-1)
+        x = F.leaky_relu(self.fc3(x), negative_slope=2e-1)
+        return x
+
+class Classifier_Net(nn.Module):
+    def __init__(self, input_dim, n_latents, activation_fun, initial, save_path, data_loader, drop_out,net_name, min, max):
+        # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+        # initial: could be 'None','normal', 'xavier_uniform', 'kaiming'
+        super().__init__()
+        self.activation_fun = activation_fun
+        self.n_hidden_layers = len(n_latents)
+        self.save_path = save_path
+        self.data_loader = data_loader
+        self.name = net_name
+        self.min = min
+        self.max = max
+
+        layers_dim = [input_dim] + n_latents + [1]
+        self.layers = nn.Sequential(collections.OrderedDict(
+            [('layer{}'.format(i),
+                nn.Linear(n_in, n_out)) for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))
+             ]))
+
+        if initial in ['xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal']:
+            for i in range(len(layers_dim)-1):
+                if initial == 'normal':
+                    nn.init.normal_(self.layers[i].weight, std=0.02)
+                    nn.init.constant_(self.layers[i].bias, 0)
+                elif initial == 'xavier_uniform':
+                    nn.init.xavier_uniform_(self.layers[i].weight)
+                    nn.init.zeros_(self.layers[i].bias)
+                elif initial == 'xavier_normal':
+                    nn.init.xavier_normal_(self.layers[i].weight, gain=1.0)
+                elif initial == 'kaiming_uniform':
+                    if isinstance(self.layers[i], nn.Linear):
+                        nn.init.kaiming_uniform_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
+                        nn.init.constant_(self.layers[i].bias, 0.0)
+                elif initial == 'kaiming_normal':
+                    if isinstance(self.layers[i], nn.Linear):
+                        nn.init.kaiming_normal_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
+                        nn.init.constant_(self.layers[i].bias, 0.0)
+
+        self.bn1 = nn.BatchNorm1d(num_features=n_latents[0])
+        self.dropout = nn.Dropout(p=drop_out)
+
+    def forward(self, input):
+        for one_layer in self.layers[0:-1]:
+            if self.activation_fun == 'ReLU':
+                input_next = self.dropout(self.bn1(F.relu(one_layer(input))))
+            elif self.activation_fun == "ELU":
+                input_next = self.dropout(self.bn1(F.elu(one_layer(input))))
+            elif self.activation_fun == 'Leaky_ReLU':
+                input_next = self.dropout(self.bn1(F.leaky_relu(one_layer(input),negative_slope=2e-1)))
+            input = input_next
+        logit = torch.sigmoid(self.layers[-1](input_next))
+        return logit
+
+
+# discrete_continuous_info(d, c) estimates the mutual information between a
+# discrete vector 'd' and a continuous vector 'c' using
+# nearest-neighbor statistics.  Similar to the estimator described by
+# Kraskov et. al. ("Estimating Mutual Information", PRE 2004)
+# Each vector in c & d is stored as a column in an array:
+# c.shape = (vector length, # samples).
+import numpy as np
+import math
+import scipy
+def discrete_continuous_info(d, c, k:int = 3, base: float = 2):
+    # First, bin the continuous data 'c' according to the discrete symbols 'd'
+    # d and c are tensors
+    first_symbol = []
+    symbol_IDs = d.shape[1]*[0]
+    c_split = []
+    cs_indices = []
+    num_d_symbols = 0
+
+    for c1 in range(d.shape[1]):
+
+        symbol_IDs[c1] = num_d_symbols + 1
+
+        for c2 in range(num_d_symbols):
+            if d[:,c1] == d[:, first_symbol[c2]]:
+                symbol_IDs[c1] = c2
+                break
+        if symbol_IDs[c1] > num_d_symbols:
+            num_d_symbols = num_d_symbols + 1
+            first_symbol = first_symbol + [c1]
+            c_split = c_split + [torch.transpose(c[:,c1][np.newaxis,:],0,1)]
+            cs_indices = cs_indices + [Variable(torch.from_numpy(np.array([[c1]])).type(torch.FloatTensor),requires_grad=True)]
+        else:
+            c_split[symbol_IDs[c1]-1] = torch.cat((c_split[symbol_IDs[c1]-1], torch.transpose(c[:,c1][np.newaxis,:],0,1)), dim=1)
+            cs_indices[symbol_IDs[c1]-1] = torch.cat((cs_indices[symbol_IDs[c1]-1], Variable(torch.from_numpy(np.array([[c1]])).type(torch.FloatTensor),requires_grad=True)), dim=1)
+
+    # Second, compute the neighbor statistic for each data pair (c, d) using
+    # the binned c_split list
+
+    m_tot = 0
+    av_psi_Nd = 0
+    V = d.shape[1]*[0]
+    all_c_distances = c.shape[1]*[0]
+    psi_ks = 0
+
+    for c_bin in range(num_d_symbols):
+        one_k = min(k, c_split[c_bin].shape[1]-1)
+        if one_k > 0:
+            c_distances = c_split[c_bin].shape[1]*[0]
+            c_split_one = c_split[c_bin]
+            for pivot in range(c_split[c_bin].shape[1]):
+                # find the radius of our volume using only those samples with
+                # the particular value of the discrete symbol 'd'
+                for cv in range(c_split[c_bin].shape[1]):
+                    vector_diff = c_split_one[:,cv][np.newaxis,:] - c_split_one[:,pivot][np.newaxis,:]
+                    c_distances[cv] = torch.sqrt(torch.mm(vector_diff, torch.transpose(vector_diff,0,1)))
+                eps_over_2 = sorted(c_distances)[one_k]
+
+                for cv in range(c.shape[1]):
+                    vector_diff = c[:,cv][np.newaxis,:]-c_split_one[:,pivot][np.newaxis,:]
+                    all_c_distances[cv] = torch.sqrt(torch.mm(vector_diff, torch.transpose(vector_diff,0,1)))
+
+                m =  max(len(list(filter(lambda x: x <= eps_over_2, all_c_distances)))-1,0)
+                m_tot = m_tot + scipy.special.digamma(m)
+                V[cs_indices[c_bin][0,pivot].int()] = (2*eps_over_2)**(d.shape[0])
+        else:
+            m_tot = m_tot + scipy.special.digamma(num_d_symbols*2)
+
+        p_d = (c_split[c_bin].shape[1])/(d.shape[1])
+        av_psi_Nd = av_psi_Nd + p_d*scipy.special.digamma(p_d*(d.shape[1]))
+        psi_ks = psi_ks + p_d*scipy.special.digamma(max(one_k, 1))
+
+    f = (scipy.special.digamma(d.shape[1]) - av_psi_Nd + psi_ks - m_tot/(d.shape[1]))/math.log(base)
+    return f
+
+def Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, nsamples_z):
+        # nsamples_z: the number of z taken from the aggregated posterior distribution of z
+        # list of hidden nodes for Mine_Net4_2
+
+        qz_m_array = qz_m.detach().numpy()
+        qz_v_array = qz_v.detach().numpy()
+        batch_index_list = np.ndarray.tolist(batch_index.detach().numpy().ravel())
+        qz_m_array_batch0 = qz_m_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 0], :]
+        qz_m_array_batch1 = qz_m_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 1], :]
+        qz_v_array_batch0 = qz_v_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 0], :]
+        qz_v_array_batch1 = qz_v_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 1], :]
+
+        z_batch0 = np.empty((0, qz_m_array.shape[-1]), float)
+        z_batch1 = np.empty((0, qz_m_array.shape[-1]), float)
+        for k in range(nsamples_z):
+            posterior_index_batch0 = np.random.choice(np.arange(0, qz_m_array_batch0.shape[0]),p=[1 / qz_m_array_batch0.shape[0] for i in range(qz_m_array_batch0.shape[0])])
+            z_0 = multivariate_normal(qz_m_array_batch0[posterior_index_batch0],qz_v_array_batch0[posterior_index_batch0]).rvs()
+            z_batch0 = np.append(z_batch0, np.array([z_0]), axis=0)
+
+            posterior_index_batch1 = np.random.choice(np.arange(0, qz_m_array_batch1.shape[0]),p=[1 / qz_m_array_batch1.shape[0] for i in range(qz_m_array_batch1.shape[0])])
+            z_1 = multivariate_normal(qz_m_array_batch1[posterior_index_batch1],qz_v_array_batch1[posterior_index_batch1]).rvs()
+            z_batch1 = np.append(z_batch1, np.array([z_1]), axis=0)
+        return z_batch0, z_batch1
