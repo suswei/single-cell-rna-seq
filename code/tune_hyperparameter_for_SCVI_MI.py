@@ -47,7 +47,7 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
-            'pre_adv_epochs': [100],
+            'pre_adv_epochs': [200],
             'adv_epochs': [1],
             'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
@@ -203,7 +203,7 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
             advnet = MINE_Net4_3(input_dim=vae_MI2.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/rep%s/' % (dataset_name, taskid),
-                                  data_loader=trainer_vae_MI2_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.3)
+                                  data_loader=trainer_vae_MI2_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.2)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI2.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/rep%s/' % (dataset_name, taskid),
@@ -357,6 +357,7 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
         batch_indices_array_train = np.concatenate((batch_indices_array_train, batch_indices_list_train[i].detach().numpy()), axis=0)
 
     if adv_model == 'MI':
+        '''
         batch_index_adv_list = np.ndarray.tolist(batch_indices_array_train)
         z_batch0_tensor_train = z_tensor_train[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]],:]
         z_batch1_tensor_train = z_tensor_train[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]],:]
@@ -368,10 +369,19 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
         pred_x_z_train = trainer_vae_MI2.adv_model(input=l_z_batch1_tensor_train)
         predicted_mutual_info = (torch.mean(pred_xz_train) - torch.log(torch.mean(torch.exp(pred_x_z_train)))).detach().cpu().numpy()
         std_predicted_mutual_info = (predicted_mutual_info - (-0.02))/(0.3-(-0.02))
+        '''
+        l_z_joint_train = torch.cat((library_tensor_train, z_tensor_train), dim=1)
+        z_shuffle_train = np.random.permutation(z_tensor_train.detach().numpy())
+        z_shuffle_train = Variable(torch.from_numpy(z_shuffle_train).type(torch.FloatTensor), requires_grad=True)
+        l_z_indept_train = torch.cat((library_tensor_train, z_shuffle_train), dim=1)
+        pred_xz_train = trainer_vae_MI2.adv_model(input=l_z_joint_train)
+        pred_x_z_train = trainer_vae_MI2.adv_model(input=l_z_indept_train)
+        predicted_mutual_info = (torch.mean(pred_xz_train) - (torch.log(torch.mean(torch.exp(pred_x_z_train))) * torch.mean(torch.exp(pred_x_z_train)).detach() / trainer_vae_MI2.adv_model.ma_et)).detach().cpu().numpy()
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.02)) / (0.2 - (-0.02))
 
         advnet2 = MINE_Net4_3(input_dim=vae_MI2.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                               save_path='None',data_loader=trainer_vae_MI2_adv, drop_out=adv_drop_out, net_name=adv_model, min=-0.02, max=0.06)
-        adv_optimizer2 = torch.optim.Adam(advnet.parameters(), lr=5e-4)
+        adv_optimizer2 = torch.optim.Adam(advnet.parameters(), lr=5e-3)
         #To fully train MineNet
         for full_epoch in tqdm(range(400)):
             advnet2.train()
@@ -384,7 +394,7 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
                 qz_m, qz_v, z = trainer_vae_MI2.model.z_encoder(x_, None)
                 # z = z.detach()
                 ql_m, ql_v, library = trainer_vae_MI2.model.l_encoder(x_)
-
+                '''
                 z_batch0_tensor = z[(Variable(torch.LongTensor([1])) - batch_index_adv).squeeze(1).byte()]
                 z_batch1_tensor = z[batch_index_adv.squeeze(1).byte()]
                 l_batch0_tensor = library[(Variable(torch.LongTensor([1])) - batch_index_adv).squeeze(1).byte()]
@@ -400,7 +410,13 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
                 # clip pred_x_z, but not pred_xz
                 pred_x_z = torch.min(pred_x_z, Variable(torch.FloatTensor([1])))
                 pred_x_z = torch.max(pred_x_z, Variable(torch.FloatTensor([-1])))
-
+                '''
+                l_z_joint_tensor = torch.cat((library, z), dim=1)
+                z_shuffle_tensor = np.random.permutation(z.detach().numpy())
+                z_shuffle_tensor = Variable(torch.from_numpy(z_shuffle_tensor).type(torch.FloatTensor), requires_grad=True)
+                l_z_indept_tensor = torch.cat((library, z_shuffle_tensor), dim=1)
+                pred_xz = advnet2(input=l_z_joint_tensor)
+                pred_x_z = advnet2(input=l_z_indept_tensor)
                 if advnet2.unbiased_loss:
                     t = pred_xz
                     et = torch.exp(pred_x_z)
@@ -416,12 +432,16 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
                 loss_adv2.backward()
                 adv_optimizer2.step()
         advnet2.eval()
-
+    '''
     pred_xz_train_fully = advnet2(input=l_z_batch0_tensor_train)
     pred_x_z_train_fully = advnet2(input=l_z_batch1_tensor_train)
     pred_x_z_train_fully = torch.min(pred_x_z_train_fully, Variable(torch.FloatTensor([1])))
     pred_x_z_train_fully = torch.max(pred_x_z_train_fully, Variable(torch.FloatTensor([-1])))
     predicted_mutual_info_fully = (torch.mean(pred_xz_train_fully) - torch.log(torch.mean(torch.exp(pred_x_z_train_fully)))).detach().cpu().numpy()
+    '''
+    pred_xz_train_fully = advnet2(input=l_z_joint_train)
+    pred_x_z_train_fully = advnet2(input=l_z_indept_train)
+    predicted_mutual_info_fully = (torch.mean(pred_xz_train_fully) - (torch.log(torch.mean(torch.exp(pred_x_z_train_fully))) * torch.mean(torch.exp(pred_x_z_train_fully)).detach() / advnet2.ma_et)).detach().cpu().numpy()
 
     ELBO_list_train = []
     number_samples = 0
@@ -460,6 +480,7 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
         batch_indices_array_test = np.concatenate((batch_indices_array_test, batch_indices_list_test[i].detach().numpy()), axis=0)
 
     if adv_model == 'MI':
+        '''
         batch_index_adv_list = np.ndarray.tolist(batch_indices_array_test)
         z_batch0_tensor_test = z_tensor_test[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [0]], :]
         z_batch1_tensor_test = z_tensor_test[[i for i in range(len(batch_index_adv_list)) if batch_index_adv_list[i] == [1]], :]
@@ -477,6 +498,21 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
         pred_x_z_test_fully = torch.min(pred_x_z_test_fully, Variable(torch.FloatTensor([1])))
         pred_x_z_test_fully = torch.max(pred_x_z_test_fully, Variable(torch.FloatTensor([-1])))
         predicted_mutual_info_fully = (torch.mean(pred_xz_test_fully) - torch.log(torch.mean(torch.exp(pred_x_z_test_fully)))).detach().cpu().numpy()
+        '''
+        l_z_joint_test = torch.cat((library_tensor_test, z_tensor_test), dim=1)
+        z_shuffle_test = np.random.permutation(z_tensor_test.detach().numpy())
+        z_shuffle_test = Variable(torch.from_numpy(z_shuffle_test).type(torch.FloatTensor), requires_grad=True)
+        l_z_indept_test = torch.cat((library_tensor_test, z_shuffle_test), dim=1)
+        pred_xz_test = trainer_vae_MI2.adv_model(input=l_z_joint_test)
+        pred_x_z_test = trainer_vae_MI2.adv_model(input=l_z_indept_test)
+        predicted_mutual_info = (torch.mean(pred_xz_test) - (torch.log(torch.mean(torch.exp(pred_x_z_test))) * torch.mean(
+                torch.exp(pred_x_z_test)).detach() / trainer_vae_MI2.adv_model.ma_et)).detach().cpu().numpy()
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.02)) / (0.2 - (-0.02))
+
+        pred_xz_test_fully = advnet2(input=l_z_joint_test)
+        pred_x_z_test_fully = advnet2(input=l_z_indept_test)
+        predicted_mutual_info_fully = (torch.mean(pred_xz_test_fully) - (torch.log(torch.mean(torch.exp(pred_x_z_test_fully))) * torch.mean(torch.exp(pred_x_z_test_fully)).detach() / advnet2.ma_et)).detach().cpu().numpy()
+
 
     elif adv_model == 'Classifier':
         z_l_test = torch.cat((library_tensor_test, z_tensor_test), dim=1)

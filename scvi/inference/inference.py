@@ -64,6 +64,7 @@ class UnsupervisedTrainer(Trainer):
             #z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
             #z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
             if self.adv_model.name == 'MI':
+                '''
                 z_batch0_tensor = z[(Variable(torch.LongTensor([1])) - batch_index).squeeze(1).byte()]
                 z_batch1_tensor = z[batch_index.squeeze(1).byte()]
                 l_batch0_tensor = library[(Variable(torch.LongTensor([1])) - batch_index).squeeze(1).byte()]
@@ -79,6 +80,15 @@ class UnsupervisedTrainer(Trainer):
                     pred_x_z = torch.min(pred_x_z, Variable(torch.FloatTensor([1])))
                     pred_x_z = torch.max(pred_x_z, Variable(torch.FloatTensor([-1])))
                     penalty_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+                '''
+                l_z_joint = torch.cat((library, z), dim=1)
+                z_shuffle = np.random.permutation(z.detach().numpy())
+                z_shuffle = Variable(torch.from_numpy(z_shuffle).type(torch.FloatTensor), requires_grad=True)
+                l_z_indept = torch.cat((library, z_shuffle), dim=1)
+                pred_xz = self.adv_model(input=l_z_joint)
+                pred_x_z = self.adv_model(input=l_z_indept)
+                #penalty_loss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z)))
+                penalty_loss = torch.mean(pred_xz) - (torch.log(torch.mean(torch.exp(pred_x_z))) * torch.mean(torch.exp(pred_x_z)).detach() / self.adv_model.ma_et)
             elif self.adv_model.name == 'Classifier':
                 z_l = torch.cat((library, z), dim=1)
                 batch_index = Variable(torch.from_numpy(batch_index.detach().numpy()).type(torch.FloatTensor),requires_grad=False)

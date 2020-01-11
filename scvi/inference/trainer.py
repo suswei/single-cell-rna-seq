@@ -167,6 +167,7 @@ class Trainer:
                             ql_m, ql_v, library = self.model.l_encoder(x_)
 
                             if self.adv_model.name == 'MI':
+                                '''
                                 z_batch0_tensor = z[(Variable(torch.LongTensor([1])) - batch_index_adv).squeeze(1).byte()]
                                 z_batch1_tensor = z[batch_index_adv.squeeze(1).byte()]
                                 l_batch0_tensor = library[(Variable(torch.LongTensor([1])) - batch_index_adv).squeeze(1).byte()]
@@ -176,12 +177,19 @@ class Trainer:
 
                                 if (l_z_batch0_tensor.shape[0] == 0) or (l_z_batch1_tensor.shape[0] == 0):
                                     continue
-
+                                
                                 pred_xz = self.adv_model(input=l_z_batch0_tensor)
                                 pred_x_z = self.adv_model(input=l_z_batch1_tensor)
                                 #clip pred_x_z, but not pred_xz
                                 pred_x_z = torch.min(pred_x_z, Variable(torch.FloatTensor([1])))
                                 pred_x_z = torch.max(pred_x_z, Variable(torch.FloatTensor([-1])))
+                                '''
+                                l_z_joint = torch.cat((library, z), dim=1)
+                                z_shuffle = np.random.permutation(z.detach().numpy())
+                                z_shuffle = Variable(torch.from_numpy(z_shuffle).type(torch.FloatTensor),requires_grad=True)
+                                l_z_indept = torch.cat((library, z_shuffle), dim=1)
+                                pred_xz = self.adv_model(input=l_z_joint)
+                                pred_x_z = self.adv_model(input=l_z_indept)
 
                                 if self.adv_model.unbiased_loss:
                                     t = pred_xz
