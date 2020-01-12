@@ -47,7 +47,7 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
             'nsamples_z': [200],
             'adv': [True],
             'Adv_Net_architecture': [[256] * 10],
-            'pre_adv_epochs': [200],
+            'pre_adv_epochs': [300],
             'adv_epochs': [1],
             'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
             'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
@@ -203,7 +203,7 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
             advnet = MINE_Net4_3(input_dim=vae_MI2.n_latent + 1, n_latents=Adv_Net_architecture,
                                   activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/rep%s/' % (dataset_name, taskid),
-                                  data_loader=trainer_vae_MI2_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.02, max=0.2)
+                                  data_loader=trainer_vae_MI2_adv, drop_out = adv_drop_out, net_name = adv_model, min=-0.075, max=0.05)
         elif adv_model == 'Classifier':
             advnet = Classifier_Net(input_dim=vae_MI2.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, initial=initial,
                                   save_path='./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/rep%s/' % (dataset_name, taskid),
@@ -377,10 +377,10 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
         pred_xz_train = trainer_vae_MI2.adv_model(input=l_z_joint_train)
         pred_x_z_train = trainer_vae_MI2.adv_model(input=l_z_indept_train)
         predicted_mutual_info = (torch.mean(pred_xz_train) - (torch.log(torch.mean(torch.exp(pred_x_z_train))) * torch.mean(torch.exp(pred_x_z_train)).detach() / trainer_vae_MI2.adv_model.ma_et)).detach().cpu().numpy()
-        std_predicted_mutual_info = (predicted_mutual_info - (-0.02)) / (0.2 - (-0.02))
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.075)) / (0.05 - (-0.075))
 
         advnet2 = MINE_Net4_3(input_dim=vae_MI2.n_latent + 1, n_latents=Adv_Net_architecture, activation_fun=activation_fun, unbiased_loss=unbiased_loss, initial=initial,
-                              save_path='None',data_loader=trainer_vae_MI2_adv, drop_out=adv_drop_out, net_name=adv_model, min=-0.02, max=0.06)
+                              save_path='None',data_loader=trainer_vae_MI2_adv, drop_out=adv_drop_out, net_name=adv_model, min=-0.075, max=0.05)
         adv_optimizer2 = torch.optim.Adam(advnet.parameters(), lr=5e-3)
         #To fully train MineNet
         for full_epoch in tqdm(range(400)):
@@ -507,7 +507,7 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
         pred_x_z_test = trainer_vae_MI2.adv_model(input=l_z_indept_test)
         predicted_mutual_info = (torch.mean(pred_xz_test) - (torch.log(torch.mean(torch.exp(pred_x_z_test))) * torch.mean(
                 torch.exp(pred_x_z_test)).detach() / trainer_vae_MI2.adv_model.ma_et)).detach().cpu().numpy()
-        std_predicted_mutual_info = (predicted_mutual_info - (-0.02)) / (0.2 - (-0.02))
+        std_predicted_mutual_info = (predicted_mutual_info - (-0.075)) / (0.05 - (-0.075))
 
         pred_xz_test_fully = advnet2(input=l_z_joint_test)
         pred_x_z_test_fully = advnet2(input=l_z_indept_test)
