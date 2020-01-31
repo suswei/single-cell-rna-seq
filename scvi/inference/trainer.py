@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from sklearn.model_selection._split import _validate_shuffle_split
 from torch.utils.data.sampler import SubsetRandomSampler
+from torch.optim.lr_scheduler import StepLR
 import matplotlib.pyplot as plt
 import statistics
 import pandas as pd
@@ -109,7 +110,10 @@ class Trainer:
         #     optimizer = self.optimizer
         # else:
         optimizer = self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps)  # weight_decay=self.weight_decay,
-
+        '''
+        if self.model.adv == True:
+           scheduler = StepLR(optimizer, step_size=30, gamma=0.8)
+        '''
         self.compute_metrics_time = 0
         self.n_epochs = n_epochs
         self.compute_metrics()
@@ -163,6 +167,7 @@ class Trainer:
                             ql_m, ql_v, library = self.model.l_encoder(x_)
 
                             if self.adv_model.name == 'MI':
+                                '''
                                 z_batch0_tensor = z[(Variable(torch.LongTensor([1])) - batch_index_adv).squeeze(1).byte()]
                                 z_batch1_tensor = z[batch_index_adv.squeeze(1).byte()]
                                 l_batch0_tensor = library[(Variable(torch.LongTensor([1])) - batch_index_adv).squeeze(1).byte()]
@@ -172,9 +177,19 @@ class Trainer:
 
                                 if (l_z_batch0_tensor.shape[0] == 0) or (l_z_batch1_tensor.shape[0] == 0):
                                     continue
-
+                                
                                 pred_xz = self.adv_model(input=l_z_batch0_tensor)
                                 pred_x_z = self.adv_model(input=l_z_batch1_tensor)
+                                #clip pred_x_z, but not pred_xz
+                                pred_x_z = torch.min(pred_x_z, Variable(torch.FloatTensor([1])))
+                                pred_x_z = torch.max(pred_x_z, Variable(torch.FloatTensor([-1])))
+                                '''
+                                l_z_joint = torch.cat((library, z), dim=1)
+                                z_shuffle = np.random.permutation(z.detach().numpy())
+                                z_shuffle = Variable(torch.from_numpy(z_shuffle).type(torch.FloatTensor),requires_grad=True)
+                                l_z_indept = torch.cat((library, z_shuffle), dim=1)
+                                pred_xz = self.adv_model(input=l_z_joint)
+                                pred_x_z = self.adv_model(input=l_z_indept)
 
                                 if self.adv_model.unbiased_loss:
                                     t = pred_xz
@@ -263,6 +278,11 @@ class Trainer:
                         activation_var = np.append(activation_var, np.array([activation_var_oneepoch]).transpose(), axis=1)
                     '''
                 self.model.train()
+                '''
+                if self.model.adv == True:
+                    scheduler.step()
+                    print('LR:', scheduler.get_lr())
+                '''
                 if self.model.adv == True and self.model.std == True:
                     for tensors_list in self.data_loaders_loop():
                         loss, ELBO, std_ELBO, penalty, std_penalty = self.loss(*tensors_list)
