@@ -124,8 +124,9 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
         gene_dataset = RetinaDataset(save_path=data_save_path)
 
     n_samples_tsne = 1000
+    jobid = int(jobid)
 
-    key, value = zip(*hyperparameter_experiments[0].items())
+    key, value = zip(*hyperparameter_experiments[jobid].items())
     n_layers_encoder = value[0]
     n_layers_decoder = value[1]
     n_hidden = value[2]
@@ -153,7 +154,6 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
     std = value[24]
     max_reconst = value[25]
 
-    jobid = int(jobid)
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, 100), dtype=np.uint32)
     taskid = int(jobid/10)
