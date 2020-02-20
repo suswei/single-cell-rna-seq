@@ -56,7 +56,7 @@ def break_SCVI_barplot_clusterMetric(changed_property):
         ratios=[1 / 10, 3 / 10, 4 / 5]
     elif changed_property == 'Change_Gene_Expression_Proportion':
         proportions=[0.2, 0.4, 0.5]
-        ratios=[1 / 10, 3 / 10, 3, 10]
+        ratios=[2 / 10, 5 / 10, 2, 5]
 
     clusterMetric_path_original = './data/break_SCVI/ClusteringMetric_OriginalPbmc.csv'
     clusterMetric = pd.read_csv(clusterMetric_path_original)
@@ -67,16 +67,22 @@ def break_SCVI_barplot_clusterMetric(changed_property):
                 clusterMetric_path = './result/break_SCVI/%s/ClusteringMetrics_Batch%s_ratio%s.csv'(changed_property, batch, ratio)
                 intermediate_clusterMetric= pd.read_csv(clusterMetric_path)
                 clusterMetric = pd.concat([clusterMetric,intermediate_clusterMetric])
-            #draw barplot
+            if changed_property=='Change_Library_Size':
+                alg = ["Original","0.1","0.3","3","10"]
+            else:
+                alg = ["Original","0.1","0.3","0.8"]
+            barplot_list(clusterMetric.iloc[:, 1:].values, alg, 'Clustering metrics of train set', save='./result/%s/ClusteringMetric_Batch%s'%(changed_property, batch))
 
-alg = ["Original","0.2","0.5","2","5"]
-barplot_list(Modify_Prop1, alg, 'Clustering metrics train set for Changing Proportion', save='result/2019-05-01/trainset_clustering_metrics_for_PropThreshold1')
-alg = ["Original","0.2","0.5","2","5"]
-barplot_list(Modify_Prop2, alg, 'Clustering metrics train set for Changing Proportion', save='result/2019-05-01/trainset_clustering_metrics_for_PropThreshold2')
-alg = ["Original","0.2","0.5","2","5"]
-barplot_list(Modify_Prop3, alg, 'Clustering metrics train set for Changing Proportion', save='result/2019-05-01/trainset_clustering_metrics_for_PropThreshold3')
+    else:
+        for batch in [0,1]:
+            for proportion in [0.2, 0.4, 0.5]:
+                for ratio in [2 / 10, 5 / 10, 2, 5]:
+                    clusterMetric_path = './result/break_SCVI/%s/ClusteringMetrics_Proportion%s_Batch%s_ratio%s.csv'(changed_property, proportion, batch, ratio)
+                    intermediate_clusterMetric = pd.read_csv(clusterMetric_path)
+                    clusterMetric = pd.concat([clusterMetric, intermediate_clusterMetric])
+                alg = ["Original", "0.2", "0.5", "2", "5"]
+                barplot_list(clusterMetric.iloc[:, 1:].values, alg, 'Clustering metrics of train set', save='./result/%s/ClusteringMetric_Batch%s_Proportion%s' % (changed_property, batch, proportion))
 
-Break_SCVI(input_file_paths_prefix = './data/Break_SCVI/Change_Library_Size/2019-04-05/Pbmc_CellInfo_GeneCount*')
-Break_SCVI(input_file_paths_prefix = './data/Break_SCVI/Change_Library_Size/2019-04-14/Pbmc_CellInfo_GeneCount*')
-Break_SCVI(input_file_paths_prefix = './data/Break_SCVI/Change_Expressed_Gene_Number/2019-04-14/Pbmc_CellInfo_GeneCount*')
-Break_SCVI(input_file_paths_prefix = './data/Break_SCVI/Change_Gene_Expression_Proportion/2019-05-01/Pbmc_CellInfo_GeneCount*')
+break_SCVI_barplot_clusterMetric(changed_property ='Change_Library_Size')
+break_SCVI_barplot_clusterMetric(changed_property ='Change_Expressed_Gene_Number')
+break_SCVI_barplot_clusterMetric(changed_property ='Change_Gene_Expression_Proportion')

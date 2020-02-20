@@ -9,9 +9,7 @@ import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import torch
-import rpy2.robjects as robjects
 from scipy import sparse
-import glob2
 import ntpath
 import itertools
 
