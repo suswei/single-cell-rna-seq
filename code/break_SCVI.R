@@ -1,6 +1,6 @@
 #First, create Pbmc_CellName_Label_Batch_CellMetric_GeneCount.csv based on Pbmc_CellName_Label_GeneCount.csv, Pbmc_Batch.csv, 
 #Pbmc_GeneInfo.csv. The three files datasetsPbmc_CellName_Label_GeneCount.csv, Pbmc_Batch.csv, Pbmc_GeneInfo.csv are created 
-#by code in break_SCVI_generate_artificial_dataset.py
+#by code in break_SCVI.py
 
 setwd("D:/UMelb/PhD_Projects/Project1_Modify_SCVI/")
 library(data.table)
@@ -62,37 +62,48 @@ p2 = ggplot(aes(y = total_features_by_counts, x = factor(batchpbmc4k)), data = P
 print(p2)
 dev.off()
 png("./result/break_SCVI/LibrarySize_By_CellTypes_Batch.png")
-p3 = ggplot(aes(y = total_counts, x =Labels, fill = factor(batchpbmc4k)), data = Pbmc_dataset) + geom_boxplot() + 
-  labs(y = "Library Size", x = 'Cell Type' , caption = "0: B cells, 1: CD14+ Monocytes, 2: CD4 T cells,\n3:  CD8 T cells, 4:  Dendritic Cells, 5: FCGR3A+ Monocytes,\n6: Megakaryocytes, 7:  NK cells, 8: Other") + 
+p3 = ggplot(aes(y = total_counts, x =factor(Labels), fill = factor(batchpbmc4k)), data = Pbmc_dataset) + geom_boxplot() + 
+  labs(y = "Library Size", x = 'Cell Type', caption = "0: B cells, 1: CD14+ Monocytes, 2: CD4 T cells, 3:  CD8 T cells, 4:  Dendritic Cells,\n5: FCGR3A+ Monocytes, 6: Megakaryocytes, 7:  NK cells, 8: Other") + 
   theme(plot.caption = element_text(hjust = 0))+ guides(fill=guide_legend(title='Batch'))
 print(p3)
 dev.off()
 png("./result/break_SCVI/GeneExpressed_By_CellTypes_Batch.png")
-p4 = ggplot(aes(y = total_features_by_counts, x =Labels, fill = factor(batchpbmc4k)), data = Pbmc_dataset) + geom_boxplot()+
-  labs(y = "Number of Genes with Non-Zero Count", x='Cell Type', caption = "0: B cells, 1: CD14+ Monocytes, 2: CD4 T cells,\n3:  CD8 T cells, 4:  Dendritic Cells, 5: FCGR3A+ Monocytes,\n6: Megakaryocytes, 7:  NK cells, 8: Other") +
+p4 = ggplot(aes(y = total_features_by_counts, x =factor(Labels), fill = factor(batchpbmc4k)), data = Pbmc_dataset) + geom_boxplot()+
+  labs(y = "Number of Genes with Non-Zero Count", x='Cell Type', caption = "0: B cells, 1: CD14+ Monocytes, 2: CD4 T cells, 3:  CD8 T cells, 4:  Dendritic Cells,\n5: FCGR3A+ Monocytes, 6: Megakaryocytes, 7:  NK cells, 8: Other") +
   theme(plot.caption = element_text(hjust = 0)) + guides(fill=guide_legend(title='Batch'))
 print(p4)
 dev.off()
 
 
 #Change library size
+set.seed(12345)
 Pbmc_dataset = fread("./data/break_SCVI/Pbmc_CellName_Label_Batch_CellMetric_GeneCount.csv")
 Pbmc_dataset = Pbmc_dataset[,4:dim(Pbmc_dataset)[2]]
 
-times = c(1/10, 3/10, 3, 10)
+times = c(1/10, 3/10)
 
 ##8030/11990 cells are from batch 0, 3960/11990 cells are from batch1
 for (i in 1:length(times)){
   
-  for(j in 1:2){
+  for(batch in 0:1){
     Pbmc_dataset1 = Pbmc_dataset
     
     for(k in 1:nrow(Pbmc_dataset1)){
-      if(Pbmc_dataset1$batchpbmc4k[k]==j-1){
-        total_count = rowSums(Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]])
-        prob_vector = as.numeric((Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]])/total_count)
-        Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]] = data.frame(matrix(rmultinom(1, size=total_count*times[i], prob=prob_vector),nrow=1))
-      }
+      total_count = rowSums(Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]])
+      prob_vector = as.numeric((Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]])/total_count)
+      if(batch == 0){
+        if(Pbmc_dataset1$batchpbmc4k[k]== 0){
+          Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]] = data.frame(matrix(rmultinom(1, size=total_count*times[i], prob=prob_vector),nrow=1))
+        }else{
+          Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]] = data.frame(matrix(rmultinom(1, size=total_count*(3-2*times[i]), prob=prob_vector),nrow=1))
+        }
+      }else{
+        if(Pbmc_dataset1$batchpbmc4k[k]== 1){
+          Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]] = data.frame(matrix(rmultinom(1, size=total_count*times[i], prob=prob_vector),nrow=1))
+        }else{
+          Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]] = data.frame(matrix(rmultinom(1, size=total_count*((3-times[i])/2), prob=prob_vector),nrow=1))
+        }
+      }  
     }
     
     Pbmc_GeneCount_Matrix = t(as.matrix(Pbmc_dataset1[,5:dim(Pbmc_dataset1)[2]])) 
@@ -112,14 +123,14 @@ for (i in 1:length(times)){
     
     Pbmc_CellName_Label_Batch_CellMetric_GeneCount = cbind(Sce2_CellMetrics, Pbmc_dataset1)
     
-    Outpath = paste0("./data/break_SCVI/Change_Library_Size/ModifyBatch",j-1,"_ratio",times[i],".csv")
+    Outpath = paste0("./data/break_SCVI/Change_Library_Size/ModifyBatch", batch,"_ratio",times[i],".csv")
     write.table(Pbmc_CellName_Label_Batch_CellMetric_GeneCount,file=Outpath, row.names = F, col.names = T, sep=",")
   }
 }
 
 
 #change the number of gene expressed
-
+set.seed(12345)
 Pbmc_dataset = fread("./data/break_SCVI/Pbmc_CellName_Label_Batch_CellMetric_GeneCount.csv")
 Pbmc_dataset = Pbmc_dataset[,4:dim(Pbmc_dataset)[2]]
 times = c(1/10,3/10,4/5)
@@ -164,7 +175,7 @@ for(i in 1:length(times)){
 
 
 # change gene expression proportion
-
+set.seed(12345)
 Pbmc_dataset = fread("./data/break_SCVI/Pbmc_CellName_Label_Batch_CellMetric_GeneCount.csv")
 Pbmc_dataset = Pbmc_dataset[,4:dim(Pbmc_dataset)[2]]
 
@@ -200,54 +211,59 @@ MostExpressed_200 = Gene_MeanExpression_Dataset_Ordered$GeneName[1:200]
 #58, 117 or 168 genes are unchanged.
 
 Proportions = c(0.2,0.4,0.5)
-FCs = c( 1/10, 3/10, 3, 10)
+#FCs means the ratio between batch 0 and batch 1 is 2/10, 5/10, 2, 5.
+FCs = c(2/10, 5/10, 2, 5)
 for(i in 1:length(Proportions)){
   for(j in 1:length(FCs)){
-    for(m in 1:2){
-      index = which(Zeros_Percentage<Proportions[i])
-      LessZero_Gene = colnames(Pbmc_dataset_GeneCount)[index]
-      Genes_List = LessZero_Gene[LessZero_Gene %in% MostExpressed_200]
-      Genes_List_Median_Dataset = Gene_MeanExpression_Dataset_Ordered[Gene_MeanExpression_Dataset_Ordered$GeneName %in% Genes_List,]
-      
-      
-      To_Change_Genes_List = Genes_List_Median_Dataset$GeneName[floor(length(Genes_List)*3/4):length(Genes_List)]
-      To_Scale_Genes_List = Genes_List[1:(floor(length(Genes_List)*3/4)-1)]
-      Pbmc_dataset1 = Pbmc_dataset
-      for(k in 1:nrow(Pbmc_dataset1)){
-        if(Pbmc_dataset1$batchpbmc4k[k]==m-1){
-          total_count = rowSums(Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]])
-          gene_count_onecell = as.numeric(Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]])
-          
-          prob_vector = gene_count_onecell/total_count
-          prob_dataset = data.table(geneName=colnames(Pbmc_dataset1)[5:ncol(Pbmc_dataset1)], prob=prob_vector)
+    index = which(Zeros_Percentage<Proportions[i])
+    LessZero_Gene = colnames(Pbmc_dataset_GeneCount)[index]
+    Genes_List = LessZero_Gene[LessZero_Gene %in% MostExpressed_200]
+    Genes_List_Median_Dataset = Gene_MeanExpression_Dataset_Ordered[Gene_MeanExpression_Dataset_Ordered$GeneName %in% Genes_List,]
+    
+    
+    To_Change_Genes_List = Genes_List_Median_Dataset$GeneName[floor(length(Genes_List)*3/4):length(Genes_List)]
+    To_Scale_Genes_List = Genes_List[1:(floor(length(Genes_List)*3/4)-1)]
+    Pbmc_dataset1 = Pbmc_dataset
+    for(k in 1:nrow(Pbmc_dataset1)){
+      if(((j %in% 1:2) & Pbmc_dataset1$batchpbmc4k[k]==1) | ((j %in% 3:4) & Pbmc_dataset1$batchpbmc4k[k]==0)){
+        total_count = rowSums(Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]])
+        gene_count_onecell = as.numeric(Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]])
+        
+        prob_vector = gene_count_onecell/total_count
+        prob_dataset = data.table(geneName=colnames(Pbmc_dataset1)[5:ncol(Pbmc_dataset1)], prob=prob_vector)
+        if(j %in% 1:2){
+          prob_dataset$prob[which(prob_dataset$geneName %in% To_Change_Genes_List)] = prob_dataset$prob[which(prob_dataset$geneName %in% To_Change_Genes_List)]*(1/FCs[j])
+        }else if(j %in% 3:4){
           prob_dataset$prob[which(prob_dataset$geneName %in% To_Change_Genes_List)] = prob_dataset$prob[which(prob_dataset$geneName %in% To_Change_Genes_List)]*FCs[j]
-          
-          Ratio_For_Scale = (sum(prob_dataset$prob[which(prob_dataset$geneName %in% To_Scale_Genes_List)])-(sum(prob_dataset$prob)-1))/sum(prob_dataset$prob[which(prob_dataset$geneName %in% To_Scale_Genes_List)])        
-          prob_dataset$prob[which(prob_dataset$geneName %in% To_Scale_Genes_List)] = prob_dataset$prob[which(prob_dataset$geneName %in% To_Scale_Genes_List)]* Ratio_For_Scale
-          
-          Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]] = data.frame(matrix(rmultinom(1, size=total_count, prob=prob_dataset$prob),nrow=1))
         }
+        
+        Ratio_For_Scale = (sum(prob_dataset$prob[which(prob_dataset$geneName %in% To_Scale_Genes_List)])-(sum(prob_dataset$prob)-1))/sum(prob_dataset$prob[which(prob_dataset$geneName %in% To_Scale_Genes_List)])        
+        prob_dataset$prob[which(prob_dataset$geneName %in% To_Scale_Genes_List)] = prob_dataset$prob[which(prob_dataset$geneName %in% To_Scale_Genes_List)]* Ratio_For_Scale
+        
+        Pbmc_dataset1[k,5:dim(Pbmc_dataset1)[2]] = data.frame(matrix(rmultinom(1, size=total_count, prob=prob_dataset$prob),nrow=1))
+        
       }
-      Pbmc_GeneCount_Matrix = t(as.matrix(Pbmc_dataset1[,5:dim(Pbmc_dataset1)[2]])) 
-      #Column is cell, row is gene
-      
-      Pbmc_Info = Pbmc_dataset1[,1:4]
-      #Pbmc cell info
-      
-      Sce = SingleCellExperiment(
-        assays = list(counts = Pbmc_GeneCount_Matrix), 
-        colData = Pbmc_Info
-      )
-      
-      Sce2 = calculateQCMetrics(Sce)
-      
-      Sce2_CellMetrics = as.data.frame(colData(Sce2)[,c("total_counts","total_features_by_counts", "pct_counts_in_top_100_features")])
-      
-      Pbmc_CellName_Label_Batch_CellMetric_GeneCount = cbind(Sce2_CellMetrics, Pbmc_dataset1)
-      
-      Outpath = paste0("./data/break_SCVI/Change_Gene_Expression_Proportion/ModifyProportion",Proportions[i],"_Batch",m-1, "_ratio",FCs[j] , ".csv")
-      write.table(Pbmc_CellName_Label_Batch_CellMetric_GeneCount,file=Outpath, row.names = F, col.names = T, sep=",")
     }
+    
+    Pbmc_GeneCount_Matrix = t(as.matrix(Pbmc_dataset1[,5:dim(Pbmc_dataset1)[2]])) 
+    #Column is cell, row is gene
+    
+    Pbmc_Info = Pbmc_dataset1[,1:4]
+    #Pbmc cell info
+    
+    Sce = SingleCellExperiment(
+      assays = list(counts = Pbmc_GeneCount_Matrix), 
+      colData = Pbmc_Info
+    )
+    
+    Sce2 = calculateQCMetrics(Sce)
+    
+    Sce2_CellMetrics = as.data.frame(colData(Sce2)[,c("total_counts","total_features_by_counts", "pct_counts_in_top_100_features")])
+    
+    Pbmc_CellName_Label_Batch_CellMetric_GeneCount = cbind(Sce2_CellMetrics, Pbmc_dataset1)
+    
+    Outpath = paste0("./data/break_SCVI/Change_Gene_Expression_Proportion/ModifyProportion",Proportions[i], "_ratio",FCs[j] , ".csv")
+    write.table(Pbmc_CellName_Label_Batch_CellMetric_GeneCount,file=Outpath, row.names = F, col.names = T, sep=",")
   }
 }
 

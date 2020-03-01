@@ -14,7 +14,7 @@ import ntpath
 import itertools
 
 
-def LibrarySize_NoOfGene(trainer, pbmc_dataset, n_samples_tsne, Pbmc_Info_GeneCount, original_bool, save_path_original):
+def LibrarySize_NoOfGene(trainer, pbmc_dataset, n_samples_tsne, Pbmc_Info_GeneCount, original_bool, save_path_original, tsne_index):
 
     full = trainer.create_posterior(trainer.model, pbmc_dataset, indices=None)
 
@@ -82,11 +82,12 @@ def LibrarySize_NoOfGene(trainer, pbmc_dataset, n_samples_tsne, Pbmc_Info_GeneCo
     if original_bool == True:
         fig.savefig('./result/break_SCVI/BatchCellTypeLibrarySizeNoofGeneColoring_OriginalPbmc.png')
     else:
-        fig.savefig(save_path_original.replace('data','result').replace('Modify', 'BatchCellTypeLibrarySizeNoofGeneColoring_').replace('.csv', '.png'))
+        fig.savefig((save_path_original.replace('data','result').replace('Modify', 'BatchCellTypeLibrarySizeNoofGeneColoring_')+'_rep%s'%(tsne_index)).replace('.csv', '.png'))
     plt.close(fig)
 
 
 def main(changed_property, jobid):
+    '''
     if not os.path.exists('data/break_SCVI/Change_Library_Size'):
         os.makedirs('data/break_SCVI/Change_Library_Size')
     if not os.path.exists('data/break_SCVI/Change_Expressed_Gene_Number'):
@@ -100,6 +101,7 @@ def main(changed_property, jobid):
         os.makedirs('result/break_SCVI/Change_Expressed_Gene_Number')
     if not os.path.exists('result/break_SCVI/Change_Gene_Expression_Proportion'):
         os.makedirs('result/break_SCVI/Change_Gene_Expression_Proportion')
+    '''
 
     if changed_property == 'Change_Library_Size':
         hyperparameter_config = {
@@ -117,7 +119,7 @@ def main(changed_property, jobid):
             'frequency': [5],
             'n_samples_tsne': [1000],
             'batch': [0,1],
-            'ratio': [1/10, 3/10, 3, 10]
+            'ratio': [1/10, 3/10]
         }
     elif changed_property == 'Change_Expressed_Gene_Number':
         hyperparameter_config = {
@@ -152,15 +154,15 @@ def main(changed_property, jobid):
             'n_epochs': [400],
             'frequency': [5],
             'n_samples_tsne': [1000],
-            'batch': [0,1],
-            'ratio': [2/10, 5/10, 2, 5],
-            'proportion': [0.2, 0.4, 0.5]
+            'proportion': [0.2, 0.4, 0.5],
+            'ratio': [2/10, 5/10, 2, 5]
+
         }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     data_save_path = './data/break_SCVI/%s' % (changed_property)
-    result_save_path = './result/break_SCVI%s' % (changed_property)
+    result_save_path = './result/break_SCVI/%s' % (changed_property)
     jobid = int(jobid)
 
     key, value = zip(*hyperparameter_experiments[jobid].items())
@@ -178,17 +180,17 @@ def main(changed_property, jobid):
     frequency = value[11]
     n_samples_tsne = value[12]
     batch = value[13]
-    ratio = value[14]
     if changed_property == 'Change_Gene_Expression_Proportion':
-       proportion = value[15]
+       proportion = value[13]
+    ratio = value[14]
 
     if changed_property == 'Change_Library_Size' or changed_property == 'Change_Expressed_Gene_Number':
        input_file_path = data_save_path + '/ModifyBatch%s_ratio%s.csv'%(batch, ratio)
     else:
-        input_file_path = data_save_path + '/ModifyProportion%s_Batch%s_ratio%s.csv'%(batch, ratio)
+       input_file_path = data_save_path + '/ModifyProportion%s_ratio%s.csv'%(proportion, ratio)
     pbmc_dataset_original = PbmcDataset(save_path=os.path.dirname(input_file_path))
 
-    pbmc_dataset = pbmc_dataset_original
+    pbmc_dataset = PbmcDataset(save_path=os.path.dirname(input_file_path))
     if jobid==0 and changed_property=='Change_Library_Size':
         Pbmc_Info_GeneCount_Original = pd.read_csv('./data/break_SCVI/Pbmc_CellName_Label_Batch_CellMetric_GeneCount.csv')
     Pbmc_Info_GeneCount = pd.read_csv(input_file_path)
@@ -196,10 +198,10 @@ def main(changed_property, jobid):
 
     if jobid==0 and changed_property=='Change_Library_Size':
        vae_original = VAE(pbmc_dataset_original.nb_genes, n_batch=pbmc_dataset_original.n_batches * use_batches)
-       trainer_original = UnsupervisedTrainer(vae_original, pbmc_dataset_original, train_size=train_size, seed=3210, use_cuda=use_cuda, frequency=frequency)
+       trainer_original = UnsupervisedTrainer(vae_original, pbmc_dataset_original, train_size=train_size, use_cuda=use_cuda, frequency=frequency)
 
     vae = VAE(pbmc_dataset.nb_genes, n_batch=pbmc_dataset.n_batches * use_batches)
-    trainer = UnsupervisedTrainer(vae, pbmc_dataset, train_size=train_size, seed=3210, use_cuda=use_cuda, frequency=frequency)
+    trainer = UnsupervisedTrainer(vae, pbmc_dataset, train_size=train_size, use_cuda=use_cuda, frequency=frequency)
 
     if jobid==0 and changed_property=='Change_Library_Size':
        vae_file_path_original = './data/break_SCVI/original_pbmc.pk1'
@@ -227,7 +229,7 @@ def main(changed_property, jobid):
         fig = plt.figure(figsize=(14, 7))
         plt.plot(x, ll_train_set)
         plt.plot(x, ll_test_set)
-        plt.ylim(1150, 1600)
+        plt.ylim(100,2000)
         plt.title("Blue for training error and orange for testing error")
         fig.savefig('./result/break_SCVI/Original_Pbmc_training_testing_error.png')
         plt.close(fig)
@@ -238,7 +240,7 @@ def main(changed_property, jobid):
     fig = plt.figure(figsize=(14, 7))
     plt.plot(x, ll_train_set)
     plt.plot(x, ll_test_set)
-    plt.ylim(1150, 1600)
+    plt.ylim(100, 2000)
     plt.title("Blue for training error and orange for testing error")
     fig.savefig(input_file_path.replace('data', 'result').replace('Modify','training_testing_error_').replace('.csv', '.png'))
     plt.close(fig)
@@ -256,11 +258,13 @@ def main(changed_property, jobid):
     be = trainer.train_set.entropy_batch_mixing()
     asw, nmi, ari, uca = trainer.train_set.clustering_scores()
     clustering_metrics = pd.DataFrame({'memo': [memo], 'asw': [asw], 'nmi': [nmi], 'ari': [ari], 'uca': [uca], 'be': [be]})
-    clustering_metrics.to_csv(input_file_path.replace('Modify', 'ClusteringMetrics_'),index=None, header=True)
+    clustering_metrics.to_csv(input_file_path.replace('data','result').replace('Modify', 'ClusteringMetrics_'),index=None, header=True)
 
     if jobid == 0 and changed_property == 'Change_Library_Size':
        LibrarySize_NoOfGene(trainer=trainer_original, pbmc_dataset=pbmc_dataset_original, n_samples_tsne=n_samples_tsne, Pbmc_Info_GeneCount=Pbmc_Info_GeneCount_Original, original_bool=True, save_path_original=input_file_path)
-    LibrarySize_NoOfGene(trainer=trainer, pbmc_dataset=pbmc_dataset, n_samples_tsne=n_samples_tsne, Pbmc_Info_GeneCount=Pbmc_Info_GeneCount, original_bool=False, save_path_original=input_file_path)
+    #because tsne plot is quite random, we draw the plot several times
+    for tsne_index in range(8):
+        LibrarySize_NoOfGene(trainer=trainer, pbmc_dataset=pbmc_dataset, n_samples_tsne=n_samples_tsne, Pbmc_Info_GeneCount=Pbmc_Info_GeneCount, original_bool=False, save_path_original=input_file_path, tsne_index=tsne_index)
 
 # Run the actual program
 if __name__ == "__main__":
