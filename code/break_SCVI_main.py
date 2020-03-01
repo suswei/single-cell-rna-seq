@@ -82,7 +82,7 @@ def LibrarySize_NoOfGene(trainer, pbmc_dataset, n_samples_tsne, Pbmc_Info_GeneCo
     if original_bool == True:
         fig.savefig('./result/break_SCVI/BatchCellTypeLibrarySizeNoofGeneColoring_OriginalPbmc.png')
     else:
-        fig.savefig((save_path_original.replace('data','result').replace('Modify', 'BatchCellTypeLibrarySizeNoofGeneColoring_')+'_rep%s'%(tsne_index)).replace('.csv', '.png'))
+        fig.savefig(save_path_original.replace('data','result').replace('Modify', 'BatchLabelLibraryGeneNoColoring_rep%s_'%(tsne_index)).replace('.csv', '.png'))
     plt.close(fig)
 
 
