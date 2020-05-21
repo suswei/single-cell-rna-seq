@@ -37,4 +37,4 @@ fi
 # The job command(s):
 module load Anaconda3/2019.03
 source activate sharedenv
-python3 MINE_simulation_main.py ${SLURM_ARRAY_TASK_ID}
+python3 MINE_simulation_sweep.py ${SLURM_ARRAY_TASK_ID}
