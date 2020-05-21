@@ -133,7 +133,7 @@ def main( ):
         'gaussian_dim': [2, 10],
         'mean_diff': [1, 5],
         'mixture_component_num': [10, 128],
-        'gaussian_covariance_types': ['all_identity', 'partial_identity'],
+        'gaussian_covariance_type': ['all_identity', 'partial_identity'],
         'samplesize': [12800],
         'activation_fun': ['Leaky_ReLU', 'ELU'],
         'unbiased_loss': [True, False],

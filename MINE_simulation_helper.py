@@ -16,10 +16,10 @@ def discrete_z_density_ratio(args, batch, category_index, component_mean1, compo
     if batch == 0:
         z = MultivariateNormal(component_mean1[category_index, :],
                                torch.eye(args.gaussian_dim)).sample()
-    elif batch == 1 and args.gaussian_covariance_types == 'all_identity':
+    elif batch == 1 and args.gaussian_covariance_type == 'all_identity':
         z = MultivariateNormal(component_mean2[category_index, :],
                                torch.eye(args.gaussian_dim)).sample()
-    elif batch == 1 and args.gaussian_covariance_types == 'partial_identity':
+    elif batch == 1 and args.gaussian_covariance_type == 'partial_identity':
         z = MultivariateNormal(component_mean2[category_index, :],
                                torch.eye(args.gaussian_dim) * torch.tensor((args.mean_diff*0.9)**2)).sample()
 
@@ -30,10 +30,10 @@ def discrete_z_density_ratio(args, batch, category_index, component_mean1, compo
             componentwise_log_prob += [MultivariateNormal(component_mean1[comp_index, :],
                                                       torch.eye(args.gaussian_dim)).log_prob(z).item()]
         else:
-            if args.gaussian_covariance_types == 'all_identity':
+            if args.gaussian_covariance_type == 'all_identity':
                 componentwise_log_prob += [MultivariateNormal(component_mean2[comp_index - args.mixture_component_num, :],
                                                               torch.eye(args.gaussian_dim)).log_prob(z).item()]
-            elif args.gaussian_covariance_types == 'partial_identity':
+            elif args.gaussian_covariance_type == 'partial_identity':
                 componentwise_log_prob += [MultivariateNormal(component_mean2[comp_index - args.mixture_component_num, :],
                                        torch.eye(args.gaussian_dim)*torch.tensor((args.mean_diff*0.9)**2)).log_prob(z).item()]
 
