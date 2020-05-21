@@ -9,7 +9,7 @@
 #SBATCH --cpus-per-task=1
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=0-8:0:00
+#SBATCH --time=0-12:0:00
 
 # Batch arrays
 #SBATCH --array=0-1279

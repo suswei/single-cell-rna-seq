@@ -60,29 +60,28 @@ def draw_plot(method, dataframe, fig_title, save_path):
 
 def result_summary(confounder_type, hyperparameter_config):
 
-    dir_path = './{}_sanity_check/'.format(VItype)
+    dir_path = './MINE_simulation/{}/'.format(confounder_type)
 
-    hyperparameter_config_subset = {key: value for key, value in hyperparameter_config.items() if key not in ['dataset', 'syntheticsamplesize', 'MCs']}
+    hyperparameter_config_subset = {key: value for key, value in hyperparameter_config.items() if key not in ['MCs']}
     keys, values = zip(*hyperparameter_config_subset.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     results_config_total = pd.DataFrame()
-    for i in range(len(hyperparameter_config['dataset'])*len(hyperparameter_config['syntheticsamplesize'])*len(hyperparameter_experiments)*len(hyperparameter_config['MCs'])):
+    for i in range(len(hyperparameter_experiments)*len(hyperparameter_config['MCs'])):
         config_file_path = dir_path + 'taskid{}/config.pkl'.format(i)
         results_file_path = dir_path + 'taskid{}/results.pkl'.format(i)
         if os.path.isfile(config_file_path) and os.path.isfile(results_file_path):
             config = pickle.load(open(config_file_path, "rb"))
             results = pickle.load(open(results_file_path,"rb"))
 
-            results_config = {key: value for key, value in config.items() if key in tuple(['dataset','syntheticsamplesize']) + keys + ('trueRLCT', 'w_dim')}
-            results_config.update({key: value[0] for key, value in results.items() if key in ['rlct robust thm4 array', 'rlct ols thm4 array']})
-            results_config = {key: [value] for key, value in results_config.items()}
+
+            results_config = {key: [value] for key, value in config.items() if key in tuple(['categorical_type']) + keys}
+            results_config.update({key: value for key, value in results.items() if key in ['empirical_mutual_info','empirical_CD_KL_0_1','empirical_CD_KL_1_0',
+                                                                                              'nearest_neighbor_estimate','MI_MINE_train','MI_MINE_test','CD_KL_0_1_MINE_train',
+                                                                                              'CD_KL_0_1_MINE_test','CD_KL_1_0_MINE_train','CD_KL_1_0_MINE_test']})
 
             results_config_total = pd.concat([results_config_total,pd.DataFrame.from_dict(results_config)],axis=0)
 
-    results_config_total['d_on_2'] = results_config_total.apply(lambda row: row.w_dim / 2, axis=1)
-
-    method = 'thm4'
     results_config_mean_std = results_config_total.groupby([ele for ele in list(results_config_total.columns) if ele not in ['rlct robust thm4 array','rlct ols thm4 array']]).agg(
         rlct_robust_thm4_mean=('rlct robust thm4 array', 'mean'),
         rlct_robust_thm4_std=('rlct robust thm4 array', 'std'),
