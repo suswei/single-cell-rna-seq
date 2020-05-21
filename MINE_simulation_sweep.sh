@@ -3,7 +3,7 @@
 # The name of the job:
 #SBATCH --job-name="MINE_simulation"
 #SBATCH --account=punim0614
-#SBATCH -p mig, cloud, physical
+#SBATCH -p mig
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=8
