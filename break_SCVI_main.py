@@ -15,7 +15,7 @@ import itertools
 
 
 def LibrarySize_NoOfGene(trainer, pbmc_dataset, n_samples_tsne, Pbmc_Info_GeneCount, original_bool, save_path_original, tsne_index):
-
+    #draw tsne plot for batch, celltype, librarysize, expressedgene_number, percentage of 100 top expressed genes
     full = trainer.create_posterior(trainer.model, pbmc_dataset, indices=None)
 
     latent, batch_indices, labels = full.get_latent(sample=True)
@@ -165,29 +165,11 @@ def main(changed_property, jobid):
     result_save_path = './result/break_SCVI/%s' % (changed_property)
     jobid = int(jobid)
 
-    key, value = zip(*hyperparameter_experiments[jobid].items())
-    n_layers_encoder = value[0]
-    n_layers_decoder = value[1]
-    n_hidden = value[2]
-    n_latent = value[3]
-    dropout_rate = value[4]
-    reconstruction_loss = value[5]
-    use_batches = value[6]
-    use_cuda = value[7]
-    train_size = value[8]
-    lr = value[9]
-    n_epochs = value[10]
-    frequency = value[11]
-    n_samples_tsne = value[12]
-    batch = value[13]
-    if changed_property == 'Change_Gene_Expression_Proportion':
-       proportion = value[13]
-    ratio = value[14]
-
+    temp = hyperparameter_experiments[jobid]
     if changed_property == 'Change_Library_Size' or changed_property == 'Change_Expressed_Gene_Number':
-       input_file_path = data_save_path + '/ModifyBatch%s_ratio%s.csv'%(batch, ratio)
+       input_file_path = data_save_path + '/ModifyBatch%s_ratio%s.csv'%(temp['batch'], temp['ratio'])
     else:
-       input_file_path = data_save_path + '/ModifyProportion%s_ratio%s.csv'%(proportion, ratio)
+       input_file_path = data_save_path + '/ModifyProportion%s_ratio%s.csv'%(temp['proportion'], temp['ratio'])
     pbmc_dataset_original = PbmcDataset(save_path=os.path.dirname(input_file_path))
 
     pbmc_dataset = PbmcDataset(save_path=os.path.dirname(input_file_path))
@@ -197,11 +179,13 @@ def main(changed_property, jobid):
     pbmc_dataset._X = sparse.csr_matrix(Pbmc_Info_GeneCount.iloc[:, 7:].values)
 
     if jobid==0 and changed_property=='Change_Library_Size':
-       vae_original = VAE(pbmc_dataset_original.nb_genes, n_batch=pbmc_dataset_original.n_batches * use_batches)
-       trainer_original = UnsupervisedTrainer(vae_original, pbmc_dataset_original, train_size=train_size, use_cuda=use_cuda, frequency=frequency)
+       vae_original = VAE(pbmc_dataset_original.nb_genes, n_batch=pbmc_dataset_original.n_batches * temp['use_batches'])
+       trainer_original = UnsupervisedTrainer(vae_original, pbmc_dataset_original, train_size=temp['train_size'],
+                                              use_cuda=temp['use_cuda'], frequency=temp['frequency'])
 
-    vae = VAE(pbmc_dataset.nb_genes, n_batch=pbmc_dataset.n_batches * use_batches)
-    trainer = UnsupervisedTrainer(vae, pbmc_dataset, train_size=train_size, use_cuda=use_cuda, frequency=frequency)
+    vae = VAE(pbmc_dataset.nb_genes, n_batch=pbmc_dataset.n_batches * temp['use_batches'])
+    trainer = UnsupervisedTrainer(vae, pbmc_dataset, train_size=temp['train_size'], use_cuda=temp['use_cuda'],
+                                  frequency=temp['frequency'])
 
     if jobid==0 and changed_property=='Change_Library_Size':
        vae_file_path_original = './data/break_SCVI/original_pbmc.pk1'
@@ -212,14 +196,14 @@ def main(changed_property, jobid):
             trainer_original.model.load_state_dict(torch.load(vae_file_path_original))
             trainer_original.model.eval()
         else:
-            trainer_original.train(n_epochs=n_epochs, lr=lr)
+            trainer_original.train(n_epochs=temp['n_epochs'], lr=temp['lr'])
             torch.save(trainer_original.model.state_dict(), vae_file_path_original)
 
     if os.path.isfile(vae_file_path):
         trainer.model.load_state_dict(torch.load(vae_file_path))
         trainer.model.eval()
     else:
-        trainer.train(n_epochs=n_epochs, lr=lr)
+        trainer.train(n_epochs=temp['n_epochs'], lr=temp['lr'])
         torch.save(trainer.model.state_dict(), vae_file_path)
 
     if jobid == 0 and changed_property == 'Change_Library_Size':
@@ -261,10 +245,12 @@ def main(changed_property, jobid):
     clustering_metrics.to_csv(input_file_path.replace('data','result').replace('Modify', 'ClusteringMetrics_'),index=None, header=True)
 
     if jobid == 0 and changed_property == 'Change_Library_Size':
-       LibrarySize_NoOfGene(trainer=trainer_original, pbmc_dataset=pbmc_dataset_original, n_samples_tsne=n_samples_tsne, Pbmc_Info_GeneCount=Pbmc_Info_GeneCount_Original, original_bool=True, save_path_original=input_file_path)
+       LibrarySize_NoOfGene(trainer=trainer_original, pbmc_dataset=pbmc_dataset_original, n_samples_tsne=temp['n_samples_tsne'],
+                            Pbmc_Info_GeneCount=Pbmc_Info_GeneCount_Original, original_bool=True, save_path_original=input_file_path,tsne_index=0)
     #because tsne plot is quite random, we draw the plot several times
     for tsne_index in range(8):
-        LibrarySize_NoOfGene(trainer=trainer, pbmc_dataset=pbmc_dataset, n_samples_tsne=n_samples_tsne, Pbmc_Info_GeneCount=Pbmc_Info_GeneCount, original_bool=False, save_path_original=input_file_path, tsne_index=tsne_index)
+        LibrarySize_NoOfGene(trainer=trainer, pbmc_dataset=pbmc_dataset, n_samples_tsne=temp['n_samples_tsne'],
+                             Pbmc_Info_GeneCount=Pbmc_Info_GeneCount, original_bool=False, save_path_original=input_file_path, tsne_index=tsne_index)
 
 # Run the actual program
 if __name__ == "__main__":

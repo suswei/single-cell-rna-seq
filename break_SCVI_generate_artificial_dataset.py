@@ -1,16 +1,7 @@
 import os
 from scvi.dataset import *
-import numpy as np
 import pandas as pd
-from scvi.models import *
-from scvi.inference import UnsupervisedTrainer
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import torch
 import rpy2.robjects as robjects
-from scipy import sparse
-import glob2
-import ntpath
 
 #%matplotlib inline
 
@@ -41,5 +32,5 @@ Pbmc_Batch.to_csv('./data/break_SCVI/Pbmc_batch.csv', index = None, header=True)
 # use break_SCVI.R to produce Pbmc_CellName_Label_Batch_CellMetric_GeneCount.csv
 # and produce artificial dataset with larger batch effect from PBMC
 r_source = robjects.r['source']
-r_source('./code/break_SCVI.R')
+r_source('./break_SCVI.R')
 print('r script finished running')

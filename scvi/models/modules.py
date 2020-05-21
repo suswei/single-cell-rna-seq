@@ -236,62 +236,11 @@ class Decoder(nn.Module):
         p_v = torch.exp(self.var_decoder(p))
         return p_m, p_v
 
-
 class MINE_Net(nn.Module):
-    """
-    Takes two inputs nuisance and z, implements T_\theta(nuisance,z) \in \mathbb R function in MINE paper
-    Typically applied with nuisance representing either batch or library size and z representing latent code
-    """
-
-    def __init__(self,n_input_nuisance,n_input_z,n_hidden_z,n_layers_z):
+    def __init__(self, xy_dim, n_latents, unbiased_loss):
         super(MINE_Net, self).__init__()
-        self.nn_nuisance = nn.Linear(n_input_nuisance, 1)
-        self.nn_z = FCLayers(n_in=n_input_z, n_out=1,
-                                n_layers=n_layers_z,
-                                n_hidden=n_hidden_z, dropout_rate=0)
-
-    def forward(self, nuisance, z):
-        h = F.relu(self.nn_nuisance(nuisance)+self.nn_z(z))
-        return h
-
-
-class MINE_Net2(nn.Module):
-    """
-    Takes two inputs nuisance and z, implements T_\theta(nuisance,z) \in \mathbb R function in MINE paper
-    Typically applied with nuisance representing either batch or library size and z representing latent code
-    """
-
-    def __init__(self,n_input_nuisance,n_input_z,n_hidden_z,n_layers_z):
-        super(MINE_Net2, self).__init__()
-        self.nn_nuisance = FCLayers(n_in=n_input_nuisance, n_out=1,
-                                n_layers=n_layers_z,
-                                n_hidden=n_hidden_z, dropout_rate=0)
-        self.nn_z = FCLayers(n_in=n_input_z, n_out=1,
-                                n_layers=n_layers_z,
-                                n_hidden=n_hidden_z, dropout_rate=0)
-
-    def forward(self, nuisance, z):
-        h = F.relu(self.nn_nuisance(nuisance)+self.nn_z(z))
-        return h
-
-
-class MINE_Net3(nn.Module):
-    def __init__(self,n_input_nuisance, n_input_z, H):
-        super(MINE_Net3, self).__init__()
-        self.fc1 = nn.Linear(n_input_nuisance, H)
-        self.fc2 = nn.Linear(n_input_z, H)
-        self.fc3 = nn.Linear(H, 1)
-
-    def forward(self, x, y):
-        h1 = F.relu(self.fc1(x)+self.fc2(y))
-        h2 = self.fc3(h1)
-        return h2
-
-
-class MINE_Net4(nn.Module):
-    def __init__(self, xy_dim, n_latents):
-        super(MINE_Net4, self).__init__()
         self.xy_dim = xy_dim
+        self.unbiased_loss = unbiased_loss
 
         modules = [nn.Linear(xy_dim, n_latents[0]), nn.ReLU()]
 
@@ -304,6 +253,10 @@ class MINE_Net4(nn.Module):
         modules.append(nn.Linear(prev_layer, 1))
         self.linears = nn.Sequential(*modules)
 
+        if self.unbiased_loss:
+            self.ma_et = None
+            self.ma_rate = 0.001
+
     def forward(self, xy, x_shuffle, x_n_dim):
         h = self.linears(xy)
         y = xy[:, x_n_dim:]
@@ -311,11 +264,11 @@ class MINE_Net4(nn.Module):
         h2 = self.linears(xy_2)
         return h, h2
 
-class MINE_Net4_2(nn.Module):
+class MINE_Net2(nn.Module):
     def __init__(self, xy_dim, n_latents,activation_fun, unbiased_loss):
         # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
         # unbiased_loss: True or False. Whether to use unbiased loss or not
-        super(MINE_Net4_2, self).__init__()
+        super(MINE_Net2, self).__init__()
         self.xy_dim = xy_dim
         self.unbiased_loss = unbiased_loss
 
@@ -349,8 +302,64 @@ class MINE_Net4_2(nn.Module):
         h2 = self.linears(y)
         return h, h2
 
+class MINE_Net3(nn.Module):
+    def __init__(self, input_dim, n_latents, activation_fun, unbiased_loss, initial):
+        # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
+        # unbiased_loss: True or False. Whether to use unbiased loss or not
+        # initial: could be 'None','normal', 'xavier_uniform', 'kaiming'
+        super().__init__()
+        self.activation_fun = activation_fun
+        self.unbiased_loss = unbiased_loss
+        self.n_hidden_layers = len(n_latents)
 
-class MINE_Net4_3(nn.Module):
+        layers_dim = [input_dim] + n_latents + [1]
+        self.layers = nn.Sequential(collections.OrderedDict(
+            [('layer{}'.format(i),
+                nn.Linear(n_in, n_out)) for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))
+             ]))
+
+        # initial of weights: 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse'
+        for i in range(len(layers_dim)-1):
+            if initial == 'normal':
+                nn.init.normal_(self.layers[i].weight, std=0.02)
+                nn.init.constant_(self.layers[i].bias, 0)
+            elif initial == 'xavier_uniform':
+                nn.init.xavier_uniform_(self.layers[i].weight)
+                nn.init.zeros_(self.layers[i].bias)
+            elif initial == 'xavier_normal':
+                nn.init.xavier_normal_(self.layers[i].weight, gain=1.0)
+            elif initial == 'kaiming_uniform':
+                if isinstance(self.layers[i], nn.Linear):
+                    nn.init.kaiming_uniform_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
+                    nn.init.constant_(self.layers[i].bias, 0.0)
+            elif initial == 'kaiming_normal':
+                if isinstance(self.layers[i], nn.Linear):
+                    nn.init.kaiming_normal_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
+                    nn.init.constant_(self.layers[i].bias, 0.0)
+            elif initial == 'orthogonal':
+                nn.init.orthogonal_(self.layers[i].weight)
+                nn.init.zeros_(self.layers[i].bias)
+            elif initial == 'sparse':
+                nn.init.sparse_(self.layers[i].weight, sparsity=0.1)
+                nn.init.zeros_(self.layers[i].bias)
+
+        if self.unbiased_loss:
+            self.ma_et = None
+            self.ma_rate = 0.001
+
+    def forward(self, input):
+        for one_layer in self.layers[0:-1]:
+            if self.activation_fun == 'ReLU':
+                input_next = F.relu(one_layer(input))
+            elif self.activation_fun == "ELU":
+                input_next = F.elu(one_layer(input))
+            elif self.activation_fun == 'Leaky_ReLU':
+                input_next = F.leaky_relu(one_layer(input),negative_slope=2e-1)
+            input = input_next
+        output = self.layers[-1](input)
+        return output
+
+class MINE_Net4(nn.Module):
     def __init__(self, input_dim, n_latents, activation_fun, unbiased_loss, initial, save_path, data_loader, drop_out, net_name, min, max):
         # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
         # unbiased_loss: True or False. Whether to use unbiased loss or not
@@ -371,30 +380,30 @@ class MINE_Net4_3(nn.Module):
                 nn.Linear(n_in, n_out)) for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))
              ]))
 
-        if initial in ['normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse']:
-            for i in range(len(layers_dim)-1):
-                if initial == 'normal':
-                    nn.init.normal_(self.layers[i].weight, std=0.02)
-                    nn.init.constant_(self.layers[i].bias, 0)
-                elif initial == 'xavier_uniform':
-                    nn.init.xavier_uniform_(self.layers[i].weight)
-                    nn.init.zeros_(self.layers[i].bias)
-                elif initial == 'xavier_normal':
-                    nn.init.xavier_normal_(self.layers[i].weight, gain=1.0)
-                elif initial == 'kaiming_uniform':
-                    if isinstance(self.layers[i], nn.Linear):
-                        nn.init.kaiming_uniform_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
-                        nn.init.constant_(self.layers[i].bias, 0.0)
-                elif initial == 'kaiming_normal':
-                    if isinstance(self.layers[i], nn.Linear):
-                        nn.init.kaiming_normal_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
-                        nn.init.constant_(self.layers[i].bias, 0.0)
-                elif initial == 'orthogonal':
-                    nn.init.orthogonal_(self.layers[i].weight)
-                    nn.init.zeros_(self.layers[i].bias)
-                elif initial == 'sparse':
-                    nn.init.sparse_(self.layers[i].weight, sparsity=0.1)
-                    nn.init.zeros_(self.layers[i].bias)
+        # initial of weights: 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse'
+        for i in range(len(layers_dim)-1):
+            if initial == 'normal':
+                nn.init.normal_(self.layers[i].weight, std=0.02)
+                nn.init.constant_(self.layers[i].bias, 0)
+            elif initial == 'xavier_uniform':
+                nn.init.xavier_uniform_(self.layers[i].weight)
+                nn.init.zeros_(self.layers[i].bias)
+            elif initial == 'xavier_normal':
+                nn.init.xavier_normal_(self.layers[i].weight, gain=1.0)
+            elif initial == 'kaiming_uniform':
+                if isinstance(self.layers[i], nn.Linear):
+                    nn.init.kaiming_uniform_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
+                    nn.init.constant_(self.layers[i].bias, 0.0)
+            elif initial == 'kaiming_normal':
+                if isinstance(self.layers[i], nn.Linear):
+                    nn.init.kaiming_normal_(self.layers[i].weight)#recommended to use only with 'relu' or 'leaky_relu' (default)
+                    nn.init.constant_(self.layers[i].bias, 0.0)
+            elif initial == 'orthogonal':
+                nn.init.orthogonal_(self.layers[i].weight)
+                nn.init.zeros_(self.layers[i].bias)
+            elif initial == 'sparse':
+                nn.init.sparse_(self.layers[i].weight, sparsity=0.1)
+                nn.init.zeros_(self.layers[i].bias)
 
         self.bn1 = nn.BatchNorm1d(num_features=n_latents[0])
         self.dropout = nn.Dropout(p=drop_out)
@@ -504,6 +513,9 @@ import numpy as np
 import math
 import scipy
 def discrete_continuous_info(d, c, k:int = 3, base: float = 2):
+    #this function is transformed from the discrete_continuous_info.m from the paper
+    # 'Mutual information between discrete and continuous data sets'.
+
     # First, bin the continuous data 'c' according to the discrete symbols 'd'
     # d and c are tensors
     first_symbol = []

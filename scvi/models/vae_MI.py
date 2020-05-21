@@ -14,7 +14,7 @@ import torch.nn.functional as F
 
 
 from scvi.models.log_likelihood import log_zinb_positive, log_nb_positive
-from scvi.models.modules import Encoder, DecoderSCVI, MINE_Net4, MINE_Net4_2, discrete_continuous_info, Sample_From_Aggregated_Posterior
+from scvi.models.modules import Encoder, DecoderSCVI, MINE_Net4, discrete_continuous_info, Sample_From_Aggregated_Posterior
 from scvi.models.utils import one_hot
 
 torch.backends.cudnn.benchmark = True
