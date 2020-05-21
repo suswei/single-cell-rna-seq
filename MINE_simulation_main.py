@@ -157,7 +157,7 @@ def main():
     parser.add_argument('--mixture_component_num', type=int, default=10,
                         help='the number of gaussian components for the gaussian mixture for each batch')
 
-    parser.add_argument('--gaussian_covariance_types', type=str, default='all_identity',
+    parser.add_argument('--gaussian_covariance_type', type=str, default='all_identity',
                         help='the covariance type of each gaussian component in the gaussian mixture for each batch')
 
     parser.add_argument('--samplesize', type=int, default=6400,
