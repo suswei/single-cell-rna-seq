@@ -102,7 +102,7 @@ def MINE_train(train_loader, valid_loader, test_loader, model_type, args):
             train_loss_one = np.average(train_loss_minibatch_list)
             train_loss_epoch.append(train_loss_one)
 
-    diagnosis_loss_plot(args, model_type, MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch)
+    #diagnosis_loss_plot(args, model_type, MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch)
 
     with torch.no_grad():
         MINE.eval()
@@ -178,7 +178,7 @@ def main():
     parser.add_argument('--batchsize', type=int, default=128,
                         help='batch size for MINE training')
 
-    parser.add_argument('--epochs', type=int, default=500,
+    parser.add_argument('--epochs', type=int, default=400,
                         help='number of epochs in MINE training')
 
     parser.add_argument('--lr', type=int, default=5e-4,

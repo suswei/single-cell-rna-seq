@@ -10,6 +10,7 @@ import math
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+#on spartan, as the available version of plotly is 3.2.1, plotly.graph_objects is plotly.graph_objs
 
 def discrete_z_density_ratio(args, batch, category_index, component_mean1, component_mean2, KL):
     #sample z and calulate log density ratio of p(z|s) and p(z) to estimate the empirical mutual information

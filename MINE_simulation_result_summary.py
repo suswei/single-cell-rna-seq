@@ -5,55 +5,24 @@ import pickle
 import plotly.graph_objects as go
 import cv2
 
-def draw_plot(method, dataframe, fig_title, save_path):
+def draw_plot(confounder_type, dataframe, fig_title, save_path):
+
+    data_dict = dataframe.to_dict('list')
+    measured_values = ['empirical_mutual_info','empirical_CD_KL_0_1','empirical_CD_KL_1_0','nearest_neighbor_estimate','MI_MINE_train','MI_MINE_test','CD_KL_0_1_MINE_train','CD_KL_0_1_MINE_test','CD_KL_1_0_MINE_train','CD_KL_1_0_MINE_test']
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=dataframe.loc[:, ['syntheticsamplesize']].values[:, 0],
-                             y=dataframe.loc[:, ['d_on_2']].values[:, 0],
-                             mode='lines+markers', name='d on 2'))
-    fig.add_trace(go.Scatter(x=dataframe.loc[:, ['syntheticsamplesize']].values[:, 0],
-                             y=dataframe.loc[:, ['trueRLCT']].values[:, 0],
-                             mode='lines+markers', name='true RLCT'))
+    fig.add_trace(go.Bar(x=measured_values,
+                         y=[value[0] for key, value in data_dict.items() if key in [ele + '_mean' for ele in measured_values]],
+                         error_y=dict(type='data', array=[value[0] for key, value in data_dict.items() if key in [ele + '_std' for ele in measured_values]]))
+                  )
 
-    if method=='thm4':
-        fig.add_trace(go.Scatter(x=dataframe.loc[:, ['syntheticsamplesize']].values[:, 0],
-                                 y=dataframe.loc[:, ['rlct_robust_thm4_mean']].values[:, 0],
-                                 error_y=dict(type='data',
-                                              array=dataframe.loc[:, ['rlct_robust_thm4_std']].values[:, 0],
-                                              visible=True),
-                                 mode='lines+markers', name='robust thm4'))
-
-        fig.add_trace(go.Scatter(x=dataframe.loc[:, ['syntheticsamplesize']].values[:, 0],
-                                 y=dataframe.loc[:, ['rlct_ols_thm4_mean']].values[:, 0],
-                                 error_y=dict(type='data',
-                                              array=dataframe.loc[:, ['rlct_ols_thm4_std']].values[:, 0],
-                                              visible=True),
-                                 mode='lines+markers', name='ols thm4'))
-
-    elif method=='thm4average':
-        fig.add_trace(go.Scatter(x=dataframe.loc[:, ['syntheticsamplesize']].values[:, 0],
-                                 y=dataframe.loc[:, ['rlct_robust_thm4_average']].values[:, 0],
-                                 mode='lines+markers', name='robust thm4 average'))
-        fig.add_trace(go.Scatter(x=dataframe.loc[:, ['syntheticsamplesize']].values[:, 0],
-                                 y=dataframe.loc[:, ['rlct_ols_thm4_average']].values[:, 0],
-                                 mode='lines+markers', name='ols thm4 average'))
-    elif method=='varTI':
-        fig.add_trace(go.Scatter(x=dataframe.loc[:, ['syntheticsamplesize']].values[:, 0],
-                                 y=dataframe.loc[:, ['rlct_var_TI_mean']].values[:, 0],
-                                 error_y=dict(type='data',
-                                              array=dataframe.loc[:, ['rlct_var_TI_std']].values[:, 0],
-                                              visible=True),
-                                 mode='lines+markers', name='var TI'))
-
-    fig.update_xaxes(title_text='sample size')
     fig.update_layout(
         title={'text': fig_title,
                'y': 0.92,
                'x': 0.47,
                'xanchor': 'center',
                'yanchor': 'top'},
-        font=dict(size =10, color='black', family='Arial, sans-serif'),
-        xaxis=dict(tickmode='linear',tick0=0, dtick=500)
+        font=dict(size = 10, color ='black', family = 'Arial, sans-serif')
     )
     fig.write_image(save_path)
 
@@ -75,55 +44,56 @@ def result_summary(confounder_type, hyperparameter_config):
             results = pickle.load(open(results_file_path,"rb"))
 
 
-            results_config = {key: [value] for key, value in config.items() if key in tuple(['categorical_type']) + keys}
-            results_config.update({key: value for key, value in results.items() if key in ['empirical_mutual_info','empirical_CD_KL_0_1','empirical_CD_KL_1_0',
-                                                                                              'nearest_neighbor_estimate','MI_MINE_train','MI_MINE_test','CD_KL_0_1_MINE_train',
-                                                                                              'CD_KL_0_1_MINE_test','CD_KL_1_0_MINE_train','CD_KL_1_0_MINE_test']})
+            results_config = {key: [value] for key, value in config.items() if key in tuple('categorical_type') + keys}
+            results_config.update(results)
 
             results_config_total = pd.concat([results_config_total,pd.DataFrame.from_dict(results_config)],axis=0)
 
-    results_config_mean_std = results_config_total.groupby([ele for ele in list(results_config_total.columns) if ele not in ['rlct robust thm4 array','rlct ols thm4 array']]).agg(
-        rlct_robust_thm4_mean=('rlct robust thm4 array', 'mean'),
-        rlct_robust_thm4_std=('rlct robust thm4 array', 'std'),
-        rlct_ols_thm4_mean=('rlct ols thm4 array', 'mean'),
-        rlct_ols_thm4_std=('rlct ols thm4 array', 'std')
+    results_config_mean_std = results_config_total.groupby(list(tuple('categorical_type') + keys)).agg(
+        empirical_mutual_info_mean = ('empirical_mutual_info', 'mean'),
+        empirical_mutual_info_std =('empirical_mutual_info', 'std'),
+        empirical_CD_KL_0_1_mean = ('empirical_CD_KL_0_1','mean'),
+        empirical_CD_KL_0_1_std =('empirical_CD_KL_0_1', 'std'),
+        empirical_CD_KL_1_0_mean = ('empirical_CD_KL_1_0', 'mean'),
+        empirical_CD_KL_1_0_std=('empirical_CD_KL_1_0', 'std'),
+        nearest_neighbor_estimate_mean = ('nearest_neighbor_estimate', 'mean'),
+        nearest_neighbor_estimate_std =('nearest_neighbor_estimate', 'std'),
+        MI_MINE_train_mean = ('MI_MINE_train', 'mean'),
+        MI_MINE_train_std=('MI_MINE_train', 'std'),
+        MI_MINE_test_mean = ('MI_MINE_test', 'mean'),
+        MI_MINE_test_std=('MI_MINE_test', 'std'),
+        CD_KL_0_1_MINE_train_mean = ('CD_KL_0_1_MINE_train', 'mean'),
+        CD_KL_0_1_MINE_train_std=('CD_KL_0_1_MINE_train', 'std'),
+        CD_KL_0_1_MINE_test_mean = ('CD_KL_0_1_MINE_test', 'mean'),
+        CD_KL_0_1_MINE_test_std=('CD_KL_0_1_MINE_test', 'std'),
+        CD_KL_1_0_MINE_train_mean = ('CD_KL_1_0_MINE_train', 'mean'),
+        CD_KL_1_0_MINE_train_std =('CD_KL_1_0_MINE_train', 'std'),
+        CD_KL_1_0_MINE_test_mean = ('CD_KL_1_0_MINE_test', 'mean'),
+        CD_KL_1_0_MINE_test_std=('CD_KL_1_0_MINE_test', 'std')
     ).reset_index()
 
-    for dataset in hyperparameter_config['dataset']:
+    for config_index in range(len(hyperparameter_experiments)):
+        temp = hyperparameter_experiments[config_index]
+        results_oneconfig_dataset = results_config_mean_std
+        for key in keys:
+            results_oneconfig_dataset = results_oneconfig_dataset[results_oneconfig_dataset[key]==temp[key]]
 
-        results_config_dataset = results_config_mean_std[results_config_mean_std['dataset']==dataset]
+        save_path = dir_path + '{}'.format(confounder_type)
+        for key in keys:
+            save_path += '_{}{}'.format(key, temp[key])
+        save_path += '.png'
 
-        for config_index in range(len(hyperparameter_experiments)):
-            temp = hyperparameter_experiments[config_index]
-            results_oneconfig_dataset = results_config_dataset
-            for key in keys:
-                results_oneconfig_dataset = results_oneconfig_dataset[results_oneconfig_dataset[key]==temp[key]]
-
-            save_path = dir_path + '{}_{}_{}'.format(dataset, VItype, method)
-            for key in keys:
-                save_path += '_{}{}'.format(key, temp[key])
-            save_path += '.png'
-
-            fig_title = '{}, {}, {}, <br>'.format(dataset, VItype, method)
-
-            '''
-            for index, key in enumerate(keys):
-                if index < len(keys)-1:
-                    fig_title += '{}: {}, '.format(key, temp[key])
+        fig_title = ''
+        for index, key in enumerate(keys): # if there are too many hyperparameters, exhibit the fig title in several lines.
+            if index % 3 == 2:
+                if index < len(keys) - 1:
+                    fig_title += '{}: {}, <br>'.format(key, temp[key])
                 else:
                     fig_title += '{}: {}'.format(key, temp[key])
-            '''
+            else:
+                fig_title += '{}: {}, '.format(key, temp[key])
 
-            for index, key in enumerate(keys): # if there are too many hyperparameters, exhibit the fig title in several lines.
-                if index % 2 == 0:
-                    fig_title += '{}: {}, '.format(key, temp[key])
-                else:
-                    if index < len(keys)-1:
-                        fig_title += '{}: {}, <br>'.format(key, temp[key])
-                    else:
-                        fig_title += '{}: {}'.format(key, temp[key])
-
-            draw_plot(method, results_oneconfig_dataset, fig_title, save_path)
+        draw_plot(confounder_type, results_oneconfig_dataset, fig_title, save_path)
 
 def main( ):
 
@@ -148,25 +118,24 @@ def main( ):
     keys, values = zip(*hyperparameter_config_subset.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    method = 'thm4'
-    for dataset in hyperparameter_config['dataset']:
-        video_name = dir_path + '{}_{}_{}.mp4'.format(dataset, VItype, method)
 
-        file_paths = []
-        for config_index in range(len(hyperparameter_experiments)):
-            temp = hyperparameter_experiments[config_index]
-            one_image_path = dir_path + '{}_{}_{}'.format(dataset, VItype,method)
-            for key in keys:
-                one_image_path += '_{}{}'.format(key, temp[key])
-            one_image_path += '.png'
+    video_name = dir_path + '{}.mp4'.format(confounder_type)
 
-            if os.path.isfile(one_image_path):
-               file_paths += [one_image_path]
+    file_paths = []
+    for config_index in range(len(hyperparameter_experiments)):
+        temp = hyperparameter_experiments[config_index]
+        one_image_path = dir_path + '{}'.format(confounder_type)
+        for key in keys:
+            one_image_path += '_{}{}'.format(key, temp[key])
+        one_image_path += '.png'
 
-        frame = cv2.imread(file_paths[0])
-        height, width, layers = frame.shape
-        video = cv2.VideoWriter(video_name, 0, 1, (width, height))
-        for file_path in file_paths:
-            video.write(cv2.imread(file_path))
-        cv2.destroyAllWindows()
-        video.release()
+        if os.path.isfile(one_image_path):
+           file_paths += [one_image_path]
+
+    frame = cv2.imread(file_paths[0])
+    height, width, layers = frame.shape
+    video = cv2.VideoWriter(video_name, 0, 1, (width, height))
+    for file_path in file_paths:
+        video.write(cv2.imread(file_path))
+    cv2.destroyAllWindows()
+    video.release()
