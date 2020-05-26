@@ -5,17 +5,20 @@ import pickle
 import plotly.graph_objects as go
 import cv2
 
-def draw_plot(confounder_type, dataframe, fig_title, save_path):
+def draw_plot(dataframe, fig_title, save_path):
 
     data_dict = dataframe.to_dict('list')
-    measured_values = ['empirical_mutual_info','empirical_CD_KL_0_1','empirical_CD_KL_1_0','nearest_neighbor_estimate','MI_MINE_train','MI_MINE_test','CD_KL_0_1_MINE_train','CD_KL_0_1_MINE_test','CD_KL_1_0_MINE_train','CD_KL_1_0_MINE_test']
+    #measured_values = ['nearest_neighbor_estimate','empirical_mutual_info','MI_MINE_train','MI_MINE_test']
+
+    measured_values = ['nearest_neighbor_estimate','empirical_mutual_info','MI_MINE_train','MI_MINE_test','empirical_CD_KL_0_1','CD_KL_0_1_MINE_train','CD_KL_0_1_MINE_test','empirical_CD_KL_1_0','CD_KL_1_0_MINE_train','CD_KL_1_0_MINE_test']
 
     fig = go.Figure()
     fig.add_trace(go.Bar(x=measured_values,
                          y=[value[0] for key, value in data_dict.items() if key in [ele + '_mean' for ele in measured_values]],
-                         error_y=dict(type='data', array=[value[0] for key, value in data_dict.items() if key in [ele + '_std' for ele in measured_values]]))
+                         error_y=dict(type='data', array=[value[0] for key, value in data_dict.items() if key in [ele + '_std' for ele in measured_values]]),
+                         text=[value[0] for key, value in data_dict.items() if key in [ele + '_mean' for ele in measured_values]], )
                   )
-
+    fig.update_traces(texttemplate='%{text:.3f}', textposition='outside')
     fig.update_layout(
         title={'text': fig_title,
                'y': 0.92,
@@ -29,7 +32,7 @@ def draw_plot(confounder_type, dataframe, fig_title, save_path):
 
 def result_summary(confounder_type, hyperparameter_config):
 
-    dir_path = './MINE_simulation/{}/'.format(confounder_type)
+    dir_path = './result/MINE_simulation/{}/'.format(confounder_type)
 
     hyperparameter_config_subset = {key: value for key, value in hyperparameter_config.items() if key not in ['MCs']}
     keys, values = zip(*hyperparameter_config_subset.items())
@@ -43,29 +46,30 @@ def result_summary(confounder_type, hyperparameter_config):
             config = pickle.load(open(config_file_path, "rb"))
             results = pickle.load(open(results_file_path,"rb"))
 
-
-            results_config = {key: [value] for key, value in config.items() if key in tuple('categorical_type') + keys}
+            results_config = {key: [value] for key, value in config.items() if key in tuple(['confounder_type']) + keys}
             results_config.update(results)
 
             results_config_total = pd.concat([results_config_total,pd.DataFrame.from_dict(results_config)],axis=0)
+        else:
+            print(i)
 
-    results_config_mean_std = results_config_total.groupby(list(tuple('categorical_type') + keys)).agg(
+    results_config_mean_std = results_config_total.groupby(list(tuple(['confounder_type']) + keys)).agg(
+        nearest_neighbor_estimate_mean=('nearest_neighbor_estimate', 'mean'),
+        nearest_neighbor_estimate_std=('nearest_neighbor_estimate', 'std'),
         empirical_mutual_info_mean = ('empirical_mutual_info', 'mean'),
         empirical_mutual_info_std =('empirical_mutual_info', 'std'),
+        MI_MINE_train_mean=('MI_MINE_train', 'mean'),
+        MI_MINE_train_std=('MI_MINE_train', 'std'),
+        MI_MINE_test_mean=('MI_MINE_test', 'mean'),
+        MI_MINE_test_std=('MI_MINE_test', 'std'),
         empirical_CD_KL_0_1_mean = ('empirical_CD_KL_0_1','mean'),
         empirical_CD_KL_0_1_std =('empirical_CD_KL_0_1', 'std'),
+        CD_KL_0_1_MINE_train_mean=('CD_KL_0_1_MINE_train', 'mean'),
+        CD_KL_0_1_MINE_train_std=('CD_KL_0_1_MINE_train', 'std'),
+        CD_KL_0_1_MINE_test_mean=('CD_KL_0_1_MINE_test', 'mean'),
+        CD_KL_0_1_MINE_test_std=('CD_KL_0_1_MINE_test', 'std'),
         empirical_CD_KL_1_0_mean = ('empirical_CD_KL_1_0', 'mean'),
         empirical_CD_KL_1_0_std=('empirical_CD_KL_1_0', 'std'),
-        nearest_neighbor_estimate_mean = ('nearest_neighbor_estimate', 'mean'),
-        nearest_neighbor_estimate_std =('nearest_neighbor_estimate', 'std'),
-        MI_MINE_train_mean = ('MI_MINE_train', 'mean'),
-        MI_MINE_train_std=('MI_MINE_train', 'std'),
-        MI_MINE_test_mean = ('MI_MINE_test', 'mean'),
-        MI_MINE_test_std=('MI_MINE_test', 'std'),
-        CD_KL_0_1_MINE_train_mean = ('CD_KL_0_1_MINE_train', 'mean'),
-        CD_KL_0_1_MINE_train_std=('CD_KL_0_1_MINE_train', 'std'),
-        CD_KL_0_1_MINE_test_mean = ('CD_KL_0_1_MINE_test', 'mean'),
-        CD_KL_0_1_MINE_test_std=('CD_KL_0_1_MINE_test', 'std'),
         CD_KL_1_0_MINE_train_mean = ('CD_KL_1_0_MINE_train', 'mean'),
         CD_KL_1_0_MINE_train_std =('CD_KL_1_0_MINE_train', 'std'),
         CD_KL_1_0_MINE_test_mean = ('CD_KL_1_0_MINE_test', 'mean'),
@@ -89,11 +93,11 @@ def result_summary(confounder_type, hyperparameter_config):
                 if index < len(keys) - 1:
                     fig_title += '{}: {}, <br>'.format(key, temp[key])
                 else:
-                    fig_title += '{}: {}'.format(key, temp[key])
+                    fig_title += '{}: {}.'.format(key, temp[key])
             else:
                 fig_title += '{}: {}, '.format(key, temp[key])
 
-        draw_plot(confounder_type, results_oneconfig_dataset, fig_title, save_path)
+        draw_plot(results_oneconfig_dataset, fig_title, save_path)
 
 def main( ):
 
@@ -106,11 +110,11 @@ def main( ):
         'gaussian_covariance_type': ['all_identity', 'partial_identity'],
         'samplesize': [12800],
         'activation_fun': ['Leaky_ReLU', 'ELU'],
-        'unbiased_loss': [True, False],
-        'MCs': 20 * [1]
+        'unbiased_loss': [True],
+        'MCs': 40 * [1]
     }
 
-    dir_path = './MINE_simulation/{}/'.format(confounder_type)
+    dir_path = './result/MINE_simulation/{}/'.format(confounder_type)
 
     result_summary(confounder_type=confounder_type, hyperparameter_config= hyperparameter_config)
 

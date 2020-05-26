@@ -1,8 +1,12 @@
 # Run 100 Monte Carlo Samples for each dataset, as scVI is variable for each run.
 # For mouse marrow dataset, the hyperparameter tried n_layers for scvi=2, n_hidden=128, n_latent=10, reconstruction_loss=zinb, dropout_rate=0.1, lr=0.001, n_epochs=250, training_size-0.8
 # For Pbmc dataset, the hyperparameter tried n_layers_for_scvi=1, n_latent=256, n_latent=14, dropout_rate=0.5, lr=0.01, n_epochs=170, training_size=0.8.
+
+
 import os
 import sys
+import argparse
+from random import randint
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,156 +15,149 @@ from scvi.dataset import *
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
-from scvi.models.modules import MINE_Net4_3, Classifier_Net
+from scvi.models.modules import MINE_Net3, Classifier_Net
 from scvi.inference import UnsupervisedTrainer
 import torch
 from torch.autograd import Variable
-import itertools
 from tqdm import tqdm
 
-def main(dataset_name, nuisance_variable, adv_model, jobid):
-    # taskid is just any integer from 0 to 99
-    # dataset_name could be 'muris_tabula', 'pbmc'
-    # nuisance_variable could be 'batch'
-    # MI_estimator could be 'Mine_Net4', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
+def main( ):
 
-    if not os.path.exists('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('./data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
-    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)):
-        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name))
+    parser = argparse.ArgumentParser(description='Pareto_Front')
 
-    if dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'MI':
-        hyperparameter_config = {
-            'n_layers_encoder': [10],
-            'n_layers_decoder': [2],
-            'n_hidden': [128],
-            'n_latent': [10],
-            'dropout_rate': [0.1],
-            'reconstruction_loss': ['zinb'],
-            'use_batches': [True],
-            'use_cuda': [False],
-            'train_size': [0.8],
-            'lr': [1e-2],
-            'adv_lr': [5e-3],
-            'pre_n_epochs': [100],
-            'n_epochs': [200],
-            'nsamples_z': [200],
-            'adv': [True],
-            'Adv_Net_architecture': [[256] * 10],
-            'pre_adv_epochs': [300],
-            'adv_epochs': [1],
-            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
-            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
-            'initial': ['xavier_normal'], # initial: could be 'None', 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal', 'orthogonal', 'sparse' ('orthogonal', 'sparse' are not proper in our case)
-            'adv_model' : ['MI'],
-            'optimiser': ['Adam'],
-            'adv_drop_out': [0.2],
-            'std': [True],
-            'max_reconst': [17000]
-        }
-    elif dataset_name == 'muris_tabula' and nuisance_variable == 'batch' and adv_model == 'Classifier':
-        hyperparameter_config = {
-            'n_layers_encoder': [2,10],
-            'n_layers_decoder': [2],
-            'n_hidden': [128],
-            'n_latent': [10],
-            'dropout_rate': [0.1],
-            'reconstruction_loss': ['zinb'],
-            'use_batches': [True],
-            'use_cuda': [False],
-            'MIScale': [0.2],
-            'train_size': [0.8],
-            'lr': [1e-2],  # 1e-3, 5e-3, 1e-4
-            'adv_lr': [1, 1e-1, 1e-2, 5e-3, 1e-3, 5e-4],  # 5e-4, 1e-8
-            'pre_n_epochs' : [50],
-            'n_epochs': [350],  # 350
-            'nsamples_z': [200],
-            'adv': [True],
-            'Adv_Net_architecture': [[256] * 10],
-            'pre_adv_epochs': [5],
-            'adv_epochs': [1],
-            'activation_fun': ['ELU'],  # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU' , 'Leaky_ReLU'
-            'unbiased_loss': [True],  # unbiased_loss: True or False. Whether to use unbiased loss or not
-            'initial': ['xavier_normal'],
-            'adv_model': ['Classifier'],
-            'optimiser': ['Adam'],
-            'adv_drop_out': [0.2],
-            'std': [True],
-            'taskid': [0]
-        }
-    elif dataset_name == 'pbmc' and nuisance_variable == 'batch':
-        hyperparameter_config = {
-            'n_layers_encoder': [1],
-            'n_layers_decoder': [1],
-            'n_hidden': [256],
-            'n_latent': [14],
-            'dropout_rate': [0.5],
-            'reconstruction_loss': ['zinb'],
-            'use_batches': [True],
-            'use_cuda': [False],
-            'MIScale': [200, 500, 800, 1000, 2000, 5000, 10000, 100000],
-            'train_size': [0.8],
-            'lr': [0.01],
-            'adv_lr': [0.001],
-            'n_epochs': [170],
-            'nsamples_z': [200],
-            'adv': [False]
-        }
-    keys, values = zip(*hyperparameter_config.items())
-    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+    parser.add_argument('--taskid', type=int, default=1000 + randint(0, 1000),
+                        help='taskid from sbatch')
 
-    data_save_path = './data/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
-    result_save_path = './result/tune_hyperparameter_for_SCVI_MI/%s/choose_config' % (dataset_name)
+    parser.add_argument('--dataset_name', type=str, default='muris_tabula',
+                        help='the name of the dataset')
 
-    if dataset_name == 'muris_tabula':
+    parser.add_argument('--nuisance_variable', type=str, default='batch',
+                        help='the name of nuisance variable')
+
+
+    #for scVI
+    parser.add_argument('--n_layers_encoder', type=int, default=2,
+                        help='number of hidden layers for encoder in scVI')
+
+    parser.add_argument('--n_layers_decoder', type=int, default=2,
+                        help='number of hidden layers for decoder in scVI')
+
+    parser.add_argument('--n_hidden', type=int, default=128,
+                        help='number of hidden nodes for each hidden layer in both encoder and decoder in scVI')
+
+    parser.add_argument('--n_latent', type=int, default=10,
+                        help='dimension for latent vector z')
+
+    parser.add_argument('--dropout_rate', type=float, default=0.1,
+                        help='dropout rate for encoder in scVI')
+
+    parser.add_argument('--reconstruction_loss', type=str, default='zinb',
+                        help='the generative model used to estimate loss')
+
+    parser.add_argument('--use_batches', type=bool, default=True,
+                        help='whether to use batches or not in scVI')
+
+    parser.add_argument('--train_size', type=float, default=0.8,
+                        help='the ratio to split training and testing data set')
+
+    parser.add_argument('--std', type=bool, default=True,
+                        help='whether to standardize loss from scVI and MINE')
+
+    parser.add_argument('--max_neg_ELBO', type=float, default=17000,
+                        help='the maximum value used to standardize loss of scVI')
+
+    parser.add_argument('--lr', type=float, default=1e-2,
+                        help='learning rate for scVI')
+
+    parser.add_argument('--pre_n_epochs', type=int, default=100,
+                        help='number of epochs to pretrain scVI')
+
+    parser.add_argument('--n_epochs', type=int, default=200,
+                        help='number of epochs to train scVI and MINE')
+
+    parser.add_argument('--nsamples_z', type=int, default=200,
+                        help='number of z sampled from aggregated posterior for nearest neighbor method')
+
+
+    #for MINE
+    parser.add_argument('--conf_estimator', type=str, default='MINE',
+                       help='the method used to estimate MI or KL_divergence')
+
+    parser.add_argument('--adv_n_latents', type=int, default=128,
+                       help='the number of hidden nodes in each hidden layer for MINE')
+
+    parser.add_argument('--adv_n_layers', type=int, default=10,
+                        help='the number of hidden layers for MINE')
+
+    parser.add_argument('--adv_pre_epochs', type=int, default=100,
+                        help='number of epochs to pretrain MINE')
+
+    parser.add_argument('--adv_epochs', type=int, default=2,
+                        help='number of epochs to train MINE for each minibatch when scVI is trained')
+
+    parser.add_argument('--activation_fun', type=str, default='Leaky_ReLU',
+                        help='the activation function used for MINE')
+
+    parser.add_argument('--unbiased_loss', type=bool, default=True,
+                        help='whether to use unbiased loss or not in MINE')
+
+    parser.add_argument('--batchsize', type=int, default=128,
+                        help='batch size for MINE training')
+
+    parser.add_argument('--epochs', type=int, default=400,
+                        help='number of epochs in MINE training')
+
+    parser.add_argument('--adv_lr', type=float, default=5e-4,
+                        help='learning rate in MINE training')
+
+    parser.add_argument('--lambda', type=float, default=0,
+                        help='the scale for the standardized loss of MINE')
+
+
+    parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+                        help='how many epochs to wait before logging training status')
+
+    parser.add_argument('--no-cuda', action='store_true', default=False,
+                        help='disables CUDA training')
+    parser.add_argument("--mode", default='client')
+    parser.add_argument("--port", default=62364)
+
+    args = parser.parse_args()
+
+    args.cuda = not args.no_cuda and torch.cuda.is_available()
+    print("args.cuda is " + str(args.cuda))
+
+    if args.activation_fun == 'Leaky_ReLU':
+        args.w_initial = 'kaiming_normal'
+    elif args.activation_fun in ['ReLU', 'ELU']:
+        args.w_initial = 'normal'
+
+    kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+
+    data_save_path = './data/pareto_front_scVI_MINE/%s' % (args.dataset_name)
+    if not os.path.exists('./data/pareto_front_scVI_MINE/%s' % (args.dataset_name)):
+        os.makedirs('./data/pareto_front_scVI_MINE/%s' % (args.dataset_name))
+
+    if args.dataset_name == 'muris_tabula':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
         dataset2 = TabulaMuris('droplet', save_path=data_save_path)
         dataset1.subsample_genes(dataset1.nb_genes)
         dataset2.subsample_genes(dataset2.nb_genes)
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
-    elif dataset_name == 'pbmc':
+    elif args.dataset_name == 'pbmc':
         gene_dataset = PbmcDataset(save_path=data_save_path)
-    elif dataset_name == 'retina':
+    elif args.dataset_name == 'retina':
         gene_dataset = RetinaDataset(save_path=data_save_path)
 
-    n_samples_tsne = 1000
-    jobid = int(jobid)
-
-    key, value = zip(*hyperparameter_experiments[jobid].items())
-    n_layers_encoder = value[0]
-    n_layers_decoder = value[1]
-    n_hidden = value[2]
-    n_latent = value[3]
-    dropout_rate = value[4]
-    reconstruction_loss = value[5]
-    use_batches = value[6]
-    use_cuda = value[7]
-    train_size = value[8]
-    lr = value[9]  # 0.0005
-    adv_lr = value[10]
-    pre_n_epochs = value[11]
-    n_epochs = value[12]  # 500
-    nsamples_z = value[13]
-    adv = value[14]
-    Adv_Net_architecture = value[15]
-    pre_adv_epochs = value[16]
-    adv_epochs = value[17]
-    activation_fun = value[18]
-    unbiased_loss = value[19]
-    initial = value[20]
-    adv_model = value[21]
-    optimiser = value[22]
-    adv_drop_out = value[23]
-    std = value[24]
-    max_reconst = value[25]
-
+    #get the seed to split training and testing dataset
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, 100), dtype=np.uint32)
-    taskid = int(jobid/10)
-    desired_seed = int(desired_seeds[0, taskid])
+    seed_idx =  args.taskid - int(args.taskid/100)*100
+    desired_seed = int(desired_seeds[0, seed_idx])
 
-    if not os.path.exists('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/rep%s' % (dataset_name, taskid)):
-        os.makedirs('./result/tune_hyperparameter_for_SCVI_MI/%s/choose_config/rep%s' % (dataset_name, taskid))
+    result_save_path = './result/pareto_front_scVI_MINE/%s/%s/taskid%s' % (args.dataset_name, args.confounder_type, args.taskid)
+    if not os.path.exists('./result/pareto_front_scVI_MINE/%s/%s/taskid%s' % (args.dataset_name, args.confounder_type, args.taskid)):
+        os.makedirs('./result/pareto_front_scVI_MINE/%s/%s/taskid%s' % (args.dataset_name, args.confounder_type, args.taskid))
 
     #vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * use_batches, n_labels=gene_dataset.n_labels,n_hidden=n_hidden, n_latent=n_latent, n_layers_encoder=n_layers_encoder,
     #          n_layers_decoder=n_layers_decoder, dropout_rate=dropout_rate,reconstruction_loss=reconstruction_loss, nsamples_z=nsamples_z, adv=False,
@@ -180,7 +177,7 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
     torch.save(trainer_vae_MI.model.state_dict(), vae_MI_file_path)
     '''
     vae_MI_file_path = '%s/%s_%s_taskid%s_VaeMI.pth' % (data_save_path, dataset_name, nuisance_variable, taskid)
-    MIScales = [0, 0.2 , 0.4, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
+
 
     MIScale_index = jobid%10
     MIScale = MIScales[MIScale_index]
@@ -280,6 +277,7 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
     minibatch_info = pd.DataFrame.from_dict({'minibatch_ELBO': ELBO_list, 'minibatch_penalty': penalty_list})
     minibatch_info.to_csv('%s/rep%s/%s_%s_MIScale%s_minibatch_info.csv' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index), index=None, header=True)
 
+    n_samples_tsne = 1000
     trainer_vae_MI2.train_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/rep%s/trainset_tsne_SCVI+MI_%s_%s_MIScale%s' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index))
     trainer_vae_MI2.test_set.show_t_sne(n_samples_tsne, color_by='batches and labels',save_name='%s/rep%s/testset_tsne_SCVI+MI_%s_%s_MIScale%s' % (result_save_path, taskid, dataset_name, nuisance_variable, MIScale_index))
 
@@ -541,7 +539,7 @@ def main(dataset_name, nuisance_variable, adv_model, jobid):
 
 # Run the actual program
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    main()
 
 # In terminal type
 # python hypertuning.py taskid

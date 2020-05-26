@@ -18,8 +18,8 @@ def MINE_train(train_loader, valid_loader, test_loader, model_type, args):
         input_dim = args.gaussian_dim + 2
     elif model_type != 'MI':
         input_dim = args.gaussian_dim
-    MINE = MINE_Net3(input_dim=input_dim, n_latents=[args.n_hidden_node]*args.n_hidden_layer,
-                         activation_fun=args.activation_fun, unbiased_loss=args.unbiased_loss, initial=args.w_initial)
+    MINE = MINE_Net3(input_dim=input_dim, n_latents=args.n_hidden_node, n_layers=args.n_hidden_layer,
+                    activation_fun=args.activation_fun, unbiased_loss=args.unbiased_loss, initial=args.w_initial)
 
     opt_MINE = optim.Adam(MINE.parameters(), lr=args.lr)
     scheduler_MINE_MI = ReduceLROnPlateau(opt_MINE, mode='min', factor=0.1, patience=10, verbose=True)
@@ -35,7 +35,7 @@ def MINE_train(train_loader, valid_loader, test_loader, model_type, args):
             t = MINE(sample1)
             et = torch.exp(MINE(sample2))
 
-            if args.unbiased_loss == True:
+            if args.unbiased_loss:
                 if MINE.ma_et is None:
                     MINE.ma_et = torch.mean(et).detach().item() #detach means will not calculate gradient for ma_et, ma_et is just a number
                 MINE.ma_et = (1 - MINE.ma_rate) * MINE.ma_et + MINE.ma_rate * torch.mean(et).detach().item()
@@ -172,7 +172,7 @@ def main():
     parser.add_argument('--activation_fun', type=str, default='Leaky_ReLU',
                         help='activation function in MINE')
 
-    parser.add_argument('--unbiased_loss', type=bool, default=True,
+    parser.add_argument('--unbiased_loss', action='store_true', default=False,
                         help='whether to use unbiased loss or not in MINE')
 
     parser.add_argument('--batchsize', type=int, default=128,
@@ -181,7 +181,7 @@ def main():
     parser.add_argument('--epochs', type=int, default=400,
                         help='number of epochs in MINE training')
 
-    parser.add_argument('--lr', type=int, default=5e-4,
+    parser.add_argument('--lr', type=float, default=5e-4,
                         help='learning rate in MINE training')
 
     parser.add_argument('--unbiased_loss_type', type=str, default='type2',
@@ -202,14 +202,17 @@ def main():
 
     if args.activation_fun == 'Leaky_ReLU':
         args.w_initial = 'kaiming_normal'
+        args.unbiased_loss_type = 'type1'
     elif args.activation_fun in ['ReLU', 'ELU']:
         args.w_initial = 'normal'
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
-    path = './MINE_simulation/{}/taskid{}'.format(args.confounder_type, args.taskid)
+    path = './result/{}/taskid{}'.format(args.confounder_type, args.taskid)
     if not os.path.exists(path):
         os.makedirs(path)
+
+    args.path = path
 
     if args.confounder_type == 'discrete':
 

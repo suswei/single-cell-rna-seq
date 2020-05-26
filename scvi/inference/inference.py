@@ -30,10 +30,11 @@ class UnsupervisedTrainer(Trainer):
     """
     default_metrics_to_monitor = ['ll']
 
-    def __init__(self, model, gene_dataset, train_size=0.8, test_size=None, kl=None, seed=0, adv_model=None, adv_optimizer=None, adv_epochs=1, change_adv_epochs_index=0, change_adv_epochs=50, **kwargs):
+    def __init__(self, model, gene_dataset, train_size=0.8, test_size=None, kl=None, seed=0, adv_model=None, adv_optimizer=None, adv_epochs=1, change_adv_epochs_index=0, change_adv_epochs=50, n_epochs_kl_warmup=400, **kwargs):
         super().__init__(model, gene_dataset, **kwargs)
         self.kl = kl
         self.seed = seed
+        self.n_epochs_kl_warmup = n_epochs_kl_warmup
         self.adv_model = adv_model
         self.adv_optimizer = adv_optimizer
         self.adv_epochs = adv_epochs
@@ -97,7 +98,7 @@ class UnsupervisedTrainer(Trainer):
 
             #scaled_MI_loss = self.model.MIScale*MI_loss
             # loss = torch.mean(reconst_loss + kl_divergence+scaled_MI_loss) #why self.kl_weight * kl_divergence here? Why + here, not -, because the reconst_loss is -logp(), for vae_mine, although reconst_loss's size is 128, kl_divergence's size is 1, they can be added together.
-            ELBO = torch.mean(reconst_loss + kl_divergence)
+            ELBO = torch.mean(reconst_loss + self.kl_weight*kl_divergence)
             mini_ELBO = Variable(torch.from_numpy(np.array([self.model.mini_ELBO])).type(torch.FloatTensor), requires_grad=True)
             max_ELBO = Variable(torch.from_numpy(np.array([self.model.max_ELBO])).type(torch.FloatTensor), requires_grad=True)
             adv_min = Variable(torch.from_numpy(np.array([self.adv_model.min])).type(torch.FloatTensor), requires_grad=True)
@@ -132,8 +133,11 @@ class UnsupervisedTrainer(Trainer):
                print('ELBO:{}'.format(ELBO))
                return loss, ELBO
 
+    #If your applications rely on the posterior quality, (i.e.differential expression, batch effect removal), ensure
+    #the number of total epochs( or iterations) exceed the number of epochs( or iterations) used for KL warmup
+
     def on_epoch_begin(self):
-        self.kl_weight = self.kl if self.kl is not None else min(1, self.epoch / 400)  # self.n_epochs)
+        self.kl_weight = self.kl if self.kl is not None else min(1, self.epoch / self.n_epochs_kl_warmup)  # self.n_epochs)
 
 
 class AdapterTrainer(UnsupervisedTrainer):

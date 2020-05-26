@@ -110,10 +110,7 @@ class Trainer:
         #     optimizer = self.optimizer
         # else:
         optimizer = self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps)  # weight_decay=self.weight_decay,
-        '''
-        if self.model.adv == True:
-           scheduler = StepLR(optimizer, step_size=30, gamma=0.8)
-        '''
+
         self.compute_metrics_time = 0
         self.n_epochs = n_epochs
         self.compute_metrics()

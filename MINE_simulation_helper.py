@@ -56,11 +56,11 @@ def discrete_z_density_ratio(args, batch, category_index, component_mean1, compo
         return z, log_density_ratio #for empirical mutual information
 
     else:
-        if KL == 'CD0-1':
+        if KL == 'CD_KL_0_1':
             log_density_ratio = max0 + math.log(
                     sum([math.exp(ele - max0) for ele in batch0_componentwise_log_prob]))- max1 - math.log(
                     sum([math.exp(ele - max1) for ele in batch1_componentwise_log_prob]))
-        elif KL == 'CD1-0':
+        elif KL == 'CD_KL_1_0':
             log_density_ratio = max1 + math.log(
                 sum([math.exp(ele - max1) for ele in batch1_componentwise_log_prob])) - max0 - math.log(
                 sum([math.exp(ele - max0) for ele in batch0_componentwise_log_prob]))
@@ -103,7 +103,7 @@ def generate_data_MINE_simulation(args):
         log_density_ratio_list2 = []
         for i in range(2*args.samplesize):
             category_index = categorical.sample()
-            KL = 'CD0-1' #'CD0-1' means conditional distribution 0 and conditional distribution 1.
+            KL = 'CD_KL_0_1' #'CD_KL_0_1' means conditional distribution 0 and conditional distribution 1.
             log_density_ratio = discrete_z_density_ratio(args, 0, category_index.item(),
                                                             component_mean1, component_mean2, KL)
             log_density_ratio_list2 += [log_density_ratio]
@@ -112,7 +112,7 @@ def generate_data_MINE_simulation(args):
         log_density_ratio_list3 = []
         for i in range(2 * args.samplesize):
             category_index = categorical.sample()
-            KL = 'CD1-0'
+            KL = 'CD_KL_1_0'
             log_density_ratio = discrete_z_density_ratio(args, 1, category_index.item(),
                                                          component_mean1, component_mean2, KL)
             log_density_ratio_list3 += [log_density_ratio]
@@ -196,7 +196,7 @@ def diagnosis_loss_plot(args, model_type, MINE_estimator_minibatch_list, negativ
                'yanchor': 'top'},
         font=dict(size=10, color='black', family='Arial, sans-serif')
     )
-    fig.write_image('./MINE_simulation/{}/taskid{}/{}_MINE_negative_loss_per_minibatch.png'.format(args.confounder_type, args.taskid, model_type))
+    fig.write_image('{}/{}_MINE_negative_loss_per_minibatch.png'.format(args.path, model_type))
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=list(range(0, args.epochs)),
@@ -215,5 +215,5 @@ def diagnosis_loss_plot(args, model_type, MINE_estimator_minibatch_list, negativ
                'yanchor': 'top'},
         font=dict(size=10, color='black', family='Arial, sans-serif')
     )
-    fig.write_image('./MINE_simulation/{}/taskid{}/{}_train_valid_loss_per_epoch.png'.format(args.confounder_type, args.taskid, model_type))
+    fig.write_image('{}/{}_train_valid_loss_per_epoch.png'.format(args.path, model_type))
 

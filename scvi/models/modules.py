@@ -303,22 +303,21 @@ class MINE_Net2(nn.Module):
         return h, h2
 
 class MINE_Net3(nn.Module):
-    def __init__(self, input_dim, n_latents, activation_fun, unbiased_loss, initial):
+    def __init__(self, input_dim, n_latents, n_layers, activation_fun, unbiased_loss, initial):
         # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
         # unbiased_loss: True or False. Whether to use unbiased loss or not
-        # initial: could be 'None','normal', 'xavier_uniform', 'kaiming'
+        # initial of weights: 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse'
+        # 'orthogonal', 'sparse' are not proper in our case
         super().__init__()
         self.activation_fun = activation_fun
         self.unbiased_loss = unbiased_loss
-        self.n_hidden_layers = len(n_latents)
 
-        layers_dim = [input_dim] + n_latents + [1]
+        layers_dim = [input_dim] + [n_latents]*n_layers + [1]
         self.layers = nn.Sequential(collections.OrderedDict(
             [('layer{}'.format(i),
                 nn.Linear(n_in, n_out)) for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))
              ]))
 
-        # initial of weights: 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse'
         for i in range(len(layers_dim)-1):
             if initial == 'normal':
                 nn.init.normal_(self.layers[i].weight, std=0.02)
@@ -363,7 +362,8 @@ class MINE_Net4(nn.Module):
     def __init__(self, input_dim, n_latents, activation_fun, unbiased_loss, initial, save_path, data_loader, drop_out, net_name, min, max):
         # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
         # unbiased_loss: True or False. Whether to use unbiased loss or not
-        # initial: could be 'None','normal', 'xavier_uniform', 'kaiming'
+        # initial of weights: 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse'
+        # 'orthogonal', 'sparse' are not proper in our case
         super().__init__()
         self.activation_fun = activation_fun
         self.unbiased_loss = unbiased_loss
@@ -380,7 +380,6 @@ class MINE_Net4(nn.Module):
                 nn.Linear(n_in, n_out)) for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))
              ]))
 
-        # initial of weights: 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse'
         for i in range(len(layers_dim)-1):
             if initial == 'normal':
                 nn.init.normal_(self.layers[i].weight, std=0.02)

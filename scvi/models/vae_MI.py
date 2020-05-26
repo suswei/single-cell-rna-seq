@@ -56,14 +56,12 @@ class VAE_MI(nn.Module):
 
     def __init__(self, n_input: int, n_batch: int = 0, n_labels: int = 0,
                  n_hidden: int = 128, n_latent: int = 10, n_layers_encoder: int = 1,
-                 n_layers_decoder: int = 1,
-                 dropout_rate: float = 0.1, dispersion: str = "gene",
+                 n_layers_decoder: int = 1, dropout_rate: float = 0.1, dispersion: str = "gene",
                  log_variational: bool = True, reconstruction_loss: str = "zinb",
                  n_hidden_z: int = 5, n_layers_z: int = 10,
-                 MI_estimator: str = 'NN', Adv_MineNet4_architecture: list=[32,16], MIScale: int=0,
-                 nsamples_z: int=200, adv: bool=False, adv_minibatch_MI: float=0, save_path: str='None',
-                 minibatch_index: int=0, mini_ELBO: int=10000, max_ELBO: int=1000000, minibatch_number: int=60,
-                 std: bool=False, MIScale_index: int=1):
+                 conf_estimator: str = 'NN',  scale: float=0, nsamples_z: int=200, adv: bool=False,
+                 adv_minibatch_MI: float=0, save_path: str='None', minibatch_index: int=0, minibatch_number: int=60,
+                 std: bool=False, min_neg_ELBO: int=10000, max_neg_ELBO: int=1000000):
         super().__init__()
         self.dispersion = dispersion
         self.log_variational = log_variational
@@ -73,22 +71,20 @@ class VAE_MI(nn.Module):
         self.n_labels = n_labels
         self.n_latent = n_latent
         self.n_latent_layers = 1  # not sure what this is for, no usages?
-
         self.n_hidden_z = n_hidden_z
         self.n_layers_z = n_layers_z
-        self.MI_estimator = MI_estimator
-        self.Adv_MineNet4_architecture = Adv_MineNet4_architecture
-        self.MIScale = MIScale
+
+        self.conf_estimator = conf_estimator
+        self.scale = scale
         self.nsamples_z = nsamples_z
         self.adv = adv
-        self.adv_minibatch_MI = adv_minibatch_MI
+        self.adv_minibatch_MI = adv_minibatch_MI #what is this?
         self.save_path = save_path
         self.minibatch_index = minibatch_index
         self.minibatch_number = minibatch_number
-        self.mini_ELBO = mini_ELBO
-        self.max_ELBO = max_ELBO
         self.std = std
-        self.MIScale_index = MIScale_index
+        self.min_neg_ELBO = min_neg_ELBO
+        self.max_neg_ELBO = max_neg_ELBO
 
         if self.dispersion == "gene":
             self.px_r = torch.nn.Parameter(torch.randn(n_input, ))
@@ -294,10 +290,13 @@ class VAE_MI(nn.Module):
         mean = torch.zeros_like(qz_m)
         scale = torch.ones_like(qz_v)
 
-        kl_divergence_z = kl(Normal(qz_m, torch.sqrt(qz_v)), Normal(mean, scale)).sum(dim=1) #kl_divergence_z: dimension [128]
-        kl_divergence_l = kl(Normal(ql_m, torch.sqrt(ql_v)), Normal(local_l_mean, torch.sqrt(local_l_var))).sum(dim=1)#kl_divergence_l: dimension [128]
+        # only sum over dimension for each z, kl_divergence_z gives a kl_divergence for each input data point in a minibatch
+        kl_divergence_z = kl(Normal(qz_m, torch.sqrt(qz_v)), Normal(mean, scale)).sum(dim=1)
+        # kl_divergence_l gives a kl_divergence for each input data point in a minibatch
+        kl_divergence_l = kl(Normal(ql_m, torch.sqrt(ql_v)), Normal(local_l_mean, torch.sqrt(local_l_var))).sum(dim=1)
 
-        reconst_loss = self._reconstruction_loss(x, px_rate, px_r, px_dropout) # reconst_loss: dimension [128]
+        # reconst_loss: dimension [128]
+        reconst_loss = self._reconstruction_loss(x, px_rate, px_r, px_dropout)
         '''
         if self.adv == False:
             # calculate Mutual information(MI) loss
