@@ -32,7 +32,7 @@ def draw_plot(dataframe, fig_title, save_path):
 
 def result_summary(confounder_type, hyperparameter_config):
 
-    dir_path = './result/MINE_simulation/{}/'.format(confounder_type)
+    dir_path = './result/MINE_simulation2/{}/'.format(confounder_type)
 
     hyperparameter_config_subset = {key: value for key, value in hyperparameter_config.items() if key not in ['MCs']}
     keys, values = zip(*hyperparameter_config_subset.items())
@@ -114,7 +114,7 @@ def main( ):
         'MCs': 40 * [1]
     }
 
-    dir_path = './result/MINE_simulation/{}/'.format(confounder_type)
+    dir_path = './result/MINE_simulation2/{}/'.format(confounder_type)
 
     result_summary(confounder_type=confounder_type, hyperparameter_config= hyperparameter_config)
 

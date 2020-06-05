@@ -21,15 +21,8 @@ if not os.path.exists('./data/2019-04-11'):
 save_path = 'data/2019-04-11/'
 
 from scvi.dataset import *
-import numpy as np
-import pandas as pd
-
-# %matplotlib inline
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import torch
 
 hemato_dataset = HematoDataset(save_path=os.path.join(save_path, 'HEMATO/'))
 

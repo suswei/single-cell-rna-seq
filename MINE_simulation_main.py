@@ -16,9 +16,9 @@ def MINE_train(train_loader, valid_loader, test_loader, model_type, args):
 
     if model_type == 'MI':
         input_dim = args.gaussian_dim + 2
-    elif model_type != 'MI':
+    else:
         input_dim = args.gaussian_dim
-    MINE = MINE_Net3(input_dim=input_dim, n_latents=args.n_hidden_node, n_layers=args.n_hidden_layer,
+    MINE = MINE_Net3(input_dim=input_dim, n_hidden=args.n_hidden_node, n_layers=args.n_hidden_layer,
                     activation_fun=args.activation_fun, unbiased_loss=args.unbiased_loss, initial=args.w_initial)
 
     opt_MINE = optim.Adam(MINE.parameters(), lr=args.lr)
@@ -208,7 +208,7 @@ def main():
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
-    path = './result/{}/taskid{}'.format(args.confounder_type, args.taskid)
+    path = './result/MINE_simulation/{}/taskid{}'.format(args.confounder_type, args.taskid)
     if not os.path.exists(path):
         os.makedirs(path)
 

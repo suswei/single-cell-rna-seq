@@ -123,8 +123,8 @@ def generate_data_MINE_simulation(args):
         #discrete_continuous_info() will be very slow if sample size is large.
         #Therefore, only 256 datapoints are used for nearest neighbor estimate, 256 could be a minibatch size.
 
-        nearest_neighbor_estimate = discrete_continuous_info(torch.transpose(batch_tensor[0:255, :], 0, 1),
-                                                             torch.transpose(z_tensor[0:255, :], 0, 1))
+        nearest_neighbor_estimate = discrete_continuous_info(torch.transpose(batch_tensor[0:256, :], 0, 1),
+                                                             torch.transpose(z_tensor[0:256, :], 0, 1))
 
 
         return empirical_mutual_info, empirical_CD_KL_0_1, empirical_CD_KL_1_0, nearest_neighbor_estimate, z_tensor, batch_tensor

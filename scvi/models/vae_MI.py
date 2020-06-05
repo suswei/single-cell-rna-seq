@@ -3,22 +3,14 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.distributions import Normal, kl_divergence as kl
 
-import numpy as np
-import pandas as pd
-from scipy.stats import multivariate_normal
-from torch.autograd import Variable
-
-import torch.nn.functional as F
-
-
 from scvi.models.log_likelihood import log_zinb_positive, log_nb_positive
-from scvi.models.modules import Encoder, DecoderSCVI, MINE_Net4, discrete_continuous_info, Sample_From_Aggregated_Posterior
+from scvi.models.modules import Encoder, DecoderSCVI
 from scvi.models.utils import one_hot
 
 torch.backends.cudnn.benchmark = True
-
 
 
 # VAE model
@@ -45,8 +37,6 @@ class VAE_MI(nn.Module):
         * ``'nb'`` - Negative binomial distribution
         * ``'zinb'`` - Zero-inflated negative binomial distribution
 
-    :param n_hidden_z, n_layers_z: MINE network parameter for latent code
-
     Examples:
         >>> gene_dataset = CortexDataset()
         >>> vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * False,
@@ -57,11 +47,7 @@ class VAE_MI(nn.Module):
     def __init__(self, n_input: int, n_batch: int = 0, n_labels: int = 0,
                  n_hidden: int = 128, n_latent: int = 10, n_layers_encoder: int = 1,
                  n_layers_decoder: int = 1, dropout_rate: float = 0.1, dispersion: str = "gene",
-                 log_variational: bool = True, reconstruction_loss: str = "zinb",
-                 n_hidden_z: int = 5, n_layers_z: int = 10,
-                 conf_estimator: str = 'NN',  scale: float=0, nsamples_z: int=200, adv: bool=False,
-                 adv_minibatch_MI: float=0, save_path: str='None', minibatch_index: int=0, minibatch_number: int=60,
-                 std: bool=False, min_neg_ELBO: int=10000, max_neg_ELBO: int=1000000):
+                 log_variational: bool = True, reconstruction_loss: str = "zinb"):
         super().__init__()
         self.dispersion = dispersion
         self.log_variational = log_variational
@@ -70,21 +56,7 @@ class VAE_MI(nn.Module):
         self.n_batch = n_batch
         self.n_labels = n_labels
         self.n_latent = n_latent
-        self.n_latent_layers = 1  # not sure what this is for, no usages?
-        self.n_hidden_z = n_hidden_z
-        self.n_layers_z = n_layers_z
-
-        self.conf_estimator = conf_estimator
-        self.scale = scale
-        self.nsamples_z = nsamples_z
-        self.adv = adv
-        self.adv_minibatch_MI = adv_minibatch_MI #what is this?
-        self.save_path = save_path
-        self.minibatch_index = minibatch_index
-        self.minibatch_number = minibatch_number
-        self.std = std
-        self.min_neg_ELBO = min_neg_ELBO
-        self.max_neg_ELBO = max_neg_ELBO
+        self.n_latent_layers = 1
 
         if self.dispersion == "gene":
             self.px_r = torch.nn.Parameter(torch.randn(n_input, ))
@@ -185,8 +157,7 @@ class VAE_MI(nn.Module):
         px_scale, _, _, _ = self.decoder('gene', z, library, batch_index)
         return px_scale
 
-
-    def inference(self, x, batch_index=None, y=None, n_samples=1, nsamples_z=1000):
+    def inference(self, x, batch_index=None, y=None, n_samples=1):
         x_ = x
         if self.log_variational:
             x_ = torch.log(1 + x_)
@@ -212,55 +183,6 @@ class VAE_MI(nn.Module):
             px_r = self.px_r
         px_r = torch.exp(px_r)
 
-        # calculate mutual information(MI) using MINE_Net, code from MasanoriYamada/Mine_pytorch
-        z_shuffle = np.random.permutation(z.detach().numpy())
-        z_shuffle = Variable(torch.from_numpy(z_shuffle).type(torch.FloatTensor), requires_grad=True)
-        batch_index = Variable(batch_index.type(torch.FloatTensor), requires_grad=True)
-
-        #n_input_nuisance = batch_index.shape[1]
-        #n_input_z = z.shape[1]
-        #minenet = MINE_Net(n_input_nuisance,n_input_z,self.n_hidden_z,self.n_layers_z)
-        #pred_xz = minenet(batch_index, z) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
-        #pred_x_z = minenet(batch_index, z_shuffle) #pred_xz has the dimension [128,1], because the batch_size for each minibatch is 128
-        '''
-        if self.adv == False:
-            #z_batch0, z_batch1 = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.nsamples_z)
-            #batch0_indices = np.array([[0] * (z_batch0.shape[0])])
-            #batch1_indices = np.array([[1] * (z_batch1.shape[0])])
-            # calculate mutual information(MI) using MINE_Net4
-            if self.MI_estimator=='Mine_Net4': #modify this if part, use the samples from posterior distribution
-                batch_dataframe = pd.DataFrame.from_dict({'batch': np.ndarray.tolist(batch_index.ravel())})
-                batch_dummy = pd.get_dummies(batch_dataframe['batch']).values
-                batch_dummy = Variable(batch_dummy.type(torch.FloatTensor), requires_grad=True)
-                z_batch = torch.cat([z, batch_dummy],dim=1)
-                self.minenet = MINE_Net4(z_batch.shape[-1], self.MineNet4_architecture)
-                pred_xz, pred_x_z = self.minenet(xy=z_batch, x_shuffle=z_shuffle, x_n_dim=z.shape[-1])
-            elif self.MI_estimator=='NN':
-            # calculate mutual information(MI) using nearest neighbor method
-                #batch_array = np.append(batch0_indices, batch1_indices, axis=1)
-                #z_array = np.append(z_batch0, z_batch1, axis=0).transpose()
-                #predicted_mutual_info = discrete_continuous_info(d=batch_array, c=z_array)
-                batch_index_array = np.array(batch_index.detach().numpy().transpose())
-                z_array = z.detach().numpy().transpose()
-                library_array = np.array(library.detach().numpy().transpose())
-                batch_index_array_tensor = Variable(torch.from_numpy(batch_index_array).type(torch.FloatTensor), requires_grad=True)
-                z_array_tensor = Variable(torch.from_numpy(z_array).type(torch.FloatTensor), requires_grad=True)
-                library_array_tensor = Variable(torch.from_numpy(library_array).type(torch.FloatTensor), requires_grad=True)
-                l_z_array_tensor = torch.cat((library_array_tensor,z_array_tensor),dim=0)
-                predicted_mutual_info = discrete_continuous_info(d=batch_index_array_tensor, c=l_z_array_tensor)
-            #elif self.MI_estimator=='aggregated_posterior':
-                #z_batch0_tensor = Variable(torch.from_numpy(z_batch0).type(torch.FloatTensor), requires_grad=True)
-                #z_batch1_tensor = Variable(torch.from_numpy(z_batch1).type(torch.FloatTensor), requires_grad=True)
-                #self.minenet = MINE_Net4_2(z_batch0_tensor.shape[-1], self.MineNet4_architecture)
-                #pred_xz, pred_x_z = self.minenet(x=z_batch0_tensor, y=z_batch1_tensor)
-
-            #TODO: have another MINE net for library depth
-
-            if self.MI_estimator in ['Mine_Net4','aggregated_posterior']:
-                return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z
-            elif self.MI_estimator=='NN':
-                return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, predicted_mutual_info
-        '''
         return px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library
 
     def forward(self, x, local_l_mean, local_l_var, batch_index=None, y=None):
@@ -277,14 +199,8 @@ class VAE_MI(nn.Module):
         :rtype: 2-tuple of :py:class:`torch.FloatTensor`
         """
         # Parameters for z latent distribution
-        '''
-        if self.adv == False:
-            if self.MI_estimator == 'MI':
-                px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, pred_xz, pred_x_z = self.inference(x, batch_index, y, nsamples_z=self.nsamples_z)
-            elif self.MI_estimator=='NN':
-                px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, predicted_mutual_info = self.inference(x, batch_index, y, nsamples_z=self.nsamples_z)
-        '''
-        px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library = self.inference(x, batch_index, y, nsamples_z=self.nsamples_z)
+
+        px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library = self.inference(x, batch_index, y)
 
         # KL Divergence
         mean = torch.zeros_like(qz_m)
@@ -297,18 +213,5 @@ class VAE_MI(nn.Module):
 
         # reconst_loss: dimension [128]
         reconst_loss = self._reconstruction_loss(x, px_rate, px_r, px_dropout)
-        '''
-        if self.adv == False:
-            # calculate Mutual information(MI) loss
-            if self.MI_estimator == 'MI':
-                MIloss = torch.mean(pred_xz) - torch.log(torch.mean(torch.exp(pred_x_z))) #MIloss: dimension: [1]
-            elif self.MI_estimator=='NN':
-                MIloss = predicted_mutual_info  # MIloss: dimension: [1]
 
-            print('kl_divergence_z: {}, kl_divergence_l: {}, reconst_loss: {}, MI loss: {}, scaled MI loss: {}'.format(kl_divergence_z.mean(),kl_divergence_l.mean(),reconst_loss.mean(), MIloss, self.MIScale*MIloss))
-
-            # TODO: should return kl_divergence_z and MIloss separately, in current state same penalty term is applied to them
-            return reconst_loss + kl_divergence_l+ kl_divergence_z, self.MIScale*MIloss
-        '''
-
-        return reconst_loss + kl_divergence_l, kl_divergence_z
+        return reconst_loss + kl_divergence_l, kl_divergence_z, qz_m, qz_v, z

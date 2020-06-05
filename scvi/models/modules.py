@@ -9,7 +9,9 @@ from scvi.models.utils import one_hot
 
 import torch.nn.functional as F
 from torch.autograd import Variable
-from scipy.stats import multivariate_normal
+from torch.distributions.bernoulli import Bernoulli
+from torch.distributions.categorical import Categorical
+from torch.distributions.multivariate_normal import MultivariateNormal
 
 class FCLayers(nn.Module):
     r"""A helper class to build fully-connected layers for a neural network.
@@ -303,7 +305,7 @@ class MINE_Net2(nn.Module):
         return h, h2
 
 class MINE_Net3(nn.Module):
-    def __init__(self, input_dim, n_latents, n_layers, activation_fun, unbiased_loss, initial):
+    def __init__(self, input_dim, n_hidden, n_layers, activation_fun, unbiased_loss, initial):
         # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
         # unbiased_loss: True or False. Whether to use unbiased loss or not
         # initial of weights: 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse'
@@ -312,7 +314,7 @@ class MINE_Net3(nn.Module):
         self.activation_fun = activation_fun
         self.unbiased_loss = unbiased_loss
 
-        layers_dim = [input_dim] + [n_latents]*n_layers + [1]
+        layers_dim = [input_dim] + [n_hidden]*n_layers + [1]
         self.layers = nn.Sequential(collections.OrderedDict(
             [('layer{}'.format(i),
                 nn.Linear(n_in, n_out)) for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))
@@ -507,7 +509,7 @@ class Classifier_Net(nn.Module):
 # nearest-neighbor statistics.  Similar to the estimator described by
 # Kraskov et. al. ("Estimating Mutual Information", PRE 2004)
 # Each vector in c & d is stored as a column in an array:
-# c.shape = (vector length, # samples).
+# c.shape = (vector length, # of samples).
 import numpy as np
 import math
 import scipy
@@ -579,26 +581,32 @@ def discrete_continuous_info(d, c, k:int = 3, base: float = 2):
     f = (scipy.special.digamma(d.shape[1]) - av_psi_Nd + psi_ks - m_tot/(d.shape[1]))/math.log(base)
     return f
 
-def Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, nsamples_z):
-        # nsamples_z: the number of z taken from the aggregated posterior distribution of z
-        # list of hidden nodes for Mine_Net4_2
+def Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, batch1_ratio, nsamples_z):
+    # nsamples_z: the number of z taken from the aggregated posterior distribution of z
+    # qz_v is the variance or covariance matrix for z
 
-        qz_m_array = qz_m.detach().numpy()
-        qz_v_array = qz_v.detach().numpy()
-        batch_index_list = np.ndarray.tolist(batch_index.detach().numpy().ravel())
-        qz_m_array_batch0 = qz_m_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 0], :]
-        qz_m_array_batch1 = qz_m_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 1], :]
-        qz_v_array_batch0 = qz_v_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 0], :]
-        qz_v_array_batch1 = qz_v_array[[index for index in range(len(batch_index_list)) if batch_index_list[index] == 1], :]
+    qz_m_batch0 = qz_m[(batch_index[:, 0] == 0).nonzero().squeeze(1)]
+    qz_m_batch1 = qz_m[(batch_index[:, 0] == 1).nonzero().squeeze(1)]
 
-        z_batch0 = np.empty((0, qz_m_array.shape[-1]), float)
-        z_batch1 = np.empty((0, qz_m_array.shape[-1]), float)
-        for k in range(nsamples_z):
-            posterior_index_batch0 = np.random.choice(np.arange(0, qz_m_array_batch0.shape[0]),p=[1 / qz_m_array_batch0.shape[0] for i in range(qz_m_array_batch0.shape[0])])
-            z_0 = multivariate_normal(qz_m_array_batch0[posterior_index_batch0],qz_v_array_batch0[posterior_index_batch0]).rvs()
-            z_batch0 = np.append(z_batch0, np.array([z_0]), axis=0)
+    qz_v_batch0 = qz_v[(batch_index[:, 0] == 0).nonzero().squeeze(1)]
+    qz_v_batch1 = qz_v[(batch_index[:, 0] == 1).nonzero().squeeze(1)]
 
-            posterior_index_batch1 = np.random.choice(np.arange(0, qz_m_array_batch1.shape[0]),p=[1 / qz_m_array_batch1.shape[0] for i in range(qz_m_array_batch1.shape[0])])
-            z_1 = multivariate_normal(qz_m_array_batch1[posterior_index_batch1],qz_v_array_batch1[posterior_index_batch1]).rvs()
-            z_batch1 = np.append(z_batch1, np.array([z_1]), axis=0)
-        return z_batch0, z_batch1
+    bernoulli = Bernoulli(torch.tensor([batch1_ratio]))  # batch1_ratio is the probability to sample batch 1
+    categorical0 = Categorical(torch.tensor([1 / qz_m_batch0.shape[0]] * qz_m_batch0.shape[0]))
+    categorical1 = Categorical(torch.tensor([1 / qz_m_batch1.shape[0]] * qz_m_batch1.shape[0]))
+
+    batch_tensor = torch.empty(0, 1)
+    z_tensor = torch.empty(0, qz_m.shape[1])
+    for i in range(nsamples_z):
+        batch = bernoulli.sample()
+        if batch.item() == 0:
+            category_index = categorical0.sample()
+            z = MultivariateNormal(qz_m_batch0[category_index.item(), :], torch.diag(qz_v_batch0[category_index.item(), :])).sample()
+        else:
+            category_index = categorical1.sample()
+            z = MultivariateNormal(qz_m_batch1[category_index.item(), :], torch.diag(qz_v_batch1[category_index.item(), :])).sample()
+
+        batch_tensor = torch.cat((batch_tensor, batch.reshape(1, 1)), 0)
+        z_tensor = torch.cat((z_tensor, z.reshape(1, qz_m.shape[1])), 0)
+
+    return batch_tensor, z_tensor
