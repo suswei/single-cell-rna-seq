@@ -42,7 +42,7 @@ def main(taskid):
     os.system("python3 pareto_front_scVI_MINE_main.py --taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
               "--conf_estimator %s --adv_n_hidden %s --adv_n_layers %s --activation_fun %s "
-              "--pre_n_epochs %s --pre_lr %s --pre_adv_epochs%s --adv_lr %s --n_epochs %s --main_lr %s "
+              "--pre_n_epochs %s --pre_lr %s --pre_adv_epochs %s --adv_lr %s --n_epochs %s --main_lr %s "
               "--std --min_obj1 %s --max_obj1 %s --min_obj2 %s --max_obj2 %s --scale %s --MCs 20"
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'],
