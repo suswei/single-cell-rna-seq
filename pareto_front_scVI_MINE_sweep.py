@@ -21,11 +21,11 @@ def main(taskid):
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'activation_fun': ['ELU'],
-        'pre_n_epochs': [1], #50
+        'pre_n_epochs': [50],
         'pre_lr': [1e-3],
-        'pre_adv_epochs': [1], #100
+        'pre_adv_epochs': [100],
         'adv_lr': [5e-5],
-        'n_epochs': [1], #600
+        'n_epochs': [600],
         'main_lr': [1e-3],
         'min_obj1': [12000],
         'max_obj1': [20000],
