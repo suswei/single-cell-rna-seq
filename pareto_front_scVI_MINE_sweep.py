@@ -25,7 +25,7 @@ def main(taskid):
         'pre_lr': [1e-3],
         'pre_adv_epochs': [1], #100
         'adv_lr': [5e-5],
-        'n_epochs': [6], #600
+        'n_epochs': [1], #600
         'main_lr': [1e-3],
         'min_obj1': [12000],
         'max_obj1': [20000],
