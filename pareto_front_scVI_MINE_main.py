@@ -68,7 +68,7 @@ def fully_MINE_after_trainerVae(trainer_vae):
     MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=5e-4)
     scheduler_MINE = ReduceLROnPlateau(MINE_optimizer, mode='min', factor=0.1, patience=10, verbose=True)
 
-    for epoch in range(41):
+    for epoch in range(4):
         MINE_network.train()
         for tensors_list in trainer_vae.data_loaders_loop():
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list[0]
@@ -216,19 +216,19 @@ def main( ):
 
 
     #for training
-    parser.add_argument('--pre_n_epochs', type=int, default=50,
+    parser.add_argument('--pre_n_epochs', type=int, default=1,
                         help='number of epochs to pre-train scVI')
 
     parser.add_argument('--pre_lr', type=float, default=1e-3,
                         help='learning rate to pre-train scVI')
 
-    parser.add_argument('--pre_adv_epochs', type=int, default=100,
+    parser.add_argument('--pre_adv_epochs', type=int, default=1,
                         help='number of epochs to pre-train MINE')
 
     parser.add_argument('--adv_lr', type=float, default=5e-5,
                         help='learning rate in MINE pre-training and adversarial training')
 
-    parser.add_argument('--n_epochs', type=int, default=350,
+    parser.add_argument('--n_epochs', type=int, default=3,
                         help='number of epochs to train scVI and MINE')
 
     parser.add_argument('--main_lr', type=float, default=1e-3,

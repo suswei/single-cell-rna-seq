@@ -325,7 +325,7 @@ class Trainer:
                 neg_adv_lost_list.append(-adv_loss.item())
                 MINE_estimator_minibatch_list.append(MINE_estimator_minibatch.item())
 
-        self.draw_diagnosis_plot(loss_minibatch_list[100:], neg_adv_lost_list, MINE_estimator_minibatch_list)
+        #self.draw_diagnosis_plot(loss_minibatch_list[100:], neg_adv_lost_list, MINE_estimator_minibatch_list)
         return loss_minibatch_list, neg_adv_lost_list, MINE_estimator_minibatch_list
 
     def draw_diagnosis_plot(self, loss_minibatch_list, neg_adv_lost_list, MINE_estimator_minibatch_list):
