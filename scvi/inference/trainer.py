@@ -309,9 +309,9 @@ class Trainer:
                     # pay attention: here adv_min_value, adv_max_value of MINE_estimator_minibatch
                     std_obj2 = (MINE_estimator_minibatch - min_obj2) / (max_obj2 - min_obj2)
                     combined_loss = torch.max((1 - scale)*std_obj1, scale*std_obj2)
-                    if combined_loss == (1 - scale) * std_obj1:
+                    if combined_loss.item() == (1 - scale) * std_obj1.item():
                         combined_loss = loss
-                    elif combined_loss == scale * std_obj2:
+                    elif combined_loss.item() == scale * std_obj2.item():
                         combined_loss = MINE_estimator_minibatch
                 else: #to get min and max value to standardize
                     combined_loss = torch.max((1 - scale) * loss, scale * MINE_estimator_minibatch)
