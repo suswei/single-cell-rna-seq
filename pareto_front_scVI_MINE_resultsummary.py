@@ -2,6 +2,7 @@ import os
 import itertools
 import numpy as np
 import pandas as pd
+import pickle
 import matplotlib.pyplot as plt
 
 #find the parento front when the goal is to minimize two objectives
@@ -38,48 +39,64 @@ def simple_cull(inputPoints, dominates):
 def dominates(row, candidateRow):
     return sum([row[x] <= candidateRow[x] for x in range(len(row))]) == len(row)
 
-def pareto_front(hyperparameter_config, save_path: str='./result/pareto_front_scVI_MINE/muris_tabula/batch/',
-                dataset_name: str= 'muris_tabula', confounder: str='batch'):
 
-    clustermetric = pd.DataFrame(columns=['Label', 'asw', 'nmi', 'ari', 'uca', 'be', 'std_penalty', 'std_ELBO', 'penalty_fully'])
+def draw_plot(obj1, obj2, pareto_front_type, type, save_path):
 
-    rep_scale = pd.DataFrame(columns=['rep','scale'])
-    for i in range(rep_number):
-        for j in range(10):
-            file_dir = input_dir + 'rep%s/'%(i) + 'muris_tabula_batch_MIScale%s_ClusterMetric.csv'%(j)
-            if os.path.isfile(file_dir):
-                clustermetric_onerep_onescale = pd.read_csv(file_dir)
-                rep_scale_one = pd.DataFrame.from_dict({'rep':[i,i], 'scale':[j,j]})
-                clustermetric = pd.concat([clustermetric, clustermetric_onerep_onescale], axis=0)
-                rep_scale = pd.concat([rep_scale_one, rep_scale], axis=0)
-    clustermetric = pd.concat([rep_scale, clustermetric], axis=1)
-    clustermetric_half = clustermetric[clustermetric['Label'].str.match('muris_tabula_batch_MIScale.*._VaeMI_' + Label)]
-    std_penalty = clustermetric_half.loc[:,'std_penalty'].values.tolist()
-    std_ELBO = clustermetric_half.loc[:,'std_ELBO'].values.tolist()
-    penalty_full = clustermetric_half.loc[:,'penalty_fully'].values.tolist()
-    inputPoints1 = [[std_ELBO[k],std_penalty[k]] for k in range(len(std_penalty))]
-    inputPoints2 = [[std_ELBO[k],penalty_full[k]] for k in range(len(penalty_full))]
+    inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
+
     paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates)
-    paretoPoints2, dominatedPoints2 = simple_cull(inputPoints2, dominates)
 
     fig = plt.figure()
     dp = np.array(list(dominatedPoints1))
     pp = np.array(list(paretoPoints1))
-    plt.scatter(dp[:,0],dp[:,1])
-    plt.scatter(pp[:,0],pp[:,1],color='red')
-    plt.title('%s'%(Label), fontsize=18)
-    plt.xlabel('std_ELBO', fontsize=16)
-    plt.ylabel('std_penalty', fontsize=16)
-    fig.savefig(output_dir + '%s_%s_%s_pareto_front.png' % (dataset_name, nuisance_variable, Label))
-    plt.close(fig)
-
-    fig = plt.figure()
-    dp = np.array(list(dominatedPoints2))
-    pp = np.array(list(paretoPoints2))
     plt.scatter(dp[:, 0], dp[:, 1])
     plt.scatter(pp[:, 0], pp[:, 1], color='red')
-    plt.title('%s' % (Label), fontsize=18)
-    plt.xlabel('std_ELBO', fontsize=16)
-    plt.ylabel('penalty_full', fontsize=16)
-    fig.savefig(output_dir + '%s_%s_%s_penalty_full_pareto_front.png' % (dataset_name, nuisance_variable, Label))
+    if pareto_front_type == 'minibatch':
+        plt.title('obj1: std_negative_ELBO, obj2: std_MINE, {}, {}'.format(pareto_front_type, type), fontsize=18)
+    elif pareto_front_type == 'full':
+        plt.title('obj1: std_negative_ELBO, obj2: MINE, {}, {}'.format(pareto_front_type, type), fontsize=18)
+    else:
+        plt.title('obj1: be, obj2: {}, {}'.format(pareto_front_type, type), fontsize=18)
+    plt.xlabel('obj1', fontsize=16)
+    plt.ylabel('obj2', fontsize=16)
+    fig.savefig(save_path + '/pareto_front_{}_{}.png'.format(pareto_front_type, type))
     plt.close(fig)
+
+def pareto_front(dataset: str='muris_tabula', confounder: str='batch'):
+
+    dir_path = './result/pareto_front_scVI_MINE/{}/{}'.format(dataset, confounder)
+    hyperparameter_config = {
+        'scale': [ele/10 for ele in range(0, 11)],
+        'MCs': 20*[1]
+    }
+    keys, values = zip(*hyperparameter_config.items())
+    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+    results_config_total = pd.DataFrame()
+    for i in range(len(hyperparameter_experiments)):
+            config_path =  dir_path + '/taskid{}/config.pkl'.format(i)
+            results_path = dir_path + '/taskid{}/results.pkl'.format(i)
+            if os.path.isfile(config_path) and os.path.isfile(results_path):
+                config = pickle.load(open(config_path, "rb"))
+                results = pickle.load(open(results_path, "rb"))
+
+                results_config = {key: [value] for key, value in config.items() if key in tuple(['scale'])}
+                results_config.update(results)
+
+                results_config_total = pd.concat([results_config_total, pd.DataFrame.from_dict(results_config)], axis=0)
+
+    for pareto_front_type in ['minibatch', 'full', 'asw', 'nmi', 'ari', 'uca']:
+        if pareto_front_type == 'minibatch':
+            obj1 = results_config_total.loc[:, 'std_obj1_minibatch'].values.tolist()
+            obj2 = results_config_total.loc[:, 'std_obj2_minibatch'].values.tolist()
+            draw_plot(obj1, obj2, pareto_front_type, 'train', dir_path)
+        elif pareto_front_type in ['full', 'asw', 'nmi', 'ari', 'uca']:
+            for type in ['train', 'test']:
+                if pareto_front_type == 'full':
+                    obj1 = results_config_total.loc[:, 'std_obj1_{}set'.format(type)].values.tolist()
+                    obj2 = results_config_total.loc[:, 'full_MINE_estimator_{}set'.format(type)].values.tolist()
+                    draw_plot(obj1, obj2, pareto_front_type, type, dir_path)
+                else:
+                    obj1 = results_config_total.loc[:, '{}_be'.format(type, pareto_front_type)].values.tolist()
+                    obj2 = results_config_total.loc[:, '{}_{}'.format(type, pareto_front_type)].values.tolist()
+                    draw_plot(obj1, obj2, pareto_front_type, type, dir_path)

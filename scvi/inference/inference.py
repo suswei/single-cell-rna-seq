@@ -92,18 +92,18 @@ class UnsupervisedTrainer(Trainer):
             sample1, sample2 = self.adv_load_minibatch(z, batch_index)
             adv_loss, MINE_estimator_minibatch = self.adv_loss(sample1, sample2)
 
-        #if self.epoch % 50 == 0 and self.cal_loss == True:
+            #if self.epoch % 50 == 0 and self.cal_loss == True:
 
-        #    NN_estimator = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
+            #    NN_estimator = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
 
-        #    if self.aggregated_posterior == True:
-        #        batch_tensor, z_tensor = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.batch1_ratio,self.nsamples_z)
-        #        NN_estimator_posterior = discrete_continuous_info(torch.transpose(batch_tensor, 0, 1), torch.transpose(z_tensor, 0, 1))
-        #        print('Epoch: {}, neg_ELBO: {}, {}: {}, NN: {}, NN_posterior: {}.'.format(self.epoch,
-        #                loss, self.adv_estimator, MINE_estimator_minibatch, NN_estimator, NN_estimator_posterior))
-        #    else:
-        #        print('Epoch: {}, neg_ELBO: {}, {}: {}, NN: {}.'.format(self.epoch,
-        #               loss, self.adv_estimator, MINE_estimator_minibatch, NN_estimator))
+            #    if self.aggregated_posterior == True:
+            #        batch_tensor, z_tensor = Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.batch1_ratio,self.nsamples_z)
+            #        NN_estimator_posterior = discrete_continuous_info(torch.transpose(batch_tensor, 0, 1), torch.transpose(z_tensor, 0, 1))
+            #        print('Epoch: {}, neg_ELBO: {}, {}: {}, NN: {}, NN_posterior: {}.'.format(self.epoch,
+            #                loss, self.adv_estimator, MINE_estimator_minibatch, NN_estimator, NN_estimator_posterior))
+            #    else:
+            #        print('Epoch: {}, neg_ELBO: {}, {}: {}, NN: {}.'.format(self.epoch,
+            #               loss, self.adv_estimator, MINE_estimator_minibatch, NN_estimator))
 
         if self.cal_loss == True and self.cal_adv_loss == False:
             return loss, None, None

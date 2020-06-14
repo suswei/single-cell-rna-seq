@@ -17,7 +17,6 @@ import torch
 from torch.autograd import Variable
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from scvi.models.modules import discrete_continuous_info
 import pickle
 
 
@@ -240,13 +239,13 @@ def main( ):
     parser.add_argument('--scale', type=float, default=0,
                         help='the scale for the standardized value of objective 2')
 
-    parser.add_argument('--min_obj1', type=float, default=14000,
+    parser.add_argument('--min_obj1', type=float, default=12000,
                         help='the minimum value used to standardize value of objective 1')
 
     parser.add_argument('--max_obj1', type=float, default=20000,
                         help='the maximum value used to standardize value of objective 1')
 
-    parser.add_argument('--min_obj2', type=float, default=0,
+    parser.add_argument('--min_obj2', type=float, default=-0.1,
                         help='the minimum value used to standardize value of objective 2')
 
     parser.add_argument('--max_obj2', type=float, default=0.9,
