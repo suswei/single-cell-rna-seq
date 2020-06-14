@@ -2,8 +2,8 @@
 
 # The name of the job:
 #SBATCH --job-name="pareto_front"
-#SBATCH --account=punim0614
-#SBATCH -p mig
+#SBATCH --account=punim0890
+#SBATCH -p physical,cloud
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=8

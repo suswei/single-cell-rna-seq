@@ -310,9 +310,9 @@ class Trainer:
                     std_obj2 = (MINE_estimator_minibatch - min_obj2) / (max_obj2 - min_obj2)
                     combined_loss = torch.max((1 - scale)*std_obj1, scale*std_obj2)
                     if combined_loss.item() == (1 - scale) * std_obj1.item():
-                        combined_loss = loss
+                        combined_loss = (1 - scale) * loss
                     elif combined_loss.item() == scale * std_obj2.item():
-                        combined_loss = MINE_estimator_minibatch
+                        combined_loss = scale * MINE_estimator_minibatch
                 else: #to get min and max value to standardize
                     combined_loss = torch.max((1 - scale) * loss, scale * MINE_estimator_minibatch)
 
