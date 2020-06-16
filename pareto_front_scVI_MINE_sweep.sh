@@ -2,11 +2,11 @@
 
 # The name of the job:
 #SBATCH --job-name="pareto_front"
-#SBATCH --account=punim0890
-#SBATCH -p physical,cloud
+#SBATCH --account=punim0614
+#SBATCH -p mig
 
 #SBATCH --nodes=1
-#SBATCH --ntasks=8
+#SBATCH --ntasks=3
 #SBATCH --cpus-per-task=1
 
 # The maximum running time of the job in days-hours:mins:sec

@@ -64,10 +64,10 @@ def fully_MINE_after_trainerVae(trainer_vae):
     MINE_network = MINE_Net3(input_dim=10 + 2, n_hidden=128, n_layers=10,
                             activation_fun='ELU', unbiased_loss=True, initial='normal')
 
-    MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=5e-4)
-    scheduler_MINE = ReduceLROnPlateau(MINE_optimizer, mode='min', factor=0.1, patience=10, verbose=True)
+    MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=5e-5)
+    #scheduler_MINE = ReduceLROnPlateau(MINE_optimizer, mode='min', factor=0.1, patience=10, verbose=True)
 
-    for epoch in range(400):
+    for epoch in range(300):
         MINE_network.train()
         for tensors_list in trainer_vae.data_loaders_loop():
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list[0]
@@ -93,24 +93,24 @@ def fully_MINE_after_trainerVae(trainer_vae):
             MINE_optimizer.zero_grad()
             trainer_vae.optimizer.zero_grad()
 
-        with torch.no_grad():  # to save memory, no intermediate activations used for gradient calculation is stored.
+        #with torch.no_grad():  # to save memory, no intermediate activations used for gradient calculation is stored.
 
-            MINE_network.eval()
+        #    MINE_network.eval()
 
-            train_loss_minibatch_list = []
-            for tensors_list in trainer_vae.train_set:
-                sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
+        #    train_loss_minibatch_list = []
+        #    for tensors_list in trainer_vae.train_set:
+        #        sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
 
-                sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index)
-                train_t = MINE_network(sample1)
-                train_et = torch.exp(MINE_network(sample2))
+        #        sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index)
+        #        train_t = MINE_network(sample1)
+        #        train_et = torch.exp(MINE_network(sample2))
 
-                train_loss_minibatch = -(torch.mean(train_t) - (1 / MINE_network.ma_et) * torch.mean(train_et))
+        #        train_loss_minibatch = -(torch.mean(train_t) - (1 / MINE_network.ma_et) * torch.mean(train_et))
 
-                train_loss_minibatch_list.append(train_loss_minibatch.item())
+        #        train_loss_minibatch_list.append(train_loss_minibatch.item())
 
-            train_loss_one = np.average(train_loss_minibatch_list)
-            scheduler_MINE.step(train_loss_one)
+        #    train_loss_one = np.average(train_loss_minibatch_list)
+        #    scheduler_MINE.step(train_loss_one)
 
     with torch.no_grad():
         MINE_network.eval()
@@ -337,13 +337,13 @@ def main( ):
                                             scale=args.scale)
     #std_obj1 and std_obj2 of the last minibatch of the last epoch
     std_obj1_minibatch = (obj1_minibatch_list[-1] - args.min_obj1)/(args.max_obj1 - args.min_obj1)
-    std_obj2_minibatch = (obj2_minibatch_list[-1] - args.min_obj2)/(args.max_obj1 - args.min_obj2)
+    std_obj2_minibatch = (obj2_minibatch_list[-1] - args.min_obj2)/(args.max_obj2 - args.min_obj2)
 
-    train_asw, train_nmi, train_ari, train_uca = trainer_vae.train_set.clustering_scores()
-    train_be = trainer_vae.train_set.entropy_batch_mixing()
+    asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
+    be_train = trainer_vae.train_set.entropy_batch_mixing()
 
-    test_asw, test_nmi, test_ari, test_uca = trainer_vae.train_set.clustering_scores()
-    test_be = trainer_vae.train_set.entropy_batch_mixing()
+    asw_test, nmi_test, ari_test, uca_test = trainer_vae.train_set.clustering_scores()
+    be_test = trainer_vae.train_set.entropy_batch_mixing()
 
     #n_samples_tsne = 1000
     if args.scale == 0 or args.scale == 1:
@@ -352,10 +352,10 @@ def main( ):
     # latent, batch_indices, labels = trainer_vae.train_set.get_latent(sample=False)
 
     # calculate std_obj1 (std_neg_ELBO) for the whole train dataset and test dataset
-    std_obj1_trainset, std_obj1_testset = std_obj1_train_test(trainer_vae, args)
+    std_obj1_train, std_obj1_test = std_obj1_train_test(trainer_vae, args)
 
     # Train a new MINE network after trainer_vae's training, and calculate non_std obj2 for the whole train dataset and test dataset
-    full_MINE_estimator_trainset, full_MINE_estimator_testset = fully_MINE_after_trainerVae(trainer_vae)
+    full_MINE_estimator_train, full_MINE_estimator_test = fully_MINE_after_trainerVae(trainer_vae)
 
     args_dict = vars(args)
     with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
@@ -363,20 +363,20 @@ def main( ):
 
     results_dict = {'std_obj1_minibatch': [std_obj1_minibatch],
                     'std_obj2_minibatch': [std_obj2_minibatch],
-                    'std_obj1_trainset': [std_obj1_trainset],
-                    'full_MINE_estimator_trainset': [full_MINE_estimator_trainset],
-                    'std_obj1_testset': [std_obj1_testset],
-                    'full_MINE_estimator_testset': [full_MINE_estimator_testset],
-                    'train_asw': [train_asw],
-                    'train_nmi': [train_nmi],
-                    'train_ari': [train_ari],
-                    'train_uca': [train_uca],
-                    'train_be': [train_be],
-                    'test_asw': [test_asw],
-                    'test_nmi': [test_nmi],
-                    'test_ari': [test_ari],
-                    'test_uca': [test_uca],
-                    'test_be': [test_be]
+                    'std_obj1_train': [std_obj1_train],
+                    'full_MINE_estimator_train': [full_MINE_estimator_train],
+                    'std_obj1_test': [std_obj1_test],
+                    'full_MINE_estimator_test': [full_MINE_estimator_test],
+                    'asw_train': [asw_train],
+                    'nmi_train': [nmi_train],
+                    'ari_train': [ari_train],
+                    'uca_train': [uca_train],
+                    'be_train': [be_train],
+                    'asw_test': [asw_test],
+                    'nmi_test': [nmi_test],
+                    'ari_test': [ari_test],
+                    'uca_test': [uca_test],
+                    'be_test': [be_test]
                     }
     with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
         pickle.dump(results_dict, f)
