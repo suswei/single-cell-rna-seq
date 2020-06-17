@@ -12,7 +12,7 @@ def main(taskid):
     hyperparameter_config = {
         'dataset_name': ['muris_tabula'],
         'confounder': ['batch'],
-        'n_layers_encoder': [2],
+        'n_layers_encoder': [2, 10],
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10],
@@ -31,7 +31,7 @@ def main(taskid):
         'max_obj1': [20000],
         'min_obj2': [-0.1],
         'max_obj2': [0.9],
-        'scale': [ele/10 for ele in range(0, 11)],
+        'scale': [0, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1],
         'MCs': 20*[1]
     }
     keys, values = zip(*hyperparameter_config.items())
