@@ -38,4 +38,4 @@ fi
 module load Anaconda3/2019.03
 source activate sharedenv
 module load web_proxy
-python3 pareto_front_scVI_MINE_sweep.py ${SLURM_ARRAY_TASK_ID}
+python3 pareto_front_chebyshev_sweep.py ${SLURM_ARRAY_TASK_ID}

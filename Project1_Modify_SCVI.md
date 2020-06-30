@@ -786,7 +786,7 @@ import os
 import math
 import itertools
 %matplotlib inline
-exec(open('code\\SummarizeResult.py').read())
+exec(open('SummarizeResult.py').read())
 ```
 
 ```python
@@ -1841,7 +1841,7 @@ import os
 %matplotlib inline
 import itertools
 import pandas as pd
-exec(open('code\\SummarizeResult.py').read())
+exec(open('SummarizeResult.py').read())
 pareto_front(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
             output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
             rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch', Label='trainset')
@@ -1851,7 +1851,7 @@ pareto_front(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_h
 file_paths = []
 for Label in ['trainset','testset']:
     file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front\\muris_tabula_batch_%s_pareto_front.png'%(Label)] 
-    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front\\muris_tabula_batch_%s_std_penalty_full_pareto_front.png'%(Label)]
+    #file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front\\muris_tabula_batch_%s_std_penalty_full_pareto_front.png'%(Label)]
 
 SummarizeResult('image',file_paths,'Fig40: pareto_front')
 ```
@@ -1862,22 +1862,22 @@ import os
 %matplotlib inline
 import itertools
 import pandas as pd
-exec(open('code\\SummarizeResult.py').read())
+exec(open('SummarizeResult.py').read())
 pareto_front(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
             output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
             rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch', Label='trainset')
 pareto_front(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
             output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
             rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch', Label='testset')
-stdMI_clustermetrics(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
-                  output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
-                  scales_list=[0, 0.2, 0.4, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9], rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch')
+#stdMI_clustermetrics(input_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
+#                  output_dir='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front2/',
+#                  scales_list=[0, 0.2, 0.4, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9], rep_number=100, dataset_name='muris_tabula', nuisance_variable='batch')
 file_paths = []
 for Label in ['trainset','testset']:
     file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front2\\muris_tabula_batch_%s_pareto_front.png'%(Label)] 
     file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front2\\muris_tabula_batch_%s_penalty_full_pareto_front.png'%(Label)]
-    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front2\\muris_tabula_batch_%s_stdMI_vs_clustermetrics.png'%(Label)]
-    file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front2\\muris_tabula_batch_%s_stdMI_vs_be.png'%(Label)]
+    #file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front2\\muris_tabula_batch_%s_stdMI_vs_clustermetrics.png'%(Label)]
+    #file_paths += ['result\\tune_hyperparameter_for_SCVI_MI\\muris_tabula\\choose_config\\pareto_front2\\muris_tabula_batch_%s_stdMI_vs_be.png'%(Label)]
 
 SummarizeResult('image',file_paths,'Fig41: pareto_front')
 ```

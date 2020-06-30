@@ -6,6 +6,7 @@ from itertools import cycle
 
 import numpy as np
 import torch
+from torch.autograd import Variable
 from sklearn.model_selection._split import _validate_shuffle_split
 from torch.utils.data.sampler import SubsetRandomSampler
 from scvi.models.modules import MINE_Net3
@@ -13,6 +14,8 @@ from tqdm import trange
 
 from scvi.inference.posterior import Posterior
 import plotly.graph_objects as go
+
+from paretoMTL_helper import MinNormSolver, circle_points, get_d_paretomtl_init, get_d_paretomtl
 
 class Trainer:
     r"""The abstract Trainer class for training a PyTorch model and monitoring its statistics. It should be
@@ -267,9 +270,9 @@ class Trainer:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
+        # pretrain adv_model, here adv_loss is not standardized
         self.cal_loss = False
         self.cal_adv_loss = True
-        #pretrain adv_model, here adv_loss is not standardized
         for pre_adv_epoch in range(pre_adv_epochs):
             for adv_tensors_list in self.data_loaders_loop():
                 _, adv_loss, MINE_estimator_minibatch = self.two_loss(*adv_tensors_list)
@@ -282,7 +285,7 @@ class Trainer:
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = main_lr
 
-        loss_minibatch_list, MINE_estimator_minibatch_list, neg_adv_lost_list = [], [], []
+        loss_minibatch_list, MINE_estimator_minibatch_list, neg_adv_loss_minibatch_list = [], [], []
         for self.epoch in range(n_epochs):
 
             self.model.train()
@@ -291,7 +294,7 @@ class Trainer:
             for tensors_list in self.data_loaders_loop():
 
                 # here adv_loss is also not standardized, because I think my purpose is to make MINE network
-                # work the best. Check whether this is right???
+                # work. Check whether this is right???
                 self.cal_loss = False
                 _, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
                 adv_loss.backward()
@@ -322,11 +325,11 @@ class Trainer:
                 self.optimizer.zero_grad()
 
                 loss_minibatch_list.append(loss.item())
-                neg_adv_lost_list.append(-adv_loss.item())
+                neg_adv_loss_minibatch_list.append(-adv_loss.item())
                 MINE_estimator_minibatch_list.append(MINE_estimator_minibatch.item())
 
         #self.draw_diagnosis_plot(loss_minibatch_list[100:], neg_adv_lost_list, MINE_estimator_minibatch_list)
-        return loss_minibatch_list, neg_adv_lost_list, MINE_estimator_minibatch_list
+        return loss_minibatch_list, neg_adv_loss_minibatch_list, MINE_estimator_minibatch_list
 
     def draw_diagnosis_plot(self, loss_minibatch_list, neg_adv_lost_list, MINE_estimator_minibatch_list):
         fig = go.Figure()
@@ -363,6 +366,177 @@ class Trainer:
             font=dict(size=10, color='black', family='Arial, sans-serif')
         )
         fig.write_image('{}/neg_unbiased_advloss_MINE_per_minibatch.png'.format(self.save_path))
+
+    def paretoMTL_train(self, pre_adv_epochs: int=100, adv_lr: float=5e-5, n_epochs: int=200, lr: float=1e-3,
+                        eps: float = 0.01, n_tasks: int=2, npref: int=10, pref_idx: int=0):
+
+        ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
+
+        params = filter(lambda p: p.requires_grad, self.model.parameters())
+        self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps)
+        self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
+
+        # pretrain adv_model to make MINE works
+        self.cal_loss = False
+        self.cal_adv_loss = True
+        for pre_adv_epoch in range(pre_adv_epochs):
+            for adv_tensors_list in self.data_loaders_loop():
+                _, adv_loss, MINE_estimator_minibatch = self.two_loss(*adv_tensors_list)
+                self.adv_optimizer.zero_grad()
+                self.optimizer.zero_grad()
+                adv_loss.backward()
+                self.adv_optimizer.step()
+
+        # run at most 2 epochs to find the initial solution
+        # stop early once a feasible solution is found
+        # usually can be found with a few steps
+        for t in range(2):
+
+            self.model.train()
+            self.adv_model.train()
+            for tensors_list in self.data_loaders_loop():
+
+                self.cal_loss = False
+                _, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
+                self.adv_optimizer.zero_grad()
+                self.optimizer.zero_grad()
+                adv_loss.backward()
+                self.adv_optimizer.step()
+
+                # obtain and store the gradient
+                grads = {}
+                losses_vec = []
+
+                self.cal_loss = True
+                loss, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
+                # obtain and store the gradient value
+                for i in range(n_tasks):
+                    self.adv_optimizer.zero_grad()
+                    self.optimizer.zero_grad()
+                    if i == 0:
+                        losses_vec.append(loss.data)
+                        loss.backward(retain_graph=True)
+                    elif i == 1:
+                        losses_vec.append(adv_loss.data)
+                        adv_loss.backward()
+
+                    grads[i] = []
+
+                    # can use scalable method proposed in the MOO-MTL paper for large scale problem
+                    # but we keep use the gradient of all parameters in this experiment
+                    for param in self.model.parameters():
+                        if param.grad is not None:
+                            grads[i].append(Variable(param.grad.data.clone().flatten(), requires_grad=False))
+
+                grads_list = [torch.cat(grads[i]) for i in range(len(grads))]
+                grads = torch.stack(grads_list)
+
+                # calculate the weights
+                losses_vec = torch.stack(losses_vec)
+                flag, weight_vec = get_d_paretomtl_init(grads, losses_vec, ref_vec, pref_idx)
+
+                # early stop once a feasible solution is obtained
+                if flag == True:
+                    print("fealsible solution is obtained.")
+                    break
+
+                # optimization step
+                self.adv_optimizer.zero_grad()
+                self.optimizer.zero_grad()
+                self.cal_loss = True
+                loss, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
+                for i in range(n_tasks):
+                    if i == 0:
+                        loss_total = weight_vec[i] * loss
+                    else:
+                        loss_total = loss_total + weight_vec[i] * adv_loss
+
+                loss_total.backward()
+                self.optimizer.step()
+
+            else:
+                # continue if no feasible solution is found
+                continue
+            # break the loop once a feasible solutions is found
+            break
+
+        #run n_epochs of ParetoMTL
+        for self.epoch in range(n_epochs):
+
+            self.model.train()
+            self.adv_model.train()
+            for tensors_list in self.data_loaders_loop():
+
+                self.cal_loss = False
+                _, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
+                self.adv_optimizer.zero_grad()
+                self.optimizer.zero_grad()
+                adv_loss.backward()
+                self.adv_optimizer.step()
+
+                # obtain and store the gradient
+                grads = {}
+                losses_vec = []
+
+                self.cal_loss = True
+                loss, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
+                for i in range(n_tasks):
+                    self.adv_optimizer.zero_grad()
+                    self.optimizer.zero_grad()
+                    if i == 0:
+                        losses_vec.append(loss.data)
+                        loss.backward(retain_graph=True)
+                    elif i == 1:
+                        losses_vec.append(adv_loss.data)
+                        adv_loss.backward()
+
+                    # can use scalable method proposed in the MOO-MTL paper for large scale problem
+                    # but we keep use the gradient of all parameters in this experiment
+                    grads[i] = []
+                    for param in self.model.parameters():
+                        if param.grad is not None:
+                            grads[i].append(Variable(param.grad.data.clone().flatten(), requires_grad=False))
+
+                grads_list = [torch.cat(grads[i]) for i in range(len(grads))]
+                grads = torch.stack(grads_list)
+
+                # calculate the weights
+                losses_vec = torch.stack(losses_vec)
+                weight_vec = get_d_paretomtl(grads, losses_vec, ref_vec, pref_idx)
+                if self.epoch % 20 == 0:
+                    print('weight_vec:')
+                    print(weight_vec)
+                normalize_coeff = n_tasks / torch.sum(torch.abs(weight_vec))
+                weight_vec = weight_vec * normalize_coeff
+                if self.epoch % 20 == 0:
+                    print('normalized_weight_vec:')
+                    print(weight_vec)
+                # optimization step
+                self.adv_optimizer.zero_grad()
+                self.optimizer.zero_grad()
+                self.cal_loss = True
+                loss, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
+                for i in range(n_tasks):
+                    if i == 0:
+                        loss_total = weight_vec[i] * loss
+                    else:
+                        loss_total = loss_total + weight_vec[i] * adv_loss
+
+                loss_total.backward()
+                self.optimizer.step()
+
+        loss_minibatch_list, neg_adv_loss_minibatch_list, MINE_estimator_minibatch_list = [], [], []
+        with torch.no_grad():
+            self.model.eval()
+            self.adv_model.eval()
+            self.cal_loss = True
+            self.cal_adv_loss = True
+            for tensors_list in self.data_loaders_loop():
+                loss, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
+                loss_minibatch_list.append(loss.item())
+                neg_adv_loss_minibatch_list.append(adv_loss.item())
+                MINE_estimator_minibatch_list.append(MINE_estimator_minibatch.item())
+        return loss_minibatch_list, neg_adv_loss_minibatch_list, MINE_estimator_minibatch_list
 
 
 class SequentialSubsetSampler(SubsetRandomSampler):

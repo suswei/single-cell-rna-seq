@@ -342,8 +342,8 @@ def main( ):
     asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
     be_train = trainer_vae.train_set.entropy_batch_mixing()
 
-    asw_test, nmi_test, ari_test, uca_test = trainer_vae.train_set.clustering_scores()
-    be_test = trainer_vae.train_set.entropy_batch_mixing()
+    asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
+    be_test = trainer_vae.test_set.entropy_batch_mixing()
 
     #n_samples_tsne = 1000
     if args.scale == 0 or args.scale == 1:
@@ -355,7 +355,7 @@ def main( ):
     std_obj1_train, std_obj1_test = std_obj1_train_test(trainer_vae, args)
 
     # Train a new MINE network after trainer_vae's training, and calculate non_std obj2 for the whole train dataset and test dataset
-    full_MINE_estimator_train, full_MINE_estimator_test = fully_MINE_after_trainerVae(trainer_vae)
+    full_MINE_train, full_MINE_test = fully_MINE_after_trainerVae(trainer_vae)
 
     args_dict = vars(args)
     with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
@@ -364,9 +364,9 @@ def main( ):
     results_dict = {'std_obj1_minibatch': [std_obj1_minibatch],
                     'std_obj2_minibatch': [std_obj2_minibatch],
                     'std_obj1_train': [std_obj1_train],
-                    'full_MINE_estimator_train': [full_MINE_estimator_train],
+                    'full_MINE_train': [full_MINE_train],
                     'std_obj1_test': [std_obj1_test],
-                    'full_MINE_estimator_test': [full_MINE_estimator_test],
+                    'full_MINE_test': [full_MINE_test],
                     'asw_train': [asw_train],
                     'nmi_train': [nmi_train],
                     'ari_train': [ari_train],

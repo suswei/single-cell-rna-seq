@@ -509,7 +509,7 @@ class Classifier_Net(nn.Module):
 # nearest-neighbor statistics.  Similar to the estimator described by
 # Kraskov et. al. ("Estimating Mutual Information", PRE 2004)
 # Each vector in c & d is stored as a column in an array:
-# c.shape = (vector length, # of samples).
+# c.shape = (vector dimension, # of samples).
 import numpy as np
 import math
 import scipy

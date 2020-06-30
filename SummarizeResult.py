@@ -6,6 +6,8 @@ import itertools
 import math
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
+rcParams.update({'figure.autolayout': True})
 import cv2
 
 def SummarizeResult(result_type: str = 'image', file_paths: list = ['Not_Specified'],
@@ -215,12 +217,12 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
                 xaxis_index = list(range(1, len(true_MI) + 1))
 
                 fig = plt.figure(figsize=(10, 7))
-                lines1 = plt.plot(xaxis_index, sorted_trueMI, xaxis_index, sorted_estimatedMI)
-                plt.errorbar(xaxis_index, sorted_estimatedMI, yerr=sorted_std, fmt='o')
+                lines1 = plt.plot(xaxis_index, true_MI, xaxis_index, estimated_MI)
+                plt.errorbar(xaxis_index, estimated_MI, yerr=std, fmt='o')
                 plt.setp(lines1[0], linewidth=2)
                 plt.setp(lines1[1], linewidth=2)
                 plt.legend(('true MI', 'estimated MI'), loc='upper right',fontsize=16)
-                plt.xlabel('index',fontsize=16)
+                plt.xlabel('case',fontsize=16)
                 plt.title('%s, %s, gaussian_dim%s' % (method, distribution, gaussian_dimension),fontsize=18)
                 fig.savefig(result_dict + '\\%s_%s_gaussian_dim%s.png' % (method, distribution, gaussian_dimension))
                 plt.close(fig)
@@ -229,19 +231,17 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
                 estimated_MI = subset_dataframe.loc[:, ['estimated_MI']].values
                 type = subset_dataframe.loc[:, ['training_or_testing']].iloc[0, 0]
 
-                sorted_index = sorted(range(len(true_MI)), key=true_MI.__getitem__)
-                sorted_trueMI = [true_MI[i] for i in sorted_index]
-                sorted_estimatedMI = [estimated_MI[i] for i in sorted_index]
-
                 xaxis_index = list(range(1, len(true_MI) + 1))
 
-                fig = plt.figure(figsize=(10, 7))
-                lines1 = plt.plot(xaxis_index, sorted_trueMI, xaxis_index, sorted_estimatedMI)
-                plt.setp(lines1[0], linewidth=2)
-                plt.setp(lines1[1], linewidth=2)
-                plt.legend(('true MI', 'estimated MI'), loc='upper right', fontsize=16)
-                plt.xlabel('index', fontsize=16)
-                plt.title('%s, %s, gaussian_dim%s, %s' % (method, distribution, gaussian_dimension, type), fontsize=18)
+                fig, ax = plt.subplots()
+                ax.scatter(xaxis_index, true_MI, c='blue', s=30, label='true MI',edgecolors='none')
+                ax.scatter(xaxis_index, estimated_MI, c='red', s=30, label='estimated MI', edgecolors='none')
+                ax.legend()
+                plt.xlabel('case', fontsize=16)
+                if method == 'Mine_Net':
+                    plt.title('MINE_1, %s, gaussian_dim%s, %s' % (distribution, gaussian_dimension, type), fontsize=18)
+                else:
+                    plt.title('MINE_2, %s, gaussian_dim%s, %s' % (distribution, gaussian_dimension, type), fontsize=18)
                 fig.savefig(result_dict + '\\%s_%s_gaussian_dim%s_%s.png' % (method, distribution, gaussian_dimension, type))
                 plt.close(fig)
             elif subset_dataframe.loc[:,['method']].iloc[0,0] =='Mine_Net4' and subset_dataframe.loc[:,['distribution']].iloc[0,0] in ['gaussian','lognormal']:
@@ -255,7 +255,7 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
                 plt.setp(lines1[0], linewidth=2)
                 plt.setp(lines1[1], linewidth=2)
                 plt.legend(('true MI', 'estimated MI'),loc='upper right', fontsize=16)
-                plt.xlabel('rho',fontsize=16)
+                plt.xlabel(r'$\rho$',fontsize=16)
                 plt.title('%s, %s, gaussian_dim%s, %s'%(method, distribution, gaussian_dimension,type),fontsize=18)
                 fig.savefig(result_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method, distribution, gaussian_dimension,type))
                 plt.close(fig)
@@ -669,27 +669,29 @@ def pareto_front(input_dir: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/resu
     paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates)
     paretoPoints2, dominatedPoints2 = simple_cull(inputPoints2, dominates)
 
+    rcParams.update({'figure.autolayout': True})
     fig = plt.figure()
     dp = np.array(list(dominatedPoints1))
     pp = np.array(list(paretoPoints1))
     plt.scatter(dp[:,0],dp[:,1])
     plt.scatter(pp[:,0],pp[:,1],color='red')
-    plt.title('%s'%(Label), fontsize=18)
-    plt.xlabel('std_ELBO', fontsize=16)
-    plt.ylabel('std_penalty', fontsize=16)
+    plt.title('%s'%(Label), fontsize=14)
+    plt.xlabel(r'$\tilde{R}(\phi,\theta)$', fontsize=12)
+    plt.ylabel(r'$\tilde{U}(\phi,\theta)$', fontsize=12)
     fig.savefig(output_dir + '%s_%s_%s_pareto_front.png' % (dataset_name, nuisance_variable, Label))
     plt.close(fig)
 
     fig = plt.figure()
     dp = np.array(list(dominatedPoints2))
     pp = np.array(list(paretoPoints2))
-    plt.scatter(dp[:, 0], dp[:, 1])
-    plt.scatter(pp[:, 0], pp[:, 1], color='red')
-    plt.title('%s' % (Label), fontsize=18)
-    plt.xlabel('std_ELBO', fontsize=16)
-    plt.ylabel('penalty_full', fontsize=16)
+    plt.scatter(dp[:,0], dp[:,1])
+    plt.scatter(pp[:,0], pp[:,1], color='red')
+    plt.title('%s' % (Label), fontsize=14)
+    plt.xlabel(r'$\tilde{R}(\phi,\theta)$', fontsize=12)
+    plt.ylabel(r'$U(\phi,\theta)$', fontsize=12)
     fig.savefig(output_dir + '%s_%s_%s_penalty_full_pareto_front.png' % (dataset_name, nuisance_variable, Label))
     plt.close(fig)
+
 
 def stdMI_clustermetrics(input_dir: str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
                   output_dir : str='D:/UMelb/PhD_Projects/Project1_Modify_SCVI/result/tune_hyperparameter_for_SCVI_MI/muris_tabula/choose_config/pareto_front/',
