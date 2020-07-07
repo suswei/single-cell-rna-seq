@@ -44,7 +44,7 @@ class MinNormSolver:
         This is correct only in 2D
         ie. min_c |\sum c_i x_i|_2^2 st. \sum c_i = 1 , 1 >= c_1 >= 0 for all i, c_i + c_j = 1.0 for some i, j
         """
-        dmin = 1e8
+        dmin = np.inf
         for i in range(len(vecs)):
             for j in range(i + 1, len(vecs)):
                 if (i, j) not in dps:
@@ -64,6 +64,7 @@ class MinNormSolver:
                         dps[(j, j)] += torch.dot(vecs[j][k],
                                                  vecs[j][k]).item()  # torch.dot(vecs[j][k], vecs[j][k]).data[0]
                 c, d = MinNormSolver._min_norm_element_from2(dps[(i, i)], dps[(i, j)], dps[(j, j)])
+                print(d)
                 if d < dmin:
                     dmin = d
                     sol = [(i, j), c, d]

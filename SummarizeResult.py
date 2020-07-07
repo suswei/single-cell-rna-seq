@@ -256,7 +256,7 @@ def Summarize_EstimatedMI_with_TrueMI(file_path: str = 'NA', method: str = 'NA',
                 plt.setp(lines1[1], linewidth=2)
                 plt.legend(('true MI', 'estimated MI'),loc='upper right', fontsize=16)
                 plt.xlabel(r'$\rho$',fontsize=16)
-                plt.title('%s, %s, gaussian_dim%s, %s'%(method, distribution, gaussian_dimension,type),fontsize=18)
+                plt.title('MINE_2, %s, gaussian_dim%s, %s'%(distribution, gaussian_dimension,type),fontsize=18)
                 fig.savefig(result_dict + '\\%s_%s_gaussian_dim%s_%s.png'%(method, distribution, gaussian_dimension,type))
                 plt.close(fig)
 

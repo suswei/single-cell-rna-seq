@@ -207,17 +207,23 @@ def main( ):
                         help='whether to use unbiased loss or not in MINE')
 
     # for training
+    parser.add_argument('--pre_epochs', type=int, default=100,
+                        help='number of epochs to pre-train scVI')
+
     parser.add_argument('--pre_adv_epochs', type=int, default=100,
                         help='number of epochs to pre-train MINE')
 
-    parser.add_argument('--adv_lr', type=float, default=5e-5,
+    parser.add_argument('--adv_lr', type=float, default=5e-4,
                         help='learning rate in MINE pre-training and adversarial training')
 
-    parser.add_argument('--n_epochs', type=int, default=200,
+    parser.add_argument('--n_epochs', type=int, default=51,
                         help='number of epochs to train scVI and MINE')
 
-    parser.add_argument('--lr', type=float, default=1e-3,
+    parser.add_argument('--lr', type=float, default=1e-2,
                         help='learning rate for scVI')
+
+    parser.add_argument('--obj2_scale', type=float, default=0.5,
+                        help='the scale to standardize the second objective')
 
     parser.add_argument('--n_tasks', type=int, default=2,
                         help='number of objectives for the multiple optimization problem')
@@ -300,8 +306,8 @@ def main( ):
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
     trainer_vae.kl_weight = 1
 
-    obj1_minibatch_list, _, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_adv_epochs = args.pre_adv_epochs, adv_lr = args.adv_lr, n_epochs = args.n_epochs,
-                                                                              lr = args.lr, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx)
+    obj1_minibatch_list, _, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_epochs= args.pre_epochs, pre_adv_epochs = args.pre_adv_epochs, adv_lr = args.adv_lr, n_epochs = args.n_epochs,
+                                                                              lr = args.lr, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, obj2_scale = args.obj2_scale)
     #obj1 for the whole training and testing set
     obj1_train, obj1_test = obj1_train_test(trainer_vae)
 

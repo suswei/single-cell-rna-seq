@@ -92,7 +92,7 @@ class UnsupervisedTrainer(Trainer):
             sample1, sample2 = self.adv_load_minibatch(z, batch_index)
             adv_loss, MINE_estimator_minibatch = self.adv_loss(sample1, sample2)
 
-            if self.epoch % 20 == 0 and self.cal_loss == True:
+            if self.epoch % 10 == 0 and self.cal_loss == True:
 
                 NN_estimator = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
 
