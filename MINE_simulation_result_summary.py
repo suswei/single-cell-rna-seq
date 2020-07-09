@@ -16,7 +16,7 @@ def draw_plot(dataframe, fig_title, save_path):
     fig.add_trace(go.Bar(x=measured_values,
                          y=[value[0] for key, value in data_dict.items() if key in [ele + '_mean' for ele in measured_values]],
                          error_y=dict(type='data', array=[value[0] for key, value in data_dict.items() if key in [ele + '_std' for ele in measured_values]]),
-                         text=[value[0] for key, value in data_dict.items() if key in [ele + '_mean' for ele in measured_values]], )
+                         text=[value[0] for key, value in data_dict.items() if key in [ele + '_mean' for ele in measured_values]])
                   )
     fig.update_traces(texttemplate='%{text:.3f}', textposition='outside')
     fig.update_layout(

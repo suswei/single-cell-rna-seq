@@ -21,14 +21,14 @@ def main(taskid):
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'activation_fun': ['ELU'],
-        'pre_epochs': [100, 300],
+        'pre_epochs': [300, 500, 800],
         'pre_adv_epochs': [100],
         'adv_lr': [5e-4],
         'n_epochs': [50, 100, 200],
         'lr': [1e-2],
-        'obj2_scale': [0.02, 0.1, 0.5],
+        'obj2_scale': [0.3, 0.5],
         'n_tasks': [2],
-        'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))],
+        'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]

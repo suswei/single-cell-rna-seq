@@ -267,9 +267,9 @@ def main( ):
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, 1), dtype=np.uint32)
     desired_seed = int(desired_seeds[0, 0])
 
-    args.save_path = './result/pareto_front_paretoMTL/{}/{}/{}'.format(args.dataset_name, args.confounder, args.taskid)
-    if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/{}'.format(args.dataset_name, args.confounder, args.taskid)):
-        os.makedirs('./result/pareto_front_paretoMTL/{}/{}/{}'.format(args.dataset_name, args.confounder, args.taskid))
+    args.save_path = './result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)
+    if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)):
+        os.makedirs('./result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid))
 
     # batch1_ratio = gene_dataset.batch_indices[gene_dataset.batch_indices[:,0]==1].shape[0]/gene_dataset.batch_indices.shape[0]
 
