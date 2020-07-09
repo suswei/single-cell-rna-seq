@@ -26,7 +26,7 @@ def main(taskid):
         'adv_lr': [5e-4],
         'n_epochs': [50, 100, 200],
         'lr': [1e-2],
-        'obj2_scale': [0.3, 0.5],
+        'obj2_scale': [0.2, 0.3, 0.5],
         'n_tasks': [2],
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
     }
