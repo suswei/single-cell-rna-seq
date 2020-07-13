@@ -99,9 +99,9 @@ def pareto_front(hyperparameter_config, dataframe, dir_path):
 def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
     dir_path = './result/pareto_front_paretoMTL/{}/{}'.format(dataset, confounder)
     hyperparameter_config = {
-        'pre_epochs': [100, 300],
+        'pre_epochs': [300, 500, 800],
         'n_epochs': [50, 100, 200],
-        'obj2_scale': [0.02, 0.1, 0.5],
+        'obj2_scale': [0.2, 0.3, 0.5],
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10] * 10, list(range(10)))]
     }
     keys, values = zip(*hyperparameter_config.items())
@@ -109,8 +109,8 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
 
     results_config_total = pd.DataFrame()
     for i in range(len(hyperparameter_experiments)):
-        config_path = dir_path + '/{}/config.pkl'.format(i)
-        results_path = dir_path + '/{}/results.pkl'.format(i)
+        config_path = dir_path + '/taskid{}/config.pkl'.format(i)
+        results_path = dir_path + '/taskid{}/results.pkl'.format(i)
         if os.path.isfile(config_path) and os.path.isfile(results_path):
             config = pickle.load(open(config_path, "rb"))
             results = pickle.load(open(results_path, "rb"))

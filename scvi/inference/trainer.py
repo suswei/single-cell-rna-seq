@@ -368,7 +368,8 @@ class Trainer:
         fig.write_image('{}/neg_unbiased_advloss_MINE_per_minibatch.png'.format(self.save_path))
 
     def paretoMTL_train(self,pre_epochs: int=100, pre_adv_epochs: int=100, adv_lr: float=5e-5, n_epochs: int=200, lr: float=1e-3,
-                        eps: float = 0.01, n_tasks: int=2, npref: int=10, pref_idx: int=0, obj2_scale: float=0.5):
+                        eps: float = 0.01, n_tasks: int=2, npref: int=10, pref_idx: int=0,
+                        obj1_max: float=17000, obj1_min: float=12000, obj2_max: float=0.4, obj2_min: float=-0.1):
 
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
 
@@ -376,12 +377,14 @@ class Trainer:
         self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps)
         self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
 
+        '''
         if n_epochs < 60:
             self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[20, 40], gamma=0.5)
             self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[20, 40],gamma=0.2)
         elif n_epochs >= 60:
             self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[20, 40, 80], gamma=0.5)
             self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[20, 40, 80],gamma=0.2)
+        '''
 
         # pretrain vae_MI, here loss is not standardized
         self.cal_loss = True
@@ -389,7 +392,6 @@ class Trainer:
         for pre_n_epoch in range(pre_epochs):
             for tensors_list in self.data_loaders_loop():
                 loss, _, _ = self.two_loss(*tensors_list)
-                loss = (loss - 13000)/(8000)
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
@@ -430,8 +432,8 @@ class Trainer:
                 self.cal_loss = True
                 self.cal_adv_loss = True
                 loss, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
-                loss = (loss - 13000)/(8000)
-                MINE_estimator_minibatch = (MINE_estimator_minibatch - (-0.1))/(obj2_scale)
+                loss = (loss - obj1_min)/(obj1_max - obj1_min)
+                MINE_estimator_minibatch = (MINE_estimator_minibatch - obj2_min)/(obj2_max - obj2_min)
                 # obtain and store the gradient value
                 for i in range(n_tasks):
                     self.adv_optimizer.zero_grad()
@@ -469,8 +471,8 @@ class Trainer:
                 self.cal_loss = True
                 self.cal_adv_loss = True
                 loss, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
-                loss = (loss - 13000) / (8000)
-                MINE_estimator_minibatch = (MINE_estimator_minibatch - (-0.1)) / (obj2_scale)
+                loss = (loss - obj1_min)/(obj1_max - obj1_min)
+                MINE_estimator_minibatch = (MINE_estimator_minibatch - obj2_min)/(obj2_max - obj2_min)
                 for i in range(n_tasks):
                     if i == 0:
                         loss_total = weight_vec[i] * loss
@@ -510,8 +512,8 @@ class Trainer:
                 self.cal_loss = True
                 self.cal_adv_loss = True
                 loss, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
-                loss = (loss - 13000) / (8000)
-                MINE_estimator_minibatch = (MINE_estimator_minibatch - (-0.1)) / (obj2_scale)
+                loss = (loss - obj1_min)/(obj1_max - obj1_min)
+                MINE_estimator_minibatch = (MINE_estimator_minibatch - obj2_min)/(obj2_max - obj2_min)
                 for i in range(n_tasks):
                     self.adv_optimizer.zero_grad()
                     self.optimizer.zero_grad()
@@ -549,8 +551,8 @@ class Trainer:
                 self.cal_loss = True
                 self.cal_adv_loss = True
                 loss, adv_loss, MINE_estimator_minibatch = self.two_loss(*tensors_list)
-                loss = (loss - 13000) / (8000)
-                MINE_estimator_minibatch = (MINE_estimator_minibatch - (-0.1)) / (obj2_scale)
+                loss = (loss - obj1_min)/(obj1_max - obj1_min)
+                MINE_estimator_minibatch = (MINE_estimator_minibatch - obj2_min)/(obj2_max - obj2_min)
                 for i in range(n_tasks):
                     if i == 0:
                         loss_total = weight_vec[i] * loss

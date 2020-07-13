@@ -213,17 +213,14 @@ def main( ):
     parser.add_argument('--pre_adv_epochs', type=int, default=100,
                         help='number of epochs to pre-train MINE')
 
-    parser.add_argument('--adv_lr', type=float, default=5e-4,
+    parser.add_argument('--adv_lr', type=float, default=5e-5,
                         help='learning rate in MINE pre-training and adversarial training')
 
     parser.add_argument('--n_epochs', type=int, default=51,
                         help='number of epochs to train scVI and MINE')
 
-    parser.add_argument('--lr', type=float, default=1e-2,
+    parser.add_argument('--lr', type=float, default=1e-3,
                         help='learning rate for scVI')
-
-    parser.add_argument('--obj2_scale', type=float, default=0.5,
-                        help='the scale to standardize the second objective')
 
     parser.add_argument('--n_tasks', type=int, default=2,
                         help='number of objectives for the multiple optimization problem')
@@ -233,6 +230,18 @@ def main( ):
 
     parser.add_argument('--pref_idx', type=int, default=0,
                         help='which subproblem')
+
+    parser.add_argument('--obj1_max', type=float, default=18000,
+                        help='maximum value for objective 1')
+
+    parser.add_argument('--obj1_min', type=float, default=12000,
+                        help='minimum value for objective 1')
+
+    parser.add_argument('--obj2_max', type=float, default=0.4,
+                        help='maximum value for objective 2')
+
+    parser.add_argument('--obj2_min', type=float, default=-0.1,
+                        help='minimum value for objective 2')
 
     parser.add_argument('--nsamples_z', type=int, default=200,
                         help='number of z sampled from aggregated posterior for nearest neighbor method')
@@ -307,7 +316,8 @@ def main( ):
     trainer_vae.kl_weight = 1
 
     obj1_minibatch_list, _, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_epochs= args.pre_epochs, pre_adv_epochs = args.pre_adv_epochs, adv_lr = args.adv_lr, n_epochs = args.n_epochs,
-                                                                              lr = args.lr, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, obj2_scale = args.obj2_scale)
+                                                                              lr = args.lr, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx,
+                                                                              obj1_max = args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min)
     #obj1 for the whole training and testing set
     obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
