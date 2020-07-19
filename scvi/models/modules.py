@@ -1,6 +1,6 @@
 import collections
 from typing import Iterable
-
+import scipy
 import torch
 from torch import nn as nn
 from torch.distributions import Normal
@@ -504,6 +504,8 @@ class Classifier_Net(nn.Module):
         return logit
 
 
+#Nearest neighbor method is not recommended for back-propogation, one reason is the for loop in it.
+
 # discrete_continuous_info(d, c) estimates the mutual information between a
 # discrete vector 'd' and a continuous vector 'c' using
 # nearest-neighbor statistics.  Similar to the estimator described by
@@ -512,7 +514,6 @@ class Classifier_Net(nn.Module):
 # c.shape = (vector dimension, # of samples).
 import numpy as np
 import math
-import scipy
 def discrete_continuous_info(d, c, k:int = 3, base: float = 2):
     #this function is transformed from the discrete_continuous_info.m from the paper
     # 'Mutual information between discrete and continuous data sets'.

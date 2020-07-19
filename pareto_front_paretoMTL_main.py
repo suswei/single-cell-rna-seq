@@ -13,9 +13,10 @@ from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
 from scvi.models.modules import MINE_Net3, discrete_continuous_info
+from hsic import hsic
 import pickle
 
-def sample1_sample2(trainer_vae, sample_batch, batch_index):
+def sample1_sample2(trainer_vae, sample_batch, batch_index, type):
     x_ = sample_batch
     if trainer_vae.model.log_variational:
         x_ = torch.log(1 + x_)
@@ -26,11 +27,14 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index):
     batch_dummy = torch.from_numpy(pd.get_dummies(batch_dataframe['batch']).values).type(torch.FloatTensor)
     batch_dummy = Variable(batch_dummy, requires_grad=True)
 
-    sample1 = torch.cat((z, batch_dummy), 1)  # joint
-    shuffle_index = torch.randperm(z.shape[0])
-    sample2 = torch.cat((z[shuffle_index], batch_dummy), 1)
+    if type == 'MINE':
+        sample1 = torch.cat((z, batch_dummy), 1)  # joint
+        shuffle_index = torch.randperm(z.shape[0])
+        sample2 = torch.cat((z[shuffle_index], batch_dummy), 1)
 
-    return sample1, sample2, z, batch_dummy
+        return sample1, sample2, z, batch_dummy
+    else:
+        return None, None, z, batch_dummy
 
 def obj1_train_test(trainer_vae):
 
@@ -52,7 +56,7 @@ def obj1_train_test(trainer_vae):
 
     return obj1_train, obj1_test
 
-def fully_MINE_after_trainerVae(trainer_vae):
+def MINE_after_trainerVae(trainer_vae):
     MINE_network = MINE_Net3(input_dim=10 + 2, n_hidden=128, n_layers=10,
                             activation_fun='ELU', unbiased_loss=True, initial='normal')
 
@@ -63,7 +67,7 @@ def fully_MINE_after_trainerVae(trainer_vae):
         for tensors_list in trainer_vae.data_loaders_loop():
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list[0]
 
-            sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index)
+            sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, 'MINE')
             t = MINE_network(sample1)
             et = torch.exp(MINE_network(sample2))
 
@@ -92,7 +96,7 @@ def fully_MINE_after_trainerVae(trainer_vae):
         for tensors_list in trainer_vae.train_set:
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
 
-            sample1, sample2, z, batch_dummy= sample1_sample2(trainer_vae, sample_batch, batch_index)
+            sample1, sample2, z, batch_dummy= sample1_sample2(trainer_vae, sample_batch, batch_index, 'MINE')
             z_all_train = torch.cat((z_all_train, z), 0)
             batch_all_train = torch.cat((batch_all_train, batch_dummy), 0)
 
@@ -109,7 +113,7 @@ def fully_MINE_after_trainerVae(trainer_vae):
         for tensors_list in trainer_vae.test_set:
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
 
-            sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index)
+            sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, 'MINE')
             z_all_test = torch.cat((z_all_test, z), 0)
             batch_all_test = torch.cat((batch_all_test, batch_dummy), 0)
 
@@ -129,28 +133,32 @@ def fully_MINE_after_trainerVae(trainer_vae):
 
     return MINE_estimator_train.detach().item(), MINE_estimator_test.detach().item()
 
-def NN_train_test(trainer_vae):
+def HSIC_NN_train_test(trainer_vae, type):
 
-    NN_train_list, NN_test_list = [], []
+    estimator_train_list, estimator_test_list = [], []
     for tensors_list in trainer_vae.train_set:
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
-        sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index)
-
-        NN_estimator_minibatch_train = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
-        NN_train_list.append(NN_estimator_minibatch_train)
-    NN_train = sum(NN_train_list)/len(NN_train_list)
+        _, _, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
+        if type == 'HSIC':
+            estimator_minibatch_train = hsic(z, batch_dummy)
+        elif type == 'NN':
+            estimator_minibatch_train = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
+        estimator_train_list.append(estimator_minibatch_train)
+    estimator_train = sum(estimator_train_list)/len(estimator_train_list)
 
     for tensors_list in trainer_vae.test_set:
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
-        sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index)
+        _, _, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
+        if type == 'HSIC':
+            estimator_minibatch_test = hsic(z, batch_dummy)
+        elif type == 'NN':
+            estimator_minibatch_test = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
+        estimator_test_list.append(estimator_minibatch_test)
+    estimator_test = sum(estimator_test_list)/len(estimator_test_list)
 
-        NN_estimator_minibatch_test = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
-        NN_test_list.append(NN_estimator_minibatch_test)
-    NN_test = sum(NN_test_list)/len(NN_test_list)
-
-    return NN_train, NN_test
+    return estimator_train, estimator_test
 
 def main( ):
 
@@ -190,8 +198,11 @@ def main( ):
     parser.add_argument('--batch_size', type=int, default=128,
                         help='the batch size for scVI')
 
+    parser.add_argument('--train_size', type=float, default=0.8,
+                        help='the ratio to split the training and testing data set')
+
     # for MINE
-    parser.add_argument('--conf_estimator', type=str, default='MINE_MI',
+    parser.add_argument('--adv_estimator', type=str, default='MINE',
                         help='the method used to estimate confounding effect')
 
     parser.add_argument('--adv_n_hidden', type=int, default=128,
@@ -200,27 +211,33 @@ def main( ):
     parser.add_argument('--adv_n_layers', type=int, default=10,
                         help='the number of hidden layers for MINE')
 
-    parser.add_argument('--activation_fun', type=str, default='ELU',
+    parser.add_argument('--adv_activation_fun', type=str, default='ELU',
                         help='the activation function used for MINE')
 
     parser.add_argument('--unbiased_loss', action='store_true', default=True,
                         help='whether to use unbiased loss or not in MINE')
 
     # for training
-    parser.add_argument('--pre_epochs', type=int, default=100,
+    parser.add_argument('--pre_train', action='store_true', default=False,
+                        help='whether to pre train neural network')
+
+    parser.add_argument('--pre_epochs', type=int, default=250,
                         help='number of epochs to pre-train scVI')
 
     parser.add_argument('--pre_adv_epochs', type=int, default=100,
                         help='number of epochs to pre-train MINE')
 
+    parser.add_argument('--pre_lr', type=float, default=1e-3,
+                        help='learning rate in scVI pre-training')
+
     parser.add_argument('--adv_lr', type=float, default=5e-5,
                         help='learning rate in MINE pre-training and adversarial training')
 
-    parser.add_argument('--n_epochs', type=int, default=51,
+    parser.add_argument('--n_epochs', type=int, default=50,
                         help='number of epochs to train scVI and MINE')
 
-    parser.add_argument('--lr', type=float, default=1e-3,
-                        help='learning rate for scVI')
+    parser.add_argument('--lr', type=float, default=1e-4,
+                        help='learning rate for paretoMTL')
 
     parser.add_argument('--n_tasks', type=int, default=2,
                         help='number of objectives for the multiple optimization problem')
@@ -230,6 +247,9 @@ def main( ):
 
     parser.add_argument('--pref_idx', type=int, default=0,
                         help='which subproblem')
+
+    parser.add_argument('--standardize', action='store_true', default=False,
+                        help='whether to standardize the two objectives')
 
     parser.add_argument('--obj1_max', type=float, default=18000,
                         help='maximum value for objective 1')
@@ -243,8 +263,9 @@ def main( ):
     parser.add_argument('--obj2_min', type=float, default=-0.1,
                         help='minimum value for objective 2')
 
-    parser.add_argument('--nsamples_z', type=int, default=200,
-                        help='number of z sampled from aggregated posterior for nearest neighbor method')
+    parser.add_argument('--MCs', type=int, default=100,
+                        help='the number to repeat pareto MTL')
+
 
     # general usage
     parser.add_argument('--use_cuda', action='store_true', default=False,
@@ -256,7 +277,7 @@ def main( ):
 
     args = parser.parse_args()
 
-    if args.activation_fun == 'ELU':
+    if args.adv_activation_fun == 'ELU':
         args.adv_w_initial = 'normal'
 
     #load dataset
@@ -273,25 +294,31 @@ def main( ):
 
     #generate a random seed to split training and testing dataset
     np.random.seed(1011)
-    desired_seeds = np.random.randint(0, 2 ** 32, size=(1, 1), dtype=np.uint32)
-    desired_seed = int(desired_seeds[0, 0])
+    desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
+    if args.pre_train == True:
+        desired_seed = int(desired_seeds[0, args.taskid])
+    else:
+        desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
 
-    args.save_path = './result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)
-    if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)):
-        os.makedirs('./result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid))
-
-    # batch1_ratio = gene_dataset.batch_indices[gene_dataset.batch_indices[:,0]==1].shape[0]/gene_dataset.batch_indices.shape[0]
+    if args.pre_train == True:
+        args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)
+        if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)):
+            os.makedirs('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid))
+    else:
+        args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))
+        if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))):
+            print('Error: please pretrain first!')
 
     # calculate ratio to split the gene_dataset into training and testing dataset
-    # to avoid the case when there are very few input data points of the last minibatch of every epoch
-    intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * 0.8 * 128 + (
+    # to avoid the case when there are very few input data points of the last minibatch in every epoch
+    intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (
             int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
     args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e6) / 1e6
 
     # If train vae alone
     # vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
     #          n_hidden=128, n_latent=10, n_layers_encoder=2, n_layers_decoder=2, dropout_rate=0.1,
-    #          reconstruction_loss='zinb', batch1_ratio=batch1_ratio, nsamples_z=128, adv=False,
+    #          reconstruction_loss='zinb', batch1_ratio=batch1_ratio, nsamples_z=128,
     #          std=False, save_path='None')
     # frequency controls how often the statistics in trainer_vae.model are evaluated by compute_metrics() function in trainer.py
     # trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=train_size, seed=desired_seed,
@@ -306,57 +333,82 @@ def main( ):
                     n_labels=gene_dataset.n_labels, n_hidden=args.n_hidden, n_latent=args.n_latent,
                     n_layers_encoder=args.n_layers_encoder, n_layers_decoder=args.n_layers_decoder,
                     dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss)
-    trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
-                                      seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1,
-                                      adv=True, adv_estimator=args.conf_estimator, adv_n_hidden=args.adv_n_hidden,
-                                      adv_n_layers=args.adv_n_layers, adv_activation_fun=args.activation_fun,
-                                      unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial,
-                                      aggregated_posterior=False, save_path=args.save_path)
+    if args.adv_estimator == 'MINE':
+        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
+                                          seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
+                                          adv_n_hidden=args.adv_n_hidden, adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
+                                          unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial)
+    elif args.adv_estimator == 'HSIC':
+        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
+                                          seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator)
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
     trainer_vae.kl_weight = 1
 
-    obj1_minibatch_list, _, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_epochs= args.pre_epochs, pre_adv_epochs = args.pre_adv_epochs, adv_lr = args.adv_lr, n_epochs = args.n_epochs,
-                                                                              lr = args.lr, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx,
-                                                                              obj1_max = args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min)
-    #obj1 for the whole training and testing set
-    obj1_train, obj1_test = obj1_train_test(trainer_vae)
+    if args.pre_train == True:
+        trainer_vae.paretoMTL_train(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
+                        pre_adv_epochs=args.pre_adv_epochs, adv_lr=args.adv_lr, path=args.save_path)
+    else:
+        if args.standardize == False:
+            obj1_minibatch_list, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train, adv_lr=args.adv_lr,
+                                path=args.save_path ,n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref,
+                                pref_idx=args.pref_idx, standardize=args.standardize)
+            print('the maximum value for objective 1 is {}, the minimum value for objective 1 is {}'.format(max(obj1_minibatch_list), min(obj1_minibatch_list)))
+            print('the maximum value for objective 2 is {}, the minimum value for objective 2 is {}'.format(max(obj2_minibatch_list), min(obj2_minibatch_list)))
+            #As there is randomness, the respective maximum value * (1+0.1) and the respective minimum value * (1-0.1) will be used
+            #as the maximum value and minimum value to standardize objective 1 and objective 2.
 
-    full_MINE_train, full_MINE_test = fully_MINE_after_trainerVae(trainer_vae)
+        else:
+            obj1_minibatch_list, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train, adv_lr=args.adv_lr,
+                                path=args.save_path ,n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref,
+                                pref_idx=args.pref_idx, standardize=args.standardize, obj1_max=args.obj1_max, obj1_min=args.obj1_min,
+                                obj2_max=args.obj2_max, obj2_min=args.obj2_min)
 
-    NN_train, NN_test = NN_train_test(trainer_vae)
+            #obj1 for the whole training and testing set
+            obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
-    asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
-    be_train = trainer_vae.train_set.entropy_batch_mixing()
+            if trainer_vae.adv_estimator == 'MINE':
+                obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae)
+            elif trainer_vae.adv_estimator == 'HSIC':
+                obj2_train, obj2_test = HSIC_NN_train_test(trainer_vae,'HSIC')
 
-    asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
-    be_test = trainer_vae.test_set.entropy_batch_mixing()
+            NN_train, NN_test = HSIC_NN_train_test(trainer_vae, 'NN')
 
-    args_dict = vars(args)
-    with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
-        pickle.dump(args_dict, f)
+            asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
+            be_train = trainer_vae.train_set.entropy_batch_mixing()
 
-    results_dict = {'obj1_minibatch': [obj1_minibatch_list[-1]],
-                    'obj2_minibatch': [obj2_minibatch_list[-1]],
-                    'obj1_train': [obj1_train],
-                    'full_MINE_train': [full_MINE_train],
-                    'NN_train': [NN_train],
-                    'obj1_test': [obj1_test],
-                    'full_MINE_test': [full_MINE_test],
-                    'NN_test': [NN_test],
-                    'asw_train': [asw_train],
-                    'nmi_train': [nmi_train],
-                    'ari_train': [ari_train],
-                    'uca_train': [uca_train],
-                    'be_train': [be_train],
-                    'asw_test': [asw_test],
-                    'nmi_test': [nmi_test],
-                    'ari_test': [ari_test],
-                    'uca_test': [uca_test],
-                    'be_test': [be_test]
-                    }
-    with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
-        pickle.dump(results_dict, f)
-    print(results_dict)
+            asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
+            be_test = trainer_vae.test_set.entropy_batch_mixing()
+
+            args.save_path = './result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,args.taskid)
+            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)):
+                os.makedirs('./result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid))
+
+            args_dict = vars(args)
+            with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
+                pickle.dump(args_dict, f)
+
+            results_dict = {'obj1_minibatch': [obj1_minibatch_list[-1]],
+                            'obj2_minibatch': [obj2_minibatch_list[-1]],
+                            'obj1_train': [obj1_train],
+                            'obj2_train': [obj2_train],
+                            'NN_train': [NN_train],
+                            'obj1_test': [obj1_test],
+                            'obj2_test': [obj2_test],
+                            'NN_test': [NN_test],
+                            'asw_train': [asw_train],
+                            'nmi_train': [nmi_train],
+                            'ari_train': [ari_train],
+                            'uca_train': [uca_train],
+                            'be_train': [be_train],
+                            'asw_test': [asw_test],
+                            'nmi_test': [nmi_test],
+                            'ari_test': [ari_test],
+                            'uca_test': [uca_test],
+                            'be_test': [be_test]
+                            }
+            with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
+                pickle.dump(results_dict, f)
+            print(results_dict)
 # Run the actual program
 if __name__ == "__main__":
     main()

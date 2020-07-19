@@ -25,15 +25,7 @@ def main(taskid):
         'pre_adv_epochs': [100],
         'pre_lr': [1e-3],
         'adv_lr': [5e-5],
-        'n_epochs': [50],
-        'lr': [1e-3, 1e-4],
-        'obj1_max': [17000],
-        'obj1_min': [13000],
-        'obj2_max': [0.4],
-        'obj2_min': [-0.1],
-        'n_tasks': [2],
-        'MCs': 20 * [1],
-        'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
+        'MCs': 20 * [1]
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -43,14 +35,11 @@ def main(taskid):
     os.system("python3 pareto_front_paretoMTL_main.py --taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
-              "--pre_epochs %s --pre_adv_epochs %s --pre_lr %s --adv_lr %s --n_epochs %s --lr %s "
-              "--obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s --n_tasks %s --MCs 20 --npref %s --pref_idx %s"
+              "--pre_train --pre_epochs %s --pre_adv_epochs %s --pre_lr %s --adv_lr %s --MCs 20"
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'],
                  temp['adv_estimator'], temp['adv_n_hidden'], temp['adv_n_layers'], temp['adv_activation_fun'],
-                 temp['pre_epochs'], temp['pre_adv_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'],
-                 temp['obj1_max'], temp['obj1_min'], temp['obj2_max'], temp['obj2_min'], temp['n_tasks'],
-                 temp['npref_prefidx']['npref'], temp['npref_prefidx']['pref_idx'])
+                 temp['pre_epochs'], temp['pre_adv_epochs'], temp['pre_lr'], temp['adv_lr'])
               )
 
 if __name__ == "__main__":
