@@ -385,9 +385,9 @@ class Trainer:
             self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps)
             self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
 
-            if n_epochs > 50:
-                self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[20, 40], gamma=0.5)
-                self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[20, 40], gamma=0.2)
+
+            self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[30], gamma=0.5)
+            self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[30], gamma=0.5)
 
             obj1_minibatch_list, obj2_minibatch_list = [], []
             # run at most 2 epochs to find the initial solution
@@ -398,15 +398,15 @@ class Trainer:
                 self.model.train()
                 self.adv_model.train()
                 for tensors_list in self.data_loaders_loop():
-
-                    self.cal_loss = False
-                    self.cal_adv_loss = True
-                    for adv_tensors_list in self.data_loaders_loop():
-                        _, adv_loss, obj2_minibatch = self.two_loss(*adv_tensors_list)
-                        self.adv_optimizer.zero_grad()
-                        self.optimizer.zero_grad()
-                        adv_loss.backward()
-                        self.adv_optimizer.step()
+                    if self.adv_estimator == 'MINE':
+                        self.cal_loss = False
+                        self.cal_adv_loss = True
+                        for adv_tensors_list in self.data_loaders_loop():
+                            _, adv_loss, obj2_minibatch = self.two_loss(*adv_tensors_list)
+                            self.adv_optimizer.zero_grad()
+                            self.optimizer.zero_grad()
+                            adv_loss.backward()
+                            self.adv_optimizer.step()
 
                     # obtain and store the gradient
                     grads = {}
@@ -479,21 +479,21 @@ class Trainer:
 
             #run n_epochs of ParetoMTL
             for self.epoch in range(n_epochs):
-                if n_epochs > 50:
-                    self.scheduler.step()
-                    self.adv_scheduler.step()
+
+                self.scheduler.step()
+                self.adv_scheduler.step()
                 self.model.train()
                 self.adv_model.train()
                 for tensors_list in self.data_loaders_loop():
-
-                    self.cal_loss = False
-                    self.cal_adv_loss = True
-                    for adv_tensors_list in self.data_loaders_loop():
-                        _, adv_loss, obj2_minibatch = self.two_loss(*adv_tensors_list)
-                        self.adv_optimizer.zero_grad()
-                        self.optimizer.zero_grad()
-                        adv_loss.backward()
-                        self.adv_optimizer.step()
+                    if self.adv_estimator == 'MINE':
+                        self.cal_loss = False
+                        self.cal_adv_loss = True
+                        for adv_tensors_list in self.data_loaders_loop():
+                            _, adv_loss, obj2_minibatch = self.two_loss(*adv_tensors_list)
+                            self.adv_optimizer.zero_grad()
+                            self.optimizer.zero_grad()
+                            adv_loss.backward()
+                            self.adv_optimizer.step()
 
                     # obtain and store the gradient
                     grads = {}

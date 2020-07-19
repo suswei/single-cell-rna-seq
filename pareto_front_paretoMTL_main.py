@@ -354,8 +354,9 @@ def main( ):
                                 pref_idx=args.pref_idx, standardize=args.standardize)
             print('the maximum value for objective 1 is {}, the minimum value for objective 1 is {}'.format(max(obj1_minibatch_list), min(obj1_minibatch_list)))
             print('the maximum value for objective 2 is {}, the minimum value for objective 2 is {}'.format(max(obj2_minibatch_list), min(obj2_minibatch_list)))
-            #As there is randomness, the respective maximum value * (1+0.1) and the respective minimum value * (1-0.1) will be used
-            #as the maximum value and minimum value to standardize objective 1 and objective 2.
+            #As there is randomness, the maximum value * (1+0.1) and the minimum value * (1-0.1) when pref_idx=9 will be used to standardize objective 1.
+            #As there is randomness, the maximum value * (1+0.1) and the minimum value * (1+0.1) when pref_idx=0 will be used to standardize objective 2.
+            #Round the decimal to 0.1.
 
         else:
             obj1_minibatch_list, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train, adv_lr=args.adv_lr,

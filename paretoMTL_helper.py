@@ -64,7 +64,6 @@ class MinNormSolver:
                         dps[(j, j)] += torch.dot(vecs[j][k],
                                                  vecs[j][k]).item()  # torch.dot(vecs[j][k], vecs[j][k]).data[0]
                 c, d = MinNormSolver._min_norm_element_from2(dps[(i, i)], dps[(i, j)], dps[(j, j)])
-                print(d)
                 if d < dmin:
                     dmin = d
                     sol = [(i, j), c, d]
