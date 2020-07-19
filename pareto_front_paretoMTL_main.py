@@ -280,10 +280,6 @@ def main( ):
     if args.adv_activation_fun == 'ELU':
         args.adv_w_initial = 'normal'
 
-    print('pre_train:')
-    print(args.pre_train)
-    args.pretrain == True
-
     #load dataset
     data_save_path = './data/pareto_front_paretoMTL/%s' % (args.dataset_name)
     if not os.path.exists('./data/pareto_front_paretoMTL/%s' % (args.dataset_name)):
