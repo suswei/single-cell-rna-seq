@@ -35,7 +35,7 @@ fi
 # Run the job from the directory where it was launched (default)
 
 # The job command(s):
-module load Anaconda3/2019.03
+module load anaconda3/2020.02
 source activate sharedenv
 module load web_proxy
 python3 pareto_front_paretoMTL_pretrain.py ${SLURM_ARRAY_TASK_ID}
