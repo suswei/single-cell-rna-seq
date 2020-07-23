@@ -357,7 +357,9 @@ def main( ):
             #As there is randomness, the maximum value * (1+0.1) and the minimum value * (1-0.1) when pref_idx=9 will be used to standardize objective 1.
             #As there is randomness, the maximum value * (1+0.1) and the minimum value * (1+0.1) when pref_idx=0 will be used to standardize objective 2.
             #Round the decimal to 0.1.
-
+            NN_train, NN_test = HSIC_NN_train_test(trainer_vae, 'NN')
+            print(NN_train)
+            print(NN_test)
         else:
             obj1_minibatch_list, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train, adv_lr=args.adv_lr,
                                 path=args.save_path ,n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref,

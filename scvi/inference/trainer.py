@@ -349,7 +349,6 @@ class Trainer:
         if pre_train == True:
             params = filter(lambda p: p.requires_grad, self.model.parameters())
             self.optimizer = torch.optim.Adam(params, lr=pre_lr, eps=eps)
-            self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
 
             # pretrain vae_MI, here loss is not standardized
             self.cal_loss = True
@@ -363,6 +362,7 @@ class Trainer:
             torch.save(self.model.state_dict(), path + '/vae.pkl')
 
             if self.adv_estimator == 'MINE':
+                self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
                 # pretrain adv_model to make MINE works
                 self.cal_loss = False
                 self.cal_adv_loss = True
@@ -373,21 +373,20 @@ class Trainer:
                         self.optimizer.zero_grad()
                         adv_loss.backward()
                         self.adv_optimizer.step()
+                        print(obj2_minibatch)
                 torch.save(self.adv_model.state_dict(), path + '/MINE.pkl')
         else:
             ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
 
             self.model.load_state_dict(torch.load(path + '/vae.pkl'))
-            if self.adv_estimator == 'MINE':
-                self.adv_model.load_state_dict(torch.load(path + '/MINE.pkl'))
-
             params = filter(lambda p: p.requires_grad, self.model.parameters())
             self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps)
-            self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
-
-
             self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[30], gamma=0.5)
-            self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[30], gamma=0.5)
+
+            if self.adv_estimator == 'MINE':
+                self.adv_model.load_state_dict(torch.load(path + '/MINE.pkl'))
+                self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
+                #self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[30], gamma=0.5)
 
             obj1_minibatch_list, obj2_minibatch_list = [], []
             # run at most 2 epochs to find the initial solution
@@ -396,17 +395,23 @@ class Trainer:
             for t in range(2):
 
                 self.model.train()
-                self.adv_model.train()
+                if self.adv_estimator == 'MINE':
+                    self.adv_model.train()
                 for tensors_list in self.data_loaders_loop():
+
                     if self.adv_estimator == 'MINE':
                         self.cal_loss = False
                         self.cal_adv_loss = True
+                        minibatch_number = 0
                         for adv_tensors_list in self.data_loaders_loop():
+                            minibatch_number += 1
                             _, adv_loss, obj2_minibatch = self.two_loss(*adv_tensors_list)
                             self.adv_optimizer.zero_grad()
                             self.optimizer.zero_grad()
                             adv_loss.backward()
                             self.adv_optimizer.step()
+                            if minibatch_number == 20:
+                                break
 
                     # obtain and store the gradient
                     grads = {}
@@ -419,10 +424,14 @@ class Trainer:
                     if standardize == True:
                         loss = (loss - obj1_min)/(obj1_max - obj1_min)
                         obj2_minibatch = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+
                     # obtain and store the gradient value
                     for i in range(n_tasks):
-                        self.adv_optimizer.zero_grad()
+
                         self.optimizer.zero_grad()
+                        if self.adv_estimator == 'MINE':
+                            self.adv_optimizer.zero_grad()
+
                         if i == 0:
                             losses_vec.append(loss.data)
                             loss.backward(retain_graph=True)
@@ -447,12 +456,14 @@ class Trainer:
 
                     # early stop once a feasible solution is obtained
                     if flag == True:
-                        print("fealsible solution is obtained.")
+                        print("feasible solution is obtained.")
                         break
 
                     # optimization step
-                    self.adv_optimizer.zero_grad()
                     self.optimizer.zero_grad()
+                    if self.adv_estimator == 'MINE':
+                        self.adv_optimizer.zero_grad()
+
                     self.cal_loss = True
                     self.cal_adv_loss = True
                     loss, adv_loss, obj2_minibatch = self.two_loss(*tensors_list)
@@ -462,6 +473,7 @@ class Trainer:
                     if standardize == True:
                         loss = (loss - obj1_min)/(obj1_max - obj1_min)
                         obj2_minibatch = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+
                     for i in range(n_tasks):
                         if i == 0:
                             loss_total = weight_vec[i] * loss
@@ -481,19 +493,26 @@ class Trainer:
             for self.epoch in range(n_epochs):
 
                 self.scheduler.step()
-                self.adv_scheduler.step()
                 self.model.train()
-                self.adv_model.train()
+                if self.adv_estimator == 'MINE':
+                    #self.adv_scheduler.step()
+                    self.adv_model.train()
+
                 for tensors_list in self.data_loaders_loop():
+
                     if self.adv_estimator == 'MINE':
                         self.cal_loss = False
                         self.cal_adv_loss = True
+                        minibatch_number = 0
                         for adv_tensors_list in self.data_loaders_loop():
+                            minibatch_number += 1
                             _, adv_loss, obj2_minibatch = self.two_loss(*adv_tensors_list)
                             self.adv_optimizer.zero_grad()
                             self.optimizer.zero_grad()
                             adv_loss.backward()
                             self.adv_optimizer.step()
+                            if minibatch_number == 20:
+                                break
 
                     # obtain and store the gradient
                     grads = {}
@@ -505,9 +524,13 @@ class Trainer:
                     if standardize == True:
                         loss = (loss - obj1_min)/(obj1_max - obj1_min)
                         obj2_minibatch = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+
                     for i in range(n_tasks):
-                        self.adv_optimizer.zero_grad()
+
                         self.optimizer.zero_grad()
+                        if self.adv_estimator == 'MINE':
+                            self.adv_optimizer.zero_grad()
+
                         if i == 0:
                             losses_vec.append(loss.data)
                             loss.backward(retain_graph=True)
@@ -533,8 +556,10 @@ class Trainer:
                     weight_vec = weight_vec * normalize_coeff
 
                     # optimization step
-                    self.adv_optimizer.zero_grad()
                     self.optimizer.zero_grad()
+                    if self.adv_estimator == 'MINE':
+                        self.adv_optimizer.zero_grad()
+
                     self.cal_loss = True
                     self.cal_adv_loss = True
                     loss, adv_loss, obj2_minibatch = self.two_loss(*tensors_list)
@@ -545,6 +570,7 @@ class Trainer:
                     if standardize == True:
                         loss = (loss - obj1_min)/(obj1_max - obj1_min)
                         obj2_minibatch = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+
                     for i in range(n_tasks):
                         if i == 0:
                             loss_total = weight_vec[i] * loss
