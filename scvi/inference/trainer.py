@@ -381,7 +381,7 @@ class Trainer:
             self.model.load_state_dict(torch.load(path + '/vae.pkl'))
             params = filter(lambda p: p.requires_grad, self.model.parameters())
             self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps)
-            self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[30], gamma=0.5)
+            #self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[30], gamma=0.5)
 
             if self.adv_estimator == 'MINE':
                 self.adv_model.load_state_dict(torch.load(path + '/MINE.pkl'))
@@ -492,7 +492,7 @@ class Trainer:
             #run n_epochs of ParetoMTL
             for self.epoch in range(n_epochs):
 
-                self.scheduler.step()
+                #self.scheduler.step()
                 self.model.train()
                 if self.adv_estimator == 'MINE':
                     #self.adv_scheduler.step()

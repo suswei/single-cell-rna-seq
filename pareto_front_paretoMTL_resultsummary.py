@@ -84,32 +84,37 @@ def pareto_front(hyperparameter_config, dataframe, dir_path):
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     for temp in hyperparameter_experiments:
-        dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])]
-        dataframe_oneMC = dataframe_adv.iloc[10:20, :] #there is no result for taskid=0 for HSIC
-        if dataframe_oneMC.shape[0] > 0:
+        if temp['adv_estimator']=='MINE':
+            dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])].iloc[10:,:]
+        else:
+            dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])].iloc[9:,]
+        for MC in range(19):
+            dataframe_oneMC = dataframe_adv.iloc[(10*MC):10*(MC+1),:]
+
             pref_idx_list = dataframe_oneMC.loc[:, 'pref_idx'].values.tolist()
-            for pareto_front_type in ['whole', 'NN', 'asw', 'nmi', 'ari', 'uca']:
+            for pareto_front_type in ['whole', 'NN']: #'asw', 'nmi', 'ari', 'uca'
                 for type in ['train', 'test']:
 
-                    save_path = dir_path + '/paretoMTL_{}_{}_{}.png'.format(temp['adv_estimator'], pareto_front_type, type)
+                    save_path = dir_path + '/paretoMTL_MC{}_{}_{}_{}.png'.format(MC, temp['adv_estimator'], pareto_front_type, type)
 
                     if pareto_front_type == 'whole':
 
-                        fig_title = 'obj1: negative_ELBO, obj2: {}, {}, {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}'.format(
-                            temp['adv_estimator'], pareto_front_type, type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'])
+                        fig_title = 'obj1: negative_ELBO, obj2: {}, {}, {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {}'.format(
+                            temp['adv_estimator'], pareto_front_type, type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC)
 
                         obj1 = dataframe_oneMC.loc[:, 'obj1_{}'.format(type)].values.tolist()
                         obj2 = dataframe_oneMC.loc[:, 'obj2_{}'.format(type)].values.tolist()
                         draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path)
                     elif pareto_front_type in ['NN']:
 
-                        fig_title = 'obj1: negative_ELBO, obj2: NN(for {}), {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}'.format(
-                            temp['adv_estimator'], type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'])
+                        fig_title = 'obj1: negative_ELBO, obj2: NN(for {}), {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {}'.format(
+                            temp['adv_estimator'], type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC)
 
                         obj1 = dataframe_oneMC.loc[:, 'obj1_{}'.format(type)].values.tolist()
                         obj2 = dataframe_oneMC.loc[:, '{}_{}'.format(pareto_front_type,type)].values.tolist()
 
                         draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path)
+                    '''
                     else:
                         fig_title = 'obj1: be, obj2: {}, {}, {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}'.format(
                             pareto_front_type, temp['adv_estimator'], type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'])
@@ -118,7 +123,8 @@ def pareto_front(hyperparameter_config, dataframe, dir_path):
                         obj2 = dataframe_oneMC.loc[:, '{}_{}'.format(pareto_front_type, type)].values.tolist()
 
                         draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path)
-
+                    '''
+    '''
     video_save_path = dir_path + '/paretoMTL.mp4'
 
     image_paths = []
@@ -130,6 +136,7 @@ def pareto_front(hyperparameter_config, dataframe, dir_path):
                     image_paths += [one_image_path]
 
     create_video(video_save_path, image_paths)
+    '''
 
 def mean_metrics(hyperparameter_config, dataframe, dir_path):
 
@@ -191,10 +198,13 @@ def hypervolume_compare(hyperparameter_config, dataframe, dir_path):
     for type in ['train','test']:
         hypervolume_MINE, hypervolume_HSIC = [], []
         for temp in hyperparameter_experiments:
-            dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])].iloc[10:, :] #ensure there is no convergence issue , or all 10 pareto front points exist
-            for i in range(dataframe_adv.shape[0]/10):
-                obj1_list = dataframe_adv[(10*i):10*(i+1),'obj1_{}'.format(type)].values.tolist()
-                NN_list = dataframe_adv[(10*i):10*(i+1), 'NN_{}'.format(type)].values.tolist()
+            if temp['adv_estimator']=='MINE':
+                dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])].iloc[10:, :] #ensure there is no convergence issue , or all 10 pareto front points exist
+            else:
+                dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])].iloc[9:, :]
+            for i in range(19):
+                obj1_list = dataframe_adv.iloc[(10*i):10*(i+1),:].loc[:,'obj1_{}'.format(type)].values.tolist()
+                NN_list = dataframe_adv.iloc[(10*i):10*(i+1), :].loc[:,'NN_{}'.format(type)].values.tolist()
                 hv = hypervolume([[obj1_list[k], NN_list[k]] for k in range(10)])
                 if temp['adv_estimator'] == 'MINE':
                     hypervolume_MINE += [hv.compute(ref_point)]
@@ -220,7 +230,6 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    results_config_total = pd.DataFrame()
     for i in range(len(hyperparameter_experiments)):
         if i in list(range(200)):
             config_path = dir_path + '/MINE/taskid{}/config.pkl'.format(i)
@@ -231,16 +240,19 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
         if os.path.isfile(config_path) and os.path.isfile(results_path):
             config = pickle.load(open(config_path, "rb"))
             results = pickle.load(open(results_path, "rb"))
+            if i>=200:
+                results['obj2_train']=[results['obj2_train'][0].item()]
+                results['obj2_test'] = [results['obj2_test'][0].item()]
 
             results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'pre_epochs', 'pre_lr', 'adv_lr', 'n_epochs', 'lr', 'pref_idx'])}
             results_config.update(results)
 
-            results_config_total = pd.concat([results_config_total, pd.DataFrame.from_dict(results_config)], axis=0)
+            if i == 0:
+                results_config_total = pd.DataFrame.from_dict(results_config)
+            else:
+                results_config_total = pd.concat([results_config_total, pd.DataFrame.from_dict(results_config)], axis=0)
         else:
             print(i)
-
-    results_config_total.loc[results_config_total.adv_estimator.eq('HSIC'), 'obj2_train'] = results_config_total.loc[results_config_total.adv_estimator.eq('HSIC'), 'obj2_train'].apply(lambda x: x.item())
-    results_config_total.loc[results_config_total.adv_estimator.eq('HSIC'), 'obj2_test'] = results_config_total.loc[results_config_total.adv_estimator.eq('HSIC'), 'obj2_test'].apply(lambda x: x.item())
 
     del hyperparameter_config['npref_prefidx']
     del hyperparameter_config['MCs']
