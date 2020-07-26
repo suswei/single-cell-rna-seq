@@ -402,16 +402,16 @@ class Trainer:
                     if self.adv_estimator == 'MINE':
                         self.cal_loss = False
                         self.cal_adv_loss = True
-                        minibatch_number = 0
+                        #minibatch_number = 0
                         for adv_tensors_list in self.data_loaders_loop():
-                            minibatch_number += 1
+                            #minibatch_number += 1
                             _, adv_loss, obj2_minibatch = self.two_loss(*adv_tensors_list)
                             self.adv_optimizer.zero_grad()
                             self.optimizer.zero_grad()
                             adv_loss.backward()
                             self.adv_optimizer.step()
-                            if minibatch_number == 20:
-                                break
+                            #if minibatch_number == 20:
+                            #    break
 
                     # obtain and store the gradient
                     grads = {}
@@ -503,16 +503,16 @@ class Trainer:
                     if self.adv_estimator == 'MINE':
                         self.cal_loss = False
                         self.cal_adv_loss = True
-                        minibatch_number = 0
+                        #minibatch_number = 0
                         for adv_tensors_list in self.data_loaders_loop():
-                            minibatch_number += 1
+                            #minibatch_number += 1
                             _, adv_loss, obj2_minibatch = self.two_loss(*adv_tensors_list)
                             self.adv_optimizer.zero_grad()
                             self.optimizer.zero_grad()
                             adv_loss.backward()
                             self.adv_optimizer.step()
-                            if minibatch_number == 20:
-                                break
+                            #if minibatch_number == 20:
+                            #    break
 
                     # obtain and store the gradient
                     grads = {}

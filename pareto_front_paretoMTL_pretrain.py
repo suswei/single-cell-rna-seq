@@ -24,7 +24,7 @@ def main(taskid):
         'pre_epochs': [250],
         'pre_adv_epochs': [100],
         'pre_lr': [1e-3],
-        'adv_lr': [2e-4],
+        'adv_lr': [5e-5],
         'MCs': 20 * [1]
     }
     keys, values = zip(*hyperparameter_config.items())

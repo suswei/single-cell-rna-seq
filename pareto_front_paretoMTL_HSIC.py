@@ -19,13 +19,13 @@ def main(taskid):
         'batch_size': [128],
         'adv_estimator': ['HSIC'],
         'n_epochs': [50],
-        'lr': [1e-4],
+        'lr': [1e-3],
         'obj1_max': [22155],
         'obj1_min': [10883],
         'obj2_max': [0.06],
         'obj2_min': [0],
         'n_tasks': [2],
-        'MCs': 20 * [1],
+        'MC': list(range(20)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
     }
     keys, values = zip(*hyperparameter_config.items())
@@ -37,10 +37,10 @@ def main(taskid):
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "        
               "--adv_estimator %s --n_epochs %s --lr %s --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "
-              "--n_tasks %s --npref %s --pref_idx %s"
+              "--n_tasks %s --MC %s --npref %s --pref_idx %s"
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['n_epochs'], temp['lr'],
-                 temp['obj1_max'], temp['obj1_min'], temp['obj2_max'], temp['obj2_min'], temp['n_tasks'],
+                 temp['obj1_max'], temp['obj1_min'], temp['obj2_max'], temp['obj2_min'], temp['n_tasks'], temp['MC'],
                  temp['npref_prefidx']['npref'], temp['npref_prefidx']['pref_idx'])
               )
 

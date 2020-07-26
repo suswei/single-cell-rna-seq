@@ -142,9 +142,10 @@ def HSIC_NN_train_test(trainer_vae, type):
         _, _, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
         if type == 'HSIC':
             estimator_minibatch_train = hsic(z, batch_dummy)
+            estimator_train_list.append(estimator_minibatch_train.item())
         elif type == 'NN':
             estimator_minibatch_train = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
-        estimator_train_list.append(estimator_minibatch_train)
+            estimator_train_list.append(estimator_minibatch_train)
     estimator_train = sum(estimator_train_list)/len(estimator_train_list)
 
     for tensors_list in trainer_vae.test_set:
@@ -153,9 +154,10 @@ def HSIC_NN_train_test(trainer_vae, type):
         _, _, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
         if type == 'HSIC':
             estimator_minibatch_test = hsic(z, batch_dummy)
+            estimator_test_list.append(estimator_minibatch_test.item())
         elif type == 'NN':
             estimator_minibatch_test = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
-        estimator_test_list.append(estimator_minibatch_test)
+            estimator_test_list.append(estimator_minibatch_test)
     estimator_test = sum(estimator_test_list)/len(estimator_test_list)
 
     return estimator_train, estimator_test
@@ -265,6 +267,9 @@ def main( ):
 
     parser.add_argument('--MCs', type=int, default=100,
                         help='the number to repeat pareto MTL')
+
+    parser.add_argument('--MC', type=int, default=0,
+                        help='which MC')
 
 
     # general usage
