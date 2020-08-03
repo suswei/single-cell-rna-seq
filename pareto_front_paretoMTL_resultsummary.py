@@ -54,10 +54,10 @@ def draw_hypervolume(MINE_list, HSIC_list, fig_title, save_path):
     fig = go.Figure()
     fig.add_trace(go.Bar(x=['MINE','HSIC'],
                          y=[statistics.mean(MINE_list), statistics.mean(HSIC_list)],
-                         error_y=dict(type='data', array=[statistics.stdev(MINE_list), statistics.stdev(HSIC_list)]),
-                         text=[statistics.mean(MINE_list), statistics.mean(HSIC_list)])
-                  )
-    fig.update_traces(texttemplate='%{text:.3f}', textposition='outside')
+                         error_y=dict(type='data', array=[statistics.stdev(MINE_list), statistics.stdev(HSIC_list)])
+                         )
+                  ) #text=[statistics.mean(MINE_list), statistics.mean(HSIC_list)]
+    #fig.update_traces(texttemplate='%{text:.0f}', textposition='inside')
     fig.update_layout(
         title={'text': fig_title,
                'y': 0.92,
@@ -84,12 +84,11 @@ def pareto_front(hyperparameter_config, dataframe, dir_path):
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     for temp in hyperparameter_experiments:
-        if temp['adv_estimator']=='MINE':
-            dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])].iloc[10:,:]
-        else:
-            dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])].iloc[9:,]
-        for MC in range(19):
-            dataframe_oneMC = dataframe_adv.iloc[(10*MC):10*(MC+1),:]
+
+        dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])]
+
+        for MC in range(dataframe_adv.MC.max()+1):
+            dataframe_oneMC = dataframe_adv[dataframe_adv.MC.eq(MC)]
 
             pref_idx_list = dataframe_oneMC.loc[:, 'pref_idx'].values.tolist()
             for pareto_front_type in ['whole', 'NN']: #'asw', 'nmi', 'ari', 'uca'
@@ -198,14 +197,14 @@ def hypervolume_compare(hyperparameter_config, dataframe, dir_path):
     for type in ['train','test']:
         hypervolume_MINE, hypervolume_HSIC = [], []
         for temp in hyperparameter_experiments:
-            if temp['adv_estimator']=='MINE':
-                dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])].iloc[10:, :] #ensure there is no convergence issue , or all 10 pareto front points exist
-            else:
-                dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])].iloc[9:, :]
-            for i in range(19):
-                obj1_list = dataframe_adv.iloc[(10*i):10*(i+1),:].loc[:,'obj1_{}'.format(type)].values.tolist()
-                NN_list = dataframe_adv.iloc[(10*i):10*(i+1), :].loc[:,'NN_{}'.format(type)].values.tolist()
-                hv = hypervolume([[obj1_list[k], NN_list[k]] for k in range(10)])
+
+            dataframe_adv = dataframe[dataframe.adv_estimator.eq(temp['adv_estimator'])]
+
+            for MC in range(dataframe_adv.MC.max() + 1):
+                dataframe_oneMC = dataframe_adv[dataframe_adv.MC.eq(MC)]
+                obj1_list = dataframe_oneMC.loc[:,'obj1_{}'.format(type)].values.tolist()
+                NN_list = dataframe_oneMC.loc[:, 'NN_{}'.format(type)].values.tolist()
+                hv = hypervolume([[obj1_list[k], NN_list[k]] for k in range(len(obj1_list))])
                 if temp['adv_estimator'] == 'MINE':
                     hypervolume_MINE += [hv.compute(ref_point)]
                 elif temp['adv_estimator'] == 'HSIC':
@@ -221,9 +220,9 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
         'adv_estimator': ['MINE','HSIC'],
         'pre_epochs': [250],
         'pre_lr': [1e-3],
-        'adv_lr': [2e-4],
+        'adv_lr': [5e-5],
         'n_epochs': [50],
-        'lr': [1e-4],
+        'lr': [1e-3],
         'MCs': 20 * [1],
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
     }
@@ -240,11 +239,8 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
         if os.path.isfile(config_path) and os.path.isfile(results_path):
             config = pickle.load(open(config_path, "rb"))
             results = pickle.load(open(results_path, "rb"))
-            if i>=200:
-                results['obj2_train']=[results['obj2_train'][0].item()]
-                results['obj2_test'] = [results['obj2_test'][0].item()]
 
-            results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'pre_epochs', 'pre_lr', 'adv_lr', 'n_epochs', 'lr', 'pref_idx'])}
+            results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator','MC', 'pre_epochs', 'pre_lr', 'adv_lr', 'n_epochs', 'lr', 'pref_idx'])}
             results_config.update(results)
 
             if i == 0:

@@ -16,6 +16,8 @@ from scvi.models.modules import MINE_Net3, discrete_continuous_info
 from hsic import hsic
 import pickle
 
+import matplotlib.pyplot as plt
+
 def sample1_sample2(trainer_vae, sample_batch, batch_index, type):
     x_ = sample_batch
     if trainer_vae.model.log_variational:
@@ -162,6 +164,21 @@ def HSIC_NN_train_test(trainer_vae, type):
 
     return estimator_train, estimator_test
 
+def draw_diagnosis_plot(list1,  list2, name1, name2, title, path):
+    plt.figure()
+    plt.subplot(211)
+    plt.plot(np.arange(0, len(list1), 1), list1)
+    plt.title('{}'.format(title))
+    plt.ylabel('{}'.format(name1))
+
+    plt.subplot(212)
+    plt.plot(np.arange(0, len(list2), 1), list2)
+    plt.ylabel('{}'.format(name2))
+    plt.xlabel('epochs * minibatches')
+
+    plt.savefig("{}.png".format(path))
+    plt.close()
+
 def main( ):
 
     parser = argparse.ArgumentParser(description='pareto_front_paretoMTL')
@@ -219,7 +236,7 @@ def main( ):
     parser.add_argument('--unbiased_loss', action='store_true', default=True,
                         help='whether to use unbiased loss or not in MINE')
 
-    # for training
+    #for pre_train
     parser.add_argument('--pre_train', action='store_true', default=False,
                         help='whether to pre train neural network')
 
@@ -235,10 +252,24 @@ def main( ):
     parser.add_argument('--adv_lr', type=float, default=5e-5,
                         help='learning rate in MINE pre-training and adversarial training')
 
+    #for gradnorm
+    parser.add_argument('--gradnorm_hypertune', action='store_true', default=False,
+                        help='whether to tune hyperparameter for gradnorm')
+
+    parser.add_argument('--alpha', type=float, default=3,
+                        help='hyperparameter alpha for gradnorm')
+
+    parser.add_argument('--gradnorm_epochs', type=int, default=100,
+                        help='epochs for gradnorm training')
+
+    parser.add_argument('--gradnorm_lr', type=float, default=1e-3,
+                        help='learning rate for gradnorm training')
+
+    #for paretoMTL
     parser.add_argument('--n_epochs', type=int, default=50,
                         help='number of epochs to train scVI and MINE')
 
-    parser.add_argument('--lr', type=float, default=1e-4,
+    parser.add_argument('--lr', type=float, default=1e-3,
                         help='learning rate for paretoMTL')
 
     parser.add_argument('--n_tasks', type=int, default=2,
@@ -303,16 +334,25 @@ def main( ):
     if args.pre_train == True:
         desired_seed = int(desired_seeds[0, args.taskid])
     else:
-        desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
+        if args.gradnorm_hypertune == True:
+            desired_seed = int(desired_seeds[0, 0])
+        else:
+            desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
 
     if args.pre_train == True:
         args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)
         if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)):
             os.makedirs('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid))
     else:
-        args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))
-        if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))):
-            print('Error: please pretrain first!')
+        if args.gradnorm_hypertune == True:
+            args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, 0)
+            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, 0)):
+                print('Error: please pretrain first!')
+
+        else:
+            args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))
+            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))):
+                print('Error: please pretrain first!')
 
     # calculate ratio to split the gene_dataset into training and testing dataset
     # to avoid the case when there are very few input data points of the last minibatch in every epoch
@@ -346,6 +386,7 @@ def main( ):
     elif args.adv_estimator == 'HSIC':
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator)
+
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
     trainer_vae.kl_weight = 1
 
@@ -353,23 +394,21 @@ def main( ):
         trainer_vae.paretoMTL_train(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
                         pre_adv_epochs=args.pre_adv_epochs, adv_lr=args.adv_lr, path=args.save_path)
     else:
-        if args.standardize == False:
-            obj1_minibatch_list, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train, adv_lr=args.adv_lr,
-                                path=args.save_path ,n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref,
-                                pref_idx=args.pref_idx, standardize=args.standardize)
-            print('the maximum value for objective 1 is {}, the minimum value for objective 1 is {}'.format(max(obj1_minibatch_list), min(obj1_minibatch_list)))
-            print('the maximum value for objective 2 is {}, the minimum value for objective 2 is {}'.format(max(obj2_minibatch_list), min(obj2_minibatch_list)))
-            #As there is randomness, the maximum value * (1+0.1) and the minimum value * (1-0.1) when pref_idx=9 will be used to standardize objective 1.
-            #As there is randomness, the maximum value * (1+0.1) and the minimum value * (1+0.1) when pref_idx=0 will be used to standardize objective 2.
-            #Round the decimal to 0.1.
-            NN_train, NN_test = HSIC_NN_train_test(trainer_vae, 'NN')
-            print(NN_train)
-            print(NN_test)
+        if args.gradnorm_hypertune == True:
+            weightloss1_list, weightloss2_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train,
+                                path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, alpha=args.alpha,
+                                gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr)
+
+            if not os.path.exists(os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune'):
+                os.makedirs(os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune')
+            gradnorm_path = os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune/taskid{}_weightloss_minibatch.png'.format(args.taskid)
+            gradnorm_title = 'alpha: {}, epochs: {}, lr: {}'.format(args.alpha, args.gradnorm_epochs, args.gradnorm_lr)
+            draw_diagnosis_plot(weightloss1_list, weightloss2_list, 'weight for obj1', 'weight for obj2', gradnorm_title, gradnorm_path)
         else:
             obj1_minibatch_list, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train, adv_lr=args.adv_lr,
-                                path=args.save_path ,n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref,
-                                pref_idx=args.pref_idx, standardize=args.standardize, obj1_max=args.obj1_max, obj1_min=args.obj1_min,
-                                obj2_max=args.obj2_max, obj2_min=args.obj2_min)
+                                path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, alpha=args.alpha,
+                                gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr,
+                                n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
 
             #obj1 for the whole training and testing set
             obj1_train, obj1_test = obj1_train_test(trainer_vae)
