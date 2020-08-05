@@ -348,7 +348,6 @@ def main( ):
             args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, 0)
             if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, 0)):
                 print('Error: please pretrain first!')
-
         else:
             args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))
             if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))):
