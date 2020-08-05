@@ -3,7 +3,7 @@
 # The name of the job:
 #SBATCH --job-name="pareto_front"
 #SBATCH --account=punim0890
-#SBATCH -p physical,cloud
+#SBATCH -p physical
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=3
