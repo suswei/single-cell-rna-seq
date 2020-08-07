@@ -15,6 +15,7 @@ from tqdm import trange
 
 from scvi.inference.posterior import Posterior
 import plotly.graph_objects as go
+import pickle
 
 from paretoMTL_helper import circle_points, get_d_paretomtl_init, get_d_paretomtl
 
@@ -308,12 +309,12 @@ class Trainer:
 
         return loss_minibatch_list, obj2_minibatch_list
 
-    def paretoMTL_train(self, pre_train: bool=False, pre_epochs: int=250, pre_lr: float=1e-3, eps: float = 0.01,
+    def pretrain_gradnorm_paretoMTL(self, pre_train: bool=False, pre_epochs: int=250, pre_lr: float=1e-3, eps: float = 0.01,
                         pre_adv_epochs: int=100, adv_lr: float=5e-5, path: str='None', gradnorm_hypertune: bool=False,
-                        alpha: float=3, gradnorm_epochs: int=100, gradnorm_lr: float=1e-3, n_epochs: int=50, lr: float=1e-4,
-                        n_tasks: int=2, npref: int=10, pref_idx: int=0):
+                        alpha: float=3, gradnorm_epochs: int=100, gradnorm_lr: float=1e-3, shared_layer: str='last', gradnorm_weights_idx: int=0,
+                        mid_epochs: int=50, n_epochs: int=50, lr: float=1e-4, n_tasks: int=2, npref: int=10, pref_idx: int=0):
 
-        if pre_train == True or gradnorm_hypertune==True:
+        if pre_train == True:
             params = filter(lambda p: p.requires_grad, self.model.parameters())
             self.optimizer = torch.optim.Adam(params, lr=pre_lr, eps=eps)
 
@@ -344,18 +345,7 @@ class Trainer:
                 if pre_train == True:
                     torch.save(self.adv_model.state_dict(), path + '/MINE.pkl')
 
-        if pre_train==False and gradnorm_hypertune == True:
-            # Pretrain gradnorm
-
-            weightloss1 = [1]
-            weightloss2 = [1]
-            gradnorm_weights = [weightloss1, weightloss2]
-
-            gradnorm_weights, weightloss1_list, weightloss2_list = self.standardize_gradnorm(alpha, gradnorm_epochs, gradnorm_lr, gradnorm_weights)
-
-            return gradnorm_weights, weightloss1_list, weightloss2_list
-
-        elif pre_train==False and gradnorm_hypertune == False:
+        else:
             self.model.load_state_dict(torch.load(path + '/vae.pkl'))
             params = filter(lambda p: p.requires_grad, self.model.parameters())
             self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps)
@@ -366,206 +356,42 @@ class Trainer:
                 self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
                 # self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[30], gamma=0.5)
 
-            ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
+            if gradnorm_hypertune == True:
 
-            obj1_minibatch_list, obj2_minibatch_list = [], []
-            # run at most 2 epochs to find the initial solution
-            # stop early once a feasible solution is found
-            # usually can be found with a few steps
-            for t in range(2):
+                # Pretrain gradnorm
+                weightloss1 = [1]
+                weightloss2 = [1]
+                gradnorm_weights = [weightloss1, weightloss2]
 
-                self.model.train()
-                if self.adv_estimator == 'MINE':
-                    self.adv_model.train()
-                for tensors_list in self.data_loaders_loop():
+                gradnorm_weights, weightloss1_list, weightloss2_list = self.gradnorm(alpha, gradnorm_epochs, gradnorm_lr, gradnorm_weights, shared_layer)
 
-                    if self.adv_estimator == 'MINE':
-                        self.cal_loss = False
-                        self.cal_adv_loss = True
-                        #minibatch_number = 0
-                        for adv_tensors_list in self.data_loaders_loop():
-                            #minibatch_number += 1
-                            _, adv_loss, _ = self.two_loss(*adv_tensors_list)
-                            self.adv_optimizer.zero_grad()
-                            self.optimizer.zero_grad()
-                            adv_loss.backward()
-                            self.adv_optimizer.step()
-                            #if minibatch_number == 20:
-                            #    break
+                return gradnorm_weights, weightloss1_list, weightloss2_list
 
-                    gradnorm_weights, _, _ = self.standardize_gradnorm(alpha, 1, gradnorm_lr, [gradnorm_weights[0].data, gradnorm_weights[1].data])
-
-                    # obtain and store the gradient
-                    grads = {}
-                    losses_vec = []
-
-                    self.cal_loss = True
-                    self.cal_adv_loss = True
-                    obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
-
-                    obj1_minibatch = obj1_minibatch * gradnorm_weights[0]
-                    obj2_minibatch = obj2_minibatch * gradnorm_weights[1]
-
-                    # obtain and store the gradient value
-                    for i in range(n_tasks):
-
+            else:
+                # train vae_MI further in addition to pre_train and loss is not standardized
+                self.cal_loss = True
+                self.cal_adv_loss = False
+                for mid_n_epoch in range(mid_epochs):
+                    for tensors_list in self.data_loaders_loop():
+                        loss, _, _ = self.two_loss(*tensors_list)
                         self.optimizer.zero_grad()
-                        if self.adv_estimator == 'MINE':
-                            self.adv_optimizer.zero_grad()
+                        loss.backward()
+                        self.optimizer.step()
 
-                        if i == 0:
-                            losses_vec.append(obj1_minibatch.data)
-                            obj1_minibatch.backward(retain_graph=True)
-                        elif i == 1:
-                            losses_vec.append(obj2_minibatch.data)
-                            obj2_minibatch.backward()
+                gradnorm_weights_path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_hypertune/taskid{}/results.pkl'.format(gradnorm_weights_idx)
+                gradnorm_weights_dict = pickle.load(open(gradnorm_weights_path, "rb"))
+                gradnorm_weights = gradnorm_weights_dict['gradnorm_weights']
 
-                        grads[i] = []
+                #gradnorm_weights remain constant during paretoMTL
+                obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(n_epochs = n_epochs, n_tasks=n_tasks,
+                                                         npref=npref, pref_idx=pref_idx, gradnorm_weights=gradnorm_weights)
 
-                        # can use scalable method proposed in the MOO-MTL paper for large scale problem
-                        # but we keep use the gradient of all parameters in this experiment
-                        for param in self.model.parameters():
-                            if param.grad is not None:
-                                grads[i].append(Variable(param.grad.data.clone().flatten(), requires_grad=False))
-
-                    grads_list = [torch.cat(grads[i]) for i in range(len(grads))]
-                    grads = torch.stack(grads_list)
-
-                    # calculate the weights
-                    losses_vec = torch.stack(losses_vec)
-                    flag, weight_vec = get_d_paretomtl_init(grads, losses_vec, ref_vec, pref_idx)
-
-                    # early stop once a feasible solution is obtained
-                    if flag == True:
-                        print("feasible solution is obtained.")
-                        break
-
-                    # optimization step
-                    self.optimizer.zero_grad()
-                    if self.adv_estimator == 'MINE':
-                        self.adv_optimizer.zero_grad()
-
-                    self.cal_loss = True
-                    self.cal_adv_loss = True
-                    obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
-
-                    obj1_minibatch_list.append(obj1_minibatch.data)
-                    obj2_minibatch_list.append(obj2_minibatch.data)
-
-                    obj1_minibatch = obj1_minibatch * gradnorm_weights[0]
-                    obj2_minibatch = obj2_minibatch * gradnorm_weights[1]
-
-                    for i in range(n_tasks):
-                        if i == 0:
-                            loss_total = weight_vec[i] * obj1_minibatch
-                        else:
-                            loss_total = loss_total + weight_vec[i] * obj2_minibatch
-
-                    loss_total.backward()
-                    self.optimizer.step()
-
-                else:
-                    # continue if no feasible solution is found
-                    continue
-                # break the loop once a feasible solutions is found
-                break
-
-            #run n_epochs of ParetoMTL
-            for self.epoch in range(n_epochs):
-
-                #self.scheduler.step()
-                self.model.train()
-                if self.adv_estimator == 'MINE':
-                    #self.adv_scheduler.step()
-                    self.adv_model.train()
-
-                for tensors_list in self.data_loaders_loop():
-
-                    if self.adv_estimator == 'MINE':
-                        self.cal_loss = False
-                        self.cal_adv_loss = True
-                        #minibatch_number = 0
-                        for adv_tensors_list in self.data_loaders_loop():
-                            #minibatch_number += 1
-                            _, adv_loss, _ = self.two_loss(*adv_tensors_list)
-                            self.adv_optimizer.zero_grad()
-                            self.optimizer.zero_grad()
-                            adv_loss.backward()
-                            self.adv_optimizer.step()
-                            #if minibatch_number == 20:
-                            #    break
-
-                    gradnorm_weights, _, _ = self.standardize_gradnorm(alpha, 1, gradnorm_lr, gradnorm_weights)
-
-                    # obtain and store the gradient
-                    grads = {}
-                    losses_vec = []
-
-                    self.cal_loss = True
-                    self.cal_adv_loss = True
-                    obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
-
-                    obj1_minibatch = obj1_minibatch * gradnorm_weights[0]
-                    obj2_minibatch = obj2_minibatch * gradnorm_weights[1]
-
-                    for i in range(n_tasks):
-
-                        self.optimizer.zero_grad()
-                        if self.adv_estimator == 'MINE':
-                            self.adv_optimizer.zero_grad()
-
-                        if i == 0:
-                            losses_vec.append(obj1_minibatch.data)
-                            obj1_minibatch.backward(retain_graph=True)
-                        elif i == 1:
-                            losses_vec.append(obj2_minibatch.data)
-                            obj2_minibatch.backward()
-
-                        # can use scalable method proposed in the MOO-MTL paper for large scale problem
-                        # but we keep use the gradient of all parameters in this experiment
-                        grads[i] = []
-                        for param in self.model.parameters():
-                            if param.grad is not None:
-                                grads[i].append(Variable(param.grad.data.clone().flatten(), requires_grad=False))
-
-                    grads_list = [torch.cat(grads[i]) for i in range(len(grads))]
-                    grads = torch.stack(grads_list)
-
-                    # calculate the weights
-                    losses_vec = torch.stack(losses_vec)
-                    weight_vec = get_d_paretomtl(grads, losses_vec, ref_vec, pref_idx)
-
-                    normalize_coeff = n_tasks / torch.sum(torch.abs(weight_vec))
-                    weight_vec = weight_vec * normalize_coeff
-
-                    # optimization step
-                    self.optimizer.zero_grad()
-                    if self.adv_estimator == 'MINE':
-                        self.adv_optimizer.zero_grad()
-
-                    self.cal_loss = True
-                    self.cal_adv_loss = True
-                    obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
-
-                    obj1_minibatch_list.append(obj1_minibatch.data)
-                    obj2_minibatch_list.append(obj2_minibatch.data)
+                #gradnorm + paretoMTL
 
 
-                    obj1_minibatch = obj1_minibatch * gradnorm_weights[0]
-                    obj2_minibatch = obj2_minibatch * gradnorm_weights[1]
+                return obj1_minibatch_list, obj2_minibatch_list
 
-                    for i in range(n_tasks):
-                        if i == 0:
-                            loss_total = weight_vec[i] * obj1_minibatch
-                        else:
-                            loss_total = loss_total + weight_vec[i] * obj2_minibatch
-
-                    loss_total.backward()
-                    self.optimizer.step()
-
-            return obj1_minibatch_list, obj2_minibatch_list
-
-    def standardize_gradnorm(self, alpha, gradnorm_epochs, gradnorm_lr, params):
+    def gradnorm(self, alpha, gradnorm_epochs, gradnorm_lr, params, shared_layer):
 
         print('begin GradNorm standardization')
         # weightloss1 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
@@ -597,6 +423,8 @@ class Trainer:
                         adv_loss.backward()
                         self.adv_optimizer.step()
 
+                self.cal_loss = True
+                self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
                 # for the first epoch with no l0
@@ -617,11 +445,18 @@ class Trainer:
                 temp = list(self.model.z_encoder.parameters())
                 G1 = 0.0
                 G2 = 0.0
-                for i in range(temp.__len__()):
-                    G1R = torch.autograd.grad(obj1_minibatch, temp[i], retain_graph=True, create_graph=True)
+                if shared_layer == 'all':
+                    for i in range(temp.__len__()):
+                        G1R = torch.autograd.grad(obj1_minibatch, temp[i], retain_graph=True, create_graph=True)
+                        G1 += torch.norm(torch.mul(params[0], G1R[0]), 2) ** 2
+                        G2R = torch.autograd.grad(obj2_minibatch, temp[i], retain_graph=True, create_graph=True)
+                        G2 += torch.norm(torch.mul(params[1], G2R[0]), 2) ** 2
+                elif shared_layer == 'last':
+                    G1R = torch.autograd.grad(obj1_minibatch, temp[-1], retain_graph=True, create_graph=True)
                     G1 += torch.norm(torch.mul(params[0], G1R[0]), 2) ** 2
-                    G2R = torch.autograd.grad(obj2_minibatch, temp[i], retain_graph=True, create_graph=True)
+                    G2R = torch.autograd.grad(obj2_minibatch, temp[-1], retain_graph=True, create_graph=True)
                     G2 += torch.norm(torch.mul(params[1], G2R[0]), 2) ** 2
+
                 G_avg = torch.div(torch.add(G1 ** (1 / 2), G2 ** (1 / 2)), 2)
 
                 # Calculating relative losses
@@ -661,6 +496,202 @@ class Trainer:
             print("obj1 multiplier: {}, obj2: multiplier {}".format(params[0].data, params[1].data))
         print('finish GradNorm standardization')
         return params, weightloss1_list, weightloss2_list
+
+    def paretoMTL(self, n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0, gradnorm_weights: list=[1,1]):
+
+        ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
+
+        obj1_minibatch_list, obj2_minibatch_list = [], []
+        # run at most 2 epochs to find the initial solution
+        # stop early once a feasible solution is found
+        # usually can be found with a few steps
+        for t in range(2):
+
+            self.model.train()
+            if self.adv_estimator == 'MINE':
+                self.adv_model.train()
+            for tensors_list in self.data_loaders_loop():
+
+                if self.adv_estimator == 'MINE':
+                    self.cal_loss = False
+                    self.cal_adv_loss = True
+                    # minibatch_number = 0
+                    for adv_tensors_list in self.data_loaders_loop():
+                        # minibatch_number += 1
+                        _, adv_loss, _ = self.two_loss(*adv_tensors_list)
+                        self.adv_optimizer.zero_grad()
+                        self.optimizer.zero_grad()
+                        adv_loss.backward()
+                        self.adv_optimizer.step()
+                        # if minibatch_number == 20:
+                        #    break
+
+                # obtain and store the gradient
+                grads = {}
+                losses_vec = []
+
+                self.cal_loss = True
+                self.cal_adv_loss = True
+                obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
+
+                obj1_minibatch = obj1_minibatch * gradnorm_weights[0]
+                obj2_minibatch = obj2_minibatch * gradnorm_weights[1]
+
+                # obtain and store the gradient value
+                for i in range(n_tasks):
+
+                    self.optimizer.zero_grad()
+                    if self.adv_estimator == 'MINE':
+                        self.adv_optimizer.zero_grad()
+
+                    if i == 0:
+                        losses_vec.append(obj1_minibatch.data)
+                        obj1_minibatch.backward(retain_graph=True)
+                    elif i == 1:
+                        losses_vec.append(obj2_minibatch.data)
+                        obj2_minibatch.backward()
+
+                    grads[i] = []
+
+                    # can use scalable method proposed in the MOO-MTL paper for large scale problem
+                    # but we keep use the gradient of all parameters in this experiment
+                    for param in self.model.parameters():
+                        if param.grad is not None:
+                            grads[i].append(Variable(param.grad.data.clone().flatten(), requires_grad=False))
+
+                grads_list = [torch.cat(grads[i]) for i in range(len(grads))]
+                grads = torch.stack(grads_list)
+
+                # calculate the weights
+                losses_vec = torch.stack(losses_vec)
+                flag, weight_vec = get_d_paretomtl_init(grads, losses_vec, ref_vec, pref_idx)
+
+                # early stop once a feasible solution is obtained
+                if flag == True:
+                    print("feasible solution is obtained.")
+                    break
+
+                # optimization step
+                self.optimizer.zero_grad()
+                if self.adv_estimator == 'MINE':
+                    self.adv_optimizer.zero_grad()
+
+                self.cal_loss = True
+                self.cal_adv_loss = True
+                obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
+
+                obj1_minibatch_list.append(obj1_minibatch.data)
+                obj2_minibatch_list.append(obj2_minibatch.data)
+
+                obj1_minibatch = obj1_minibatch * gradnorm_weights[0]
+                obj2_minibatch = obj2_minibatch * gradnorm_weights[1]
+
+                for i in range(n_tasks):
+                    if i == 0:
+                        loss_total = weight_vec[i] * obj1_minibatch
+                    else:
+                        loss_total = loss_total + weight_vec[i] * obj2_minibatch
+
+                loss_total.backward()
+                self.optimizer.step()
+
+            else:
+                # continue if no feasible solution is found
+                continue
+            # break the loop once a feasible solutions is found
+            break
+
+        # run n_epochs of ParetoMTL
+        for self.epoch in range(n_epochs):
+
+            # self.scheduler.step()
+            self.model.train()
+            if self.adv_estimator == 'MINE':
+                # self.adv_scheduler.step()
+                self.adv_model.train()
+
+            for tensors_list in self.data_loaders_loop():
+
+                if self.adv_estimator == 'MINE':
+                    self.cal_loss = False
+                    self.cal_adv_loss = True
+                    # minibatch_number = 0
+                    for adv_tensors_list in self.data_loaders_loop():
+                        # minibatch_number += 1
+                        _, adv_loss, _ = self.two_loss(*adv_tensors_list)
+                        self.adv_optimizer.zero_grad()
+                        self.optimizer.zero_grad()
+                        adv_loss.backward()
+                        self.adv_optimizer.step()
+                        # if minibatch_number == 20:
+                        #    break
+
+                # obtain and store the gradient
+                grads = {}
+                losses_vec = []
+
+                self.cal_loss = True
+                self.cal_adv_loss = True
+                obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
+
+                obj1_minibatch = obj1_minibatch * gradnorm_weights[0]
+                obj2_minibatch = obj2_minibatch * gradnorm_weights[1]
+
+                for i in range(n_tasks):
+
+                    self.optimizer.zero_grad()
+                    if self.adv_estimator == 'MINE':
+                        self.adv_optimizer.zero_grad()
+
+                    if i == 0:
+                        losses_vec.append(obj1_minibatch.data)
+                        obj1_minibatch.backward(retain_graph=True)
+                    elif i == 1:
+                        losses_vec.append(obj2_minibatch.data)
+                        obj2_minibatch.backward()
+
+                    # can use scalable method proposed in the MOO-MTL paper for large scale problem
+                    # but we keep use the gradient of all parameters in this experiment
+                    grads[i] = []
+                    for param in self.model.parameters():
+                        if param.grad is not None:
+                            grads[i].append(Variable(param.grad.data.clone().flatten(), requires_grad=False))
+
+                grads_list = [torch.cat(grads[i]) for i in range(len(grads))]
+                grads = torch.stack(grads_list)
+
+                # calculate the weights
+                losses_vec = torch.stack(losses_vec)
+                weight_vec = get_d_paretomtl(grads, losses_vec, ref_vec, pref_idx)
+
+                normalize_coeff = n_tasks / torch.sum(torch.abs(weight_vec))
+                weight_vec = weight_vec * normalize_coeff
+
+                # optimization step
+                self.optimizer.zero_grad()
+                if self.adv_estimator == 'MINE':
+                    self.adv_optimizer.zero_grad()
+
+                self.cal_loss = True
+                self.cal_adv_loss = True
+                obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
+
+                obj1_minibatch_list.append(obj1_minibatch.data)
+                obj2_minibatch_list.append(obj2_minibatch.data)
+
+                obj1_minibatch = obj1_minibatch * gradnorm_weights[0]
+                obj2_minibatch = obj2_minibatch * gradnorm_weights[1]
+
+                for i in range(n_tasks):
+                    if i == 0:
+                        loss_total = weight_vec[i] * obj1_minibatch
+                    else:
+                        loss_total = loss_total + weight_vec[i] * obj2_minibatch
+
+                loss_total.backward()
+                self.optimizer.step()
+
+        return obj1_minibatch_list, obj2_minibatch_list
 
 class SequentialSubsetSampler(SubsetRandomSampler):
     def __init__(self, indices):

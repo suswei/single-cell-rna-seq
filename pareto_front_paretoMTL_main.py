@@ -265,7 +265,16 @@ def main( ):
     parser.add_argument('--gradnorm_lr', type=float, default=1e-3,
                         help='learning rate for gradnorm training')
 
+    parser.add_argument('--shared_layer', type=str, default='last',
+                        help='which shared_layers to use')
+
     #for paretoMTL
+    parser.add_argument('--mid_epochs', type=int, default=50,
+                        help='number of epochs to train scVI after pretraining and before paretoMTL')
+
+    parser.add_argument('--gradnorm_weights_idx', type=int, default=0,
+                        help='the index to choose the best gradnorm_weights from hypertuning')
+
     parser.add_argument('--n_epochs', type=int, default=50,
                         help='number of epochs to train scVI and MINE')
 
@@ -394,9 +403,11 @@ def main( ):
                         pre_adv_epochs=args.pre_adv_epochs, adv_lr=args.adv_lr, path=args.save_path)
     else:
         if args.gradnorm_hypertune == True:
-            gradnorm_weights, weightloss1_list, weightloss2_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train,
+            gradnorm_weights, weightloss1_list, weightloss2_list = trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train,
                                 path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, alpha=args.alpha,
-                                gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr)
+                                gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr, shared_layer=args.shared_layer)
+
+            gradnorm_weights = [gradnorm_weights[0].data.tolist()[0], gradnorm_weights[1].data.tolist()[0]]
 
             if not os.path.exists(os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune'):
                 os.makedirs(os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune')
@@ -405,10 +416,10 @@ def main( ):
             draw_diagnosis_plot(weightloss1_list, weightloss2_list, 'weight for obj1', 'weight for obj2', gradnorm_title, gradnorm_path)
 
         else:
-            obj1_minibatch_list, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train, adv_lr=args.adv_lr,
+            obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train, adv_lr=args.adv_lr,
                                 path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, alpha=args.alpha,
-                                gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr,
-                                n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
+                                gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr, gradnorm_weights_idx=args.gradnorm_weights_idx,
+                                mid_epochs=args.mid_epochs, n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
 
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
