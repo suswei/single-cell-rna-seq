@@ -22,7 +22,7 @@ def main(taskid):
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
         'alpha': [0.2, 5, 10],
-        'gradnorm_epochs': [600],
+        'gradnorm_epochs': [300],
         'gradnorm_lr': [5e-2, 5e-3]
     }
     keys, values = zip(*hyperparameter_config.items())

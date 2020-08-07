@@ -394,7 +394,7 @@ def main( ):
                         pre_adv_epochs=args.pre_adv_epochs, adv_lr=args.adv_lr, path=args.save_path)
     else:
         if args.gradnorm_hypertune == True:
-            weightloss1_list, weightloss2_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train,
+            gradnorm_weights, weightloss1_list, weightloss2_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train,
                                 path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, alpha=args.alpha,
                                 gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr)
 
@@ -403,58 +403,66 @@ def main( ):
             gradnorm_path = os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune/taskid{}_weightloss_minibatch.png'.format(args.taskid)
             gradnorm_title = 'alpha: {}, epochs: {}, lr: {}'.format(args.alpha, args.gradnorm_epochs, args.gradnorm_lr)
             draw_diagnosis_plot(weightloss1_list, weightloss2_list, 'weight for obj1', 'weight for obj2', gradnorm_title, gradnorm_path)
+
         else:
             obj1_minibatch_list, obj2_minibatch_list = trainer_vae.paretoMTL_train(pre_train=args.pre_train, adv_lr=args.adv_lr,
                                 path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, alpha=args.alpha,
                                 gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr,
                                 n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
 
-            #obj1 for the whole training and testing set
-            obj1_train, obj1_test = obj1_train_test(trainer_vae)
+        #obj1 for the whole training and testing set
+        obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
-            if trainer_vae.adv_estimator == 'MINE':
-                obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae)
-            elif trainer_vae.adv_estimator == 'HSIC':
-                obj2_train, obj2_test = HSIC_NN_train_test(trainer_vae,'HSIC')
+        if trainer_vae.adv_estimator == 'MINE':
+            obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae)
+        elif trainer_vae.adv_estimator == 'HSIC':
+            obj2_train, obj2_test = HSIC_NN_train_test(trainer_vae,'HSIC')
 
-            NN_train, NN_test = HSIC_NN_train_test(trainer_vae, 'NN')
+        NN_train, NN_test = HSIC_NN_train_test(trainer_vae, 'NN')
 
-            asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
-            be_train = trainer_vae.train_set.entropy_batch_mixing()
+        asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
+        be_train = trainer_vae.train_set.entropy_batch_mixing()
 
-            asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
-            be_test = trainer_vae.test_set.entropy_batch_mixing()
+        asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
+        be_test = trainer_vae.test_set.entropy_batch_mixing()
 
+        results_dict = {
+                        'obj1_train': [obj1_train],
+                        'obj2_train': [obj2_train],
+                        'NN_train': [NN_train],
+                        'obj1_test': [obj1_test],
+                        'obj2_test': [obj2_test],
+                        'NN_test': [NN_test],
+                        'asw_train': [asw_train],
+                        'nmi_train': [nmi_train],
+                        'ari_train': [ari_train],
+                        'uca_train': [uca_train],
+                        'be_train': [be_train],
+                        'asw_test': [asw_test],
+                        'nmi_test': [nmi_test],
+                        'ari_test': [ari_test],
+                        'uca_test': [uca_test],
+                        'be_test': [be_test]
+                        }
+
+        if args.gradnorm_hypertune == True:
+            args.save_path = './result/pareto_front_paretoMTL/{}/{}/gradnorm_hypertune/taskid{}'.format(args.dataset_name, args.confounder,args.taskid)
+            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/gradnorm_hypertune/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)):
+                os.makedirs('./result/pareto_front_paretoMTL/{}/{}/gradnorm_hypertune/taskid{}'.format(args.dataset_name, args.confounder, args.taskid))
+
+            results_dict.update({'gradnorm_weights': gradnorm_weights})
+        else:
             args.save_path = './result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,args.taskid)
             if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)):
                 os.makedirs('./result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid))
 
-            args_dict = vars(args)
-            with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
-                pickle.dump(args_dict, f)
+        args_dict = vars(args)
+        with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
+            pickle.dump(args_dict, f)
 
-            results_dict = {'obj1_minibatch': [obj1_minibatch_list[-1]],
-                            'obj2_minibatch': [obj2_minibatch_list[-1]],
-                            'obj1_train': [obj1_train],
-                            'obj2_train': [obj2_train],
-                            'NN_train': [NN_train],
-                            'obj1_test': [obj1_test],
-                            'obj2_test': [obj2_test],
-                            'NN_test': [NN_test],
-                            'asw_train': [asw_train],
-                            'nmi_train': [nmi_train],
-                            'ari_train': [ari_train],
-                            'uca_train': [uca_train],
-                            'be_train': [be_train],
-                            'asw_test': [asw_test],
-                            'nmi_test': [nmi_test],
-                            'ari_test': [ari_test],
-                            'uca_test': [uca_test],
-                            'be_test': [be_test]
-                            }
-            with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
-                pickle.dump(results_dict, f)
-            print(results_dict)
+        with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
+            pickle.dump(results_dict, f)
+        print(results_dict)
 # Run the actual program
 if __name__ == "__main__":
     main()
