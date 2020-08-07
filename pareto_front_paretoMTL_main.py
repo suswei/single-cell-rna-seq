@@ -404,7 +404,7 @@ def main( ):
     else:
         if args.gradnorm_hypertune == True:
             gradnorm_weights, weightloss1_list, weightloss2_list = trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train,
-                                path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, alpha=args.alpha,
+                                path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, lr=args.lr, adv_lr=args.adv_lr, alpha=args.alpha,
                                 gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr, shared_layer=args.shared_layer)
 
             gradnorm_weights = [gradnorm_weights[0].data.tolist()[0], gradnorm_weights[1].data.tolist()[0]]
