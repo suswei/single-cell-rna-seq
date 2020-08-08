@@ -23,10 +23,10 @@ def main(taskid):
         'adv_activation_fun': ['ELU'],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'alpha': [0.2, 5, 10],
+        'alpha': [0.1, 0.2, 0.4, 0.6, 0.8, 1],
         'gradnorm_epochs': [300],
-        'gradnorm_lr': [5e-2, 5e-3],
-        'shared_layer': ['all', 'last']
+        'gradnorm_lr': [1e-2, 1e-3],
+        'shared_layer': ['last']
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]

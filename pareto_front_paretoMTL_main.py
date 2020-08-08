@@ -290,6 +290,10 @@ def main( ):
     parser.add_argument('--pref_idx', type=int, default=0,
                         help='which subproblem')
 
+    parser.add_argument('--gradnorm_paretoMTL', action='store_true', default=False,
+                        help='whether to use gradnorm during paretoMTL')
+
+
     parser.add_argument('--standardize', action='store_true', default=False,
                         help='whether to standardize the two objectives')
 
@@ -417,7 +421,8 @@ def main( ):
             obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train, adv_lr=args.adv_lr,
                                 path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, alpha=args.alpha,
                                 gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr, gradnorm_weights_idx=args.gradnorm_weights_idx,
-                                mid_epochs=args.mid_epochs, n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
+                                mid_epochs=args.mid_epochs, n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx,
+                                gradnorm_paretoMTL=args.gradnorm_paretoMTL)
 
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
