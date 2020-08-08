@@ -427,13 +427,16 @@ class Trainer:
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
+                l1 = params[0] * obj1_minibatch
+                l2 = params[1] * obj2_minibatch
+
                 # for the first epoch with no l0
                 if epoch == 0:
-                    l01 = obj1_minibatch.data
-                    l02 = obj2_minibatch.data
+                    l01 = l1.data
+                    l02 = l2.data
 
                 # compute the weighted loss w_i(t) * L_i(t)
-                weighted_task_loss = 0.5 * (params[0] * obj1_minibatch + params[1] * obj2_minibatch)
+                weighted_task_loss = torch.div(torch.add(l1, l2), 2)
                 # zero the parameter gradients
                 self.optimizer.zero_grad()
                 if self.adv_estimator == 'MINE':
@@ -447,21 +450,21 @@ class Trainer:
                 G2 = 0.0
                 if shared_layer == 'all':
                     for i in range(temp.__len__()):
-                        G1R = torch.autograd.grad(obj1_minibatch, temp[i], retain_graph=True, create_graph=True)
-                        G1 += torch.norm(torch.mul(params[0], G1R[0]), 2) ** 2
-                        G2R = torch.autograd.grad(obj2_minibatch, temp[i], retain_graph=True, create_graph=True)
-                        G2 += torch.norm(torch.mul(params[1], G2R[0]), 2) ** 2
+                        G1R = torch.autograd.grad(l1, temp[i], retain_graph=True, create_graph=True)
+                        G1 += torch.norm(G1R[0], 2) ** 2
+                        G2R = torch.autograd.grad(l2, temp[i], retain_graph=True, create_graph=True)
+                        G2 += torch.norm(G2R[0], 2) ** 2
                 elif shared_layer == 'last':
-                    G1R = torch.autograd.grad(obj1_minibatch, temp[-1], retain_graph=True, create_graph=True)
-                    G1 += torch.norm(torch.mul(params[0], G1R[0]), 2) ** 2
-                    G2R = torch.autograd.grad(obj2_minibatch, temp[-1], retain_graph=True, create_graph=True)
-                    G2 += torch.norm(torch.mul(params[1], G2R[0]), 2) ** 2
+                    G1R = torch.autograd.grad(l1, temp[-1], retain_graph=True, create_graph=True)
+                    G1 += torch.norm(G1R[0], 2) ** 2
+                    G2R = torch.autograd.grad(l2, temp[-1], retain_graph=True, create_graph=True)
+                    G2 += torch.norm(G2R[0], 2) ** 2
 
                 G_avg = torch.div(torch.add(G1 ** (1 / 2), G2 ** (1 / 2)), 2)
 
                 # Calculating relative losses
-                lhat1 = torch.div(obj1_minibatch, l01)
-                lhat2 = torch.div(obj2_minibatch, l02)
+                lhat1 = torch.div(l1, l01)
+                lhat2 = torch.div(l2, l02)
                 lhat_avg = torch.div(torch.add(lhat1, lhat2), 2)
 
                 # Calculating relative inverse training rates for tasks
@@ -487,7 +490,7 @@ class Trainer:
                 self.optimizer.step()
 
                 # Renormalizing the losses weights
-                coef = 1 / torch.add(weightloss1, weightloss2)
+                coef = 2 / torch.add(weightloss1, weightloss2)
                 params = [coef * weightloss1, coef * weightloss2]
 
                 weightloss1_list.append(params[0].data.tolist()[0])

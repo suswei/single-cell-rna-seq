@@ -407,8 +407,6 @@ def main( ):
                                 path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, lr=args.lr, adv_lr=args.adv_lr, alpha=args.alpha,
                                 gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr, shared_layer=args.shared_layer)
 
-            gradnorm_weights = [gradnorm_weights[0].data.tolist()[0], gradnorm_weights[1].data.tolist()[0]]
-
             if not os.path.exists(os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune'):
                 os.makedirs(os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune')
             gradnorm_path = os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune/taskid{}_weightloss_minibatch.png'.format(args.taskid)
