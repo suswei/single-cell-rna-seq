@@ -407,7 +407,7 @@ def main( ):
                         pre_adv_epochs=args.pre_adv_epochs, adv_lr=args.adv_lr, path=args.save_path)
     else:
         if args.gradnorm_hypertune == True:
-            gradnorm_weights, weightloss1_list, weightloss2_list = trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train,
+            gradnorm_weights, weightloss1_list, weightloss2_list, obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train,
                                 path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, lr=args.lr, adv_lr=args.adv_lr, alpha=args.alpha,
                                 gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr, shared_layer=args.shared_layer)
 
@@ -447,6 +447,8 @@ def main( ):
         be_test = trainer_vae.test_set.entropy_batch_mixing()
 
         results_dict = {
+                        'obj1_minibatch_list': obj1_minibatch_list,
+                        'obj2_minibatch_list': obj2_minibatch_list,
                         'obj1_train': [obj1_train],
                         'obj2_train': [obj2_train],
                         'NN_train': [NN_train],

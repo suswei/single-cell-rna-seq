@@ -410,6 +410,8 @@ class Trainer:
         weightloss1_list = [weightloss1.data.tolist()[0]]
         weightloss2_list = [weightloss2.data.tolist()[0]]
 
+        obj1_minibatch_list, obj2_minibatch_list = [], []
+
         for epoch in range(gradnorm_epochs):  # loop over the dataset multiple times
 
             gradnorm_scheduler.step()
@@ -429,6 +431,9 @@ class Trainer:
                 self.cal_loss = True
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
+
+                obj1_minibatch_list.append(obj1_minibatch.data)
+                obj2_minibatch_list.append(obj2_minibatch.data)
 
                 l1 = params[0] * obj1_minibatch
                 l2 = params[1] * obj2_minibatch
@@ -467,7 +472,7 @@ class Trainer:
 
             print("obj1 multiplier: {}, obj2: multiplier {}".format(params[0].data, params[1].data))
         print('finish GradNorm standardization')
-        return params, weightloss1_list, weightloss2_list
+        return params, weightloss1_list, weightloss2_list, obj1_minibatch_list, obj2_minibatch_list
 
     def gradnorm_loss_param(self, l1, l2, l01, l02, shared_layer: str='last', alpha: float=3):
 
