@@ -23,9 +23,9 @@ def main(taskid):
         'adv_activation_fun': ['ELU'],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'alpha': [0.1, 0.2, 0.4, 0.6, 0.8, 1],
-        'gradnorm_epochs': [300],
-        'gradnorm_lr': [1e-2, 1e-3],
+        'alpha': [1, 1.5, 2, 2.5, 3],
+        'gradnorm_epochs': [200, 300],
+        'gradnorm_lr': [1e-3],
         'shared_layer': ['last']
     }
     keys, values = zip(*hyperparameter_config.items())

@@ -413,16 +413,22 @@ def main( ):
 
             if not os.path.exists(os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune'):
                 os.makedirs(os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune')
-            gradnorm_path = os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune/taskid{}_weightloss_minibatch.png'.format(args.taskid)
+            gradnorm_path = os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune/taskid{}_weightloss_minibatch'.format(args.taskid)
             gradnorm_title = 'alpha: {}, epochs: {}, lr: {}'.format(args.alpha, args.gradnorm_epochs, args.gradnorm_lr)
             draw_diagnosis_plot(weightloss1_list, weightloss2_list, 'weight for obj1', 'weight for obj2', gradnorm_title, gradnorm_path)
 
         else:
-            obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train, adv_lr=args.adv_lr,
-                                path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, alpha=args.alpha,
-                                gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr, gradnorm_weights_idx=args.gradnorm_weights_idx,
-                                mid_epochs=args.mid_epochs, n_epochs=args.n_epochs, lr=args.lr, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx,
-                                gradnorm_paretoMTL=args.gradnorm_paretoMTL)
+            if args.gradnorm_paretoMTL == True:
+                obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train, path=args.save_path,
+                    lr=args.lr, adv_lr=args.adv_lr, gradnorm_hypertune=args.gradnorm_hypertune, mid_epochs=args.mid_epochs,
+                    gradnorm_weights_idx=args.gradnorm_weights_idx, gradnorm_paretoMTL=args.gradnorm_paretoMTL,
+                    alpha=args.alpha, gradnorm_lr=args.gradnorm_lr, shared_layer=args.shared_layer,
+                    n_epochs=args.n_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
+            else:
+                obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train, path=args.save_path,
+                    lr=args.lr, adv_lr=args.adv_lr, gradnorm_hypertune=args.gradnorm_hypertune, mid_epochs=args.mid_epochs,
+                    gradnorm_weights_idx=args.gradnorm_weights_idx, gradnorm_paretoMTL=args.gradnorm_paretoMTL,
+                    n_epochs=args.n_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
 
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
@@ -465,6 +471,8 @@ def main( ):
                 os.makedirs('./result/pareto_front_paretoMTL/{}/{}/gradnorm_hypertune/taskid{}'.format(args.dataset_name, args.confounder, args.taskid))
 
             results_dict.update({'gradnorm_weights': gradnorm_weights})
+            results_dict.update({'gradnorm_weightloss1_list': weightloss1_list})
+            results_dict.update({'gradnorm_weightloss2_list': weightloss2_list})
         else:
             args.save_path = './result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,args.taskid)
             if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)):

@@ -382,15 +382,15 @@ class Trainer:
                 gradnorm_weights_dict = pickle.load(open(gradnorm_weights_path, "rb"))
                 gradnorm_weights = gradnorm_weights_dict['gradnorm_weights']
 
-                if gradnorm_paretoMTL == False:
-                    #gradnorm_weights remain constant during paretoMTL
-                    obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(n_epochs = n_epochs, n_tasks=n_tasks,
-                                                             npref=npref, pref_idx=pref_idx, gradnorm_weights=gradnorm_weights, gradnorm_train=False)
+                if gradnorm_paretoMTL == True:
+                    # gradnorm + paretoMTL
+                    obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(n_epochs=n_epochs, n_tasks=n_tasks,
+                        npref=npref, pref_idx=pref_idx, gradnorm_weights=gradnorm_weights, gradnorm_paretoMTL=True,
+                        gradnorm_lr=gradnorm_lr, shared_layer=shared_layer, alpha=alpha)
                 else:
-                    #gradnorm + paretoMTL
-                    obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(n_epochs = n_epochs, n_tasks = n_tasks, npref = npref, pref_idx = pref_idx,
-                                                gradnorm_weights=gradnorm_weights, gradnorm_train = True, gradnorm_lr=gradnorm_lr, shared_layer=shared_layer,
-                                                alpha=alpha)
+                    # gradnorm_weights remain constant during paretoMTL
+                    obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(n_epochs=n_epochs, n_tasks=n_tasks,
+                        npref=npref, pref_idx=pref_idx, gradnorm_weights=gradnorm_weights, gradnorm_paretoMTL=False)
 
                 return obj1_minibatch_list, obj2_minibatch_list
 
@@ -511,11 +511,11 @@ class Trainer:
         return G1, G2, C1, C2
 
     def paretoMTL(self, n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0, gradnorm_weights: list=[1,1],
-                  gradnorm_train: bool=False, gradnorm_lr: float=1e-3, shared_layer: str='last', alpha: float=3):
+                  gradnorm_paretoMTL: bool=False, gradnorm_lr: float=1e-3, shared_layer: str='last', alpha: float=3):
 
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
 
-        if gradnorm_train==True:
+        if gradnorm_paretoMTL==True:
             weightloss1 = torch.FloatTensor([gradnorm_weights[0].data.tolist()[0]]).clone().detach().requires_grad_(True)
             weightloss2 = torch.FloatTensor([gradnorm_weights[1].data.tolist()[0]]).clone().detach().requires_grad_(True)
             gradnorm_weights = [weightloss1, weightloss2]
@@ -552,18 +552,9 @@ class Trainer:
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                if gradnorm_train==True:
-                    l1 = gradnorm_weights[0] * obj1_minibatch
-                    l2 = gradnorm_weights[1] * obj2_minibatch
-
-                    # for the first epoch with no l0
-                    if t == 0:
-                        l01 = l1.data
-                        l02 = l2.data
-
                 #refer to gradnorm, gradnorm_weights are renormalized by number of objectives
-                obj1 = torch.div(obj1_minibatch * gradnorm_weights[0],2)
-                obj2 = torch.div(obj2_minibatch * gradnorm_weights[1],2)
+                obj1 = torch.div(obj1_minibatch * gradnorm_weights[0].data.tolist()[0], 2)
+                obj2 = torch.div(obj2_minibatch * gradnorm_weights[1].data.tolist()[0], 2)
 
                 # calculate the weights
                 grads, losses_vec = self.paretoMTL_param(n_tasks, obj1, obj2)
@@ -575,16 +566,21 @@ class Trainer:
                     break
 
                 # optimization step
-                self.optimizer.zero_grad()
-                if self.adv_estimator == 'MINE':
-                    self.adv_optimizer.zero_grad()
-
                 self.cal_loss = True
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
                 obj1_minibatch_list.append(obj1_minibatch.data)
                 obj2_minibatch_list.append(obj2_minibatch.data)
+
+                if gradnorm_paretoMTL == True:
+                    l1 = gradnorm_weights[0] * obj1_minibatch
+                    l2 = gradnorm_weights[1] * obj2_minibatch
+
+                    # for the first epoch with no l0
+                    if t == 0:
+                        l01 = l1.data
+                        l02 = l2.data
 
                 obj1 = torch.div(obj1_minibatch * gradnorm_weights[0], 2)
                 obj2 = torch.div(obj2_minibatch * gradnorm_weights[1], 2)
@@ -595,7 +591,11 @@ class Trainer:
                     else:
                         loss_total = loss_total + weight_vec[i] * obj2
 
-                if gradnorm_train == True:
+                self.optimizer.zero_grad()
+                if self.adv_estimator == 'MINE':
+                    self.adv_optimizer.zero_grad()
+
+                if gradnorm_paretoMTL == True:
                     loss_total.backward(retain_graph=True)
 
                     gradnorm_opt.zero_grad()
@@ -652,7 +652,25 @@ class Trainer:
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                if gradnorm_train==True:
+                obj1 = torch.div(obj1_minibatch * gradnorm_weights[0].data.tolist()[0], 2)
+                obj2 = torch.div(obj2_minibatch * gradnorm_weights[1].data.tolist()[0], 2)
+
+                # calculate the weights
+                grads, losses_vec = self.paretoMTL_param(n_tasks, obj1, obj2)
+                weight_vec = get_d_paretomtl(grads, losses_vec, ref_vec, pref_idx)
+
+                normalize_coeff = n_tasks / torch.sum(torch.abs(weight_vec))
+                weight_vec = weight_vec * normalize_coeff
+
+                # optimization step
+                self.cal_loss = True
+                self.cal_adv_loss = True
+                obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
+
+                obj1_minibatch_list.append(obj1_minibatch.data)
+                obj2_minibatch_list.append(obj2_minibatch.data)
+
+                if gradnorm_paretoMTL==True:
                     l1 = gradnorm_weights[0] * obj1_minibatch
                     l2 = gradnorm_weights[1] * obj2_minibatch
 
@@ -664,35 +682,17 @@ class Trainer:
                 obj1 = torch.div(obj1_minibatch * gradnorm_weights[0], 2)
                 obj2 = torch.div(obj2_minibatch * gradnorm_weights[1], 2)
 
-                # calculate the weights
-                grads, losses_vec = self.paretoMTL_param(n_tasks, obj1, obj2)
-                weight_vec = get_d_paretomtl(grads, losses_vec, ref_vec, pref_idx)
-
-                normalize_coeff = n_tasks / torch.sum(torch.abs(weight_vec))
-                weight_vec = weight_vec * normalize_coeff
-
-                # optimization step
-                self.optimizer.zero_grad()
-                if self.adv_estimator == 'MINE':
-                    self.adv_optimizer.zero_grad()
-
-                self.cal_loss = True
-                self.cal_adv_loss = True
-                obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
-
-                obj1_minibatch_list.append(obj1_minibatch.data)
-                obj2_minibatch_list.append(obj2_minibatch.data)
-
-                obj1 = obj1_minibatch * gradnorm_weights[0]
-                obj2 = obj2_minibatch * gradnorm_weights[1]
-
                 for i in range(n_tasks):
                     if i == 0:
                         loss_total = weight_vec[i] * obj1
                     else:
                         loss_total = loss_total + weight_vec[i] * obj2
 
-                if gradnorm_train == True:
+                self.optimizer.zero_grad()
+                if self.adv_estimator == 'MINE':
+                    self.adv_optimizer.zero_grad()
+
+                if gradnorm_paretoMTL == True:
                     loss_total.backward(retain_graph=True)
 
                     gradnorm_opt.zero_grad()
