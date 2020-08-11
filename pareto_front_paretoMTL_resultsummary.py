@@ -217,13 +217,13 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
 
     dir_path = './result/pareto_front_paretoMTL/{}/{}'.format(dataset, confounder)
     hyperparameter_config = {
-        'adv_estimator': ['MINE','HSIC'],
-        'pre_epochs': [250],
+        'adv_estimator': ['MINE'],
+        'pre_epochs': [200],
         'pre_lr': [1e-3],
         'adv_lr': [5e-5],
         'n_epochs': [50],
         'lr': [1e-3],
-        'MCs': 20 * [1],
+        'MCs': 1 * [1],
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
     }
     keys, values = zip(*hyperparameter_config.items())
@@ -231,14 +231,19 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
 
     for i in range(len(hyperparameter_experiments)):
         if i in list(range(200)):
-            config_path = dir_path + '/MINE/taskid{}/config.pkl'.format(i)
-            results_path = dir_path + '/MINE/taskid{}/results.pkl'.format(i)
+            config_path = dir_path + '/taskid{}/config.pkl'.format(i)
+            results_path = dir_path + '/taskid{}/results.pkl'.format(i)
         else:
             config_path = dir_path + '/HSIC/taskid{}/config.pkl'.format(i - int(i/200)*200)
             results_path = dir_path + '/HSIC/taskid{}/results.pkl'.format(i - int(i/200)*200)
         if os.path.isfile(config_path) and os.path.isfile(results_path):
             config = pickle.load(open(config_path, "rb"))
             results = pickle.load(open(results_path, "rb"))
+
+            if 'obj1_minibatch_list' in results.keys():
+                del results['obj1_minibatch_list']
+            if 'obj2_minibatch_list' in results.keys():
+                del results['obj2_minibatch_list']
 
             results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator','MC', 'pre_epochs', 'pre_lr', 'adv_lr', 'n_epochs', 'lr', 'pref_idx'])}
             results_config.update(results)
