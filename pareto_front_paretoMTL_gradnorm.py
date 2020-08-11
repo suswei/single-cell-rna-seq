@@ -25,7 +25,7 @@ def main(taskid):
         'adv_lr': [5e-5],
         'alpha': [1, 1.5, 2, 2.5, 3],
         'gradnorm_epochs': [200, 300],
-        'gradnorm_lr': [1e-3],
+        'gradnorm_lr': [1e-3, 1e-4],
         'shared_layer': ['last']
     }
     keys, values = zip(*hyperparameter_config.items())

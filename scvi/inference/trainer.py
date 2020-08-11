@@ -363,11 +363,12 @@ class Trainer:
                 weightloss2 = [1]
                 gradnorm_weights = [weightloss1, weightloss2]
 
-                gradnorm_weights, weightloss1_list, weightloss2_list = self.gradnorm(alpha, gradnorm_epochs, gradnorm_lr, gradnorm_weights, shared_layer)
+                gradnorm_weights, weightloss1_list, weightloss2_list, obj1_minibatch_list, obj2_minibatch_list = self.gradnorm(alpha, gradnorm_epochs, gradnorm_lr, gradnorm_weights, shared_layer)
 
-                return gradnorm_weights, weightloss1_list, weightloss2_list
+                return gradnorm_weights, weightloss1_list, weightloss2_list, obj1_minibatch_list, obj2_minibatch_list
 
             else:
+                '''
                 # train vae_MI further in addition to pre_train and loss is not standardized
                 self.cal_loss = True
                 self.cal_adv_loss = False
@@ -381,6 +382,23 @@ class Trainer:
                 gradnorm_weights_path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_hypertune/taskid{}/results.pkl'.format(gradnorm_weights_idx)
                 gradnorm_weights_dict = pickle.load(open(gradnorm_weights_path, "rb"))
                 gradnorm_weights = gradnorm_weights_dict['gradnorm_weights']
+                '''
+
+                with torch.no_grad():
+                    self.model.eval()
+                    if self.adv_estimator == 'MINE':
+                        self.adv_model.eval()
+                    self.cal_loss = True
+                    self.cal_adv_loss = True
+                    obj1_train_list, obj2_train_list = [], []
+                    for tensors_list in self.data_loaders_loop():
+                        obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
+                        obj1_train_list.append(obj1_minibatch.data)
+                        obj2_train_list.append(obj2_minibatch.data)
+                    obj1_train = sum(obj1_train_list)/len(obj1_train_list)
+                    obj2_train = sum(obj2_train_list)/len(obj2_train_list)
+
+                    gradnorm_weights = [[2*obj2_train/(obj1_train + obj2_train)], [2*obj1_train(obj1_train + obj2_train)]]
 
                 if gradnorm_paretoMTL == True:
                     # gradnorm + paretoMTL
@@ -521,8 +539,8 @@ class Trainer:
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
 
         if gradnorm_paretoMTL==True:
-            weightloss1 = torch.FloatTensor([gradnorm_weights[0].data.tolist()[0]]).clone().detach().requires_grad_(True)
-            weightloss2 = torch.FloatTensor([gradnorm_weights[1].data.tolist()[0]]).clone().detach().requires_grad_(True)
+            weightloss1 = torch.FloatTensor(gradnorm_weights[0]).clone().detach().requires_grad_(True)
+            weightloss2 = torch.FloatTensor(gradnorm_weights[1]).clone().detach().requires_grad_(True)
             gradnorm_weights = [weightloss1, weightloss2]
 
             gradnorm_opt = torch.optim.Adam(gradnorm_weights, lr=gradnorm_lr)
