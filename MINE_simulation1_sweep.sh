@@ -37,5 +37,6 @@ fi
 # The job command(s):
 module load anaconda3/2020.02
 source activate sharedenv
+module load web_proxy
 python3 MINE_simulation1_sweep.py ${SLURM_ARRAY_TASK_ID}
 

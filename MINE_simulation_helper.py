@@ -13,7 +13,6 @@ import math
 import pandas as pd
 #import plotly.graph_objects as go
 
-
 def generate_data_MINE_simulation1(args):
     # The parameters for the 7 cases
     # weight of each category for the categorical variable

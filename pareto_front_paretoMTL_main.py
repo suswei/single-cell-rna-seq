@@ -400,7 +400,7 @@ def main( ):
     trainer_vae.kl_weight = 1
 
     if args.pre_train == True:
-        trainer_vae.paretoMTL_train(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
+        trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
                         pre_adv_epochs=args.pre_adv_epochs, adv_lr=args.adv_lr, path=args.save_path)
     else:
         if args.gradnorm_hypertune == True:
