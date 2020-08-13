@@ -12,8 +12,7 @@ from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
-from scvi.models.modules import MINE_Net3, discrete_continuous_info
-from hsic import hsic
+from scvi.models.modules import MINE_Net, discrete_continuous_info, hsic
 import pickle
 
 import matplotlib.pyplot as plt
@@ -59,7 +58,7 @@ def obj1_train_test(trainer_vae):
     return obj1_train, obj1_test
 
 def MINE_after_trainerVae(trainer_vae):
-    MINE_network = MINE_Net3(input_dim=10 + 2, n_hidden=128, n_layers=10,
+    MINE_network = MINE_Net(input_dim=10 + 2, n_hidden=128, n_layers=10,
                             activation_fun='ELU', unbiased_loss=True, initial='normal')
 
     MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=5e-5)

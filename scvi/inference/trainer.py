@@ -10,7 +10,7 @@ import torch
 from torch.autograd import Variable
 from sklearn.model_selection._split import _validate_shuffle_split
 from torch.utils.data.sampler import SubsetRandomSampler
-from scvi.models.modules import MINE_Net3
+from scvi.models.modules import MINE_Net
 from tqdm import trange
 
 from scvi.inference.posterior import Posterior
@@ -52,7 +52,7 @@ class Trainer:
         self.adv_estimator = adv_estimator
         if self.adv_estimator == 'MINE':
             adv_input_dim = self.model.n_latent + self.model.n_batch
-            self.adv_model = MINE_Net3(input_dim=adv_input_dim, n_hidden=adv_n_hidden, n_layers=adv_n_layers,
+            self.adv_model = MINE_Net(input_dim=adv_input_dim, n_hidden=adv_n_hidden, n_layers=adv_n_layers,
                              activation_fun=adv_activation_fun, unbiased_loss=unbiased_loss, initial=adv_w_initial)
 
         self.data_loader_kwargs = {

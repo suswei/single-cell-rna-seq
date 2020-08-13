@@ -11,7 +11,7 @@ from scvi.dataset import *
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
-from scvi.models.modules import MINE_Net3
+from scvi.models.modules import MINE_Net
 from scvi.inference import UnsupervisedTrainer
 import torch
 from torch.autograd import Variable
@@ -61,7 +61,7 @@ def std_obj1_train_test(trainer_vae, args):
     return std_obj1_trainset, std_obj1_testset
 
 def fully_MINE_after_trainerVae(trainer_vae):
-    MINE_network = MINE_Net3(input_dim=10 + 2, n_hidden=128, n_layers=10,
+    MINE_network = MINE_Net(input_dim=10 + 2, n_hidden=128, n_layers=10,
                             activation_fun='ELU', unbiased_loss=True, initial='normal')
 
     MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=5e-5)

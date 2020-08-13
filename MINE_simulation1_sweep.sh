@@ -10,10 +10,10 @@
 #SBATCH --cpus-per-task=1
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=1-6:0:00
+#SBATCH --time=0-8:0:00
 
 # Batch arrays
-#SBATCH --array=0-1279
+#SBATCH --array=0-139
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
@@ -37,4 +37,5 @@ fi
 # The job command(s):
 module load anaconda3/2020.02
 source activate sharedenv
-python3 MINE_simulation_sweep.py ${SLURM_ARRAY_TASK_ID}
+python3 MINE_simulation1_sweep.py ${SLURM_ARRAY_TASK_ID}
+

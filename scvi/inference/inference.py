@@ -5,12 +5,9 @@ from . import Trainer
 import numpy as np
 from torch.autograd import Variable
 import pandas as pd
-from scvi.models.modules import discrete_continuous_info, Sample_From_Aggregated_Posterior
-from hsic import hsic
-
+from scvi.models.modules import discrete_continuous_info, hsic
 
 plt.switch_backend('agg')
-
 
 class UnsupervisedTrainer(Trainer):
     r"""The VariationalInference class for the unsupervised training of an autoencoder.
