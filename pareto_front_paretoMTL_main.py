@@ -167,7 +167,7 @@ def draw_diagnosis_plot(list1,  list2, name1, name2, title, path):
     plt.figure()
     plt.subplot(211)
     plt.plot(np.arange(0, len(list1), 1), list1)
-    plt.title('{}'.format(title))
+    plt.title('{}'.format(title), fontsize=5)
     plt.ylabel('{}'.format(name1))
 
     plt.subplot(212)
@@ -409,13 +409,6 @@ def main( ):
             gradnorm_weights, weightloss1_list, weightloss2_list, obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train,
                                 path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, lr=args.lr, adv_lr=args.adv_lr, alpha=args.alpha,
                                 gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr, shared_layer=args.shared_layer)
-
-            if not os.path.exists(os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune'):
-                os.makedirs(os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune')
-            gradnorm_path = os.path.dirname(os.path.dirname(args.save_path)) + '/gradnorm_hypertune/taskid{}_weightloss_minibatch'.format(args.taskid)
-            gradnorm_title = 'alpha: {}, epochs: {}, lr: {}'.format(args.alpha, args.gradnorm_epochs, args.gradnorm_lr)
-            draw_diagnosis_plot(weightloss1_list, weightloss2_list, 'weight for obj1', 'weight for obj2', gradnorm_title, gradnorm_path)
-
         else:
             if args.gradnorm_paretoMTL == True:
                 obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train, path=args.save_path,
@@ -474,6 +467,15 @@ def main( ):
             results_dict.update({'gradnorm_weights': gradnorm_weights})
             results_dict.update({'gradnorm_weightloss1_list': weightloss1_list})
             results_dict.update({'gradnorm_weightloss2_list': weightloss2_list})
+
+            gradnorm_path = os.path.dirname(args.save_path) + '/taskid{}_weightloss_minibatch'.format(args.taskid)
+            gradnorm_title = 'alpha: {}, epochs: {}, lr: {}'.format(args.alpha, args.gradnorm_epochs, args.gradnorm_lr)
+            draw_diagnosis_plot(weightloss1_list, weightloss2_list, 'weight for obj1', 'weight for obj2', gradnorm_title, gradnorm_path)
+
+            gradnorm_path = os.path.dirname(args.save_path) + '/taskid{}_obj_minibatch'.format(args.taskid)
+            gradnorm_title = 'alpha: {}, epochs: {}, lr: {},\nobj1_train: {:.2f}, NN_train: {:.2f},\nasw_train: {:.2f}, nmi_train: {:.2f}, ari_train:{:.2f},\nuca_train: {:.2f}, be_train: {:.2f}'.format(args.alpha,
+                            args.gradnorm_epochs, args.gradnorm_lr, obj1_train, obj2_train, asw_train, nmi_train, ari_train, uca_train, be_train)
+            draw_diagnosis_plot(obj1_minibatch_list, obj2_minibatch_list, 'obj1 minibatch', 'obj2 minibatch', gradnorm_title, gradnorm_path)
         else:
             args.save_path = './result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,args.taskid)
             if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)):
