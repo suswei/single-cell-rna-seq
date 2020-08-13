@@ -328,8 +328,7 @@ class Trainer:
                     self.optimizer.zero_grad()
                     loss.backward()
                     self.optimizer.step()
-            if pre_train == True:
-                torch.save(self.model.state_dict(), path + '/vae.pkl')
+            torch.save(self.model.state_dict(), path + '/vae.pkl')
 
             if self.adv_estimator == 'MINE':
                 self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
@@ -343,9 +342,7 @@ class Trainer:
                         self.optimizer.zero_grad()
                         adv_loss.backward()
                         self.adv_optimizer.step()
-                if pre_train == True:
-                    torch.save(self.adv_model.state_dict(), path + '/MINE.pkl')
-
+                torch.save(self.adv_model.state_dict(), path + '/MINE.pkl')
         else:
             self.model.load_state_dict(torch.load(path + '/vae.pkl'))
             params = filter(lambda p: p.requires_grad, self.model.parameters())
