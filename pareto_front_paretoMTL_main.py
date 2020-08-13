@@ -287,7 +287,7 @@ def main( ):
     parser.add_argument('--gradnorm_paretoMTL', action='store_true', default=False,
                         help='whether to use gradnorm during paretoMTL')
 
-    parser.add_argument('--gradnorm_weight_lowlimit', type='float', default=1e-6,
+    parser.add_argument('--gradnorm_weight_lowlimit', type=float, default=1e-6,
                         help='the low limit for the smaller weight in gradnorm')
 
 
