@@ -11,7 +11,7 @@ from torch.utils.data import TensorDataset
 from torch.autograd import Variable
 import math
 import pandas as pd
-import plotly.graph_objects as go
+#import plotly.graph_objects as go
 
 
 def generate_data_MINE_simulation1(args):
@@ -345,7 +345,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
         test_MINE_estimator = torch.mean(test_t_all) - torch.log(torch.mean(test_et_all))
 
     return train_MINE_estimator.detach().item(), test_MINE_estimator.detach().item()
-
+'''
 def diagnosis_loss_plot(args, KL_type, MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch):
 
     fig = go.Figure()
@@ -385,7 +385,7 @@ def diagnosis_loss_plot(args, KL_type, MINE_estimator_minibatch_list, negative_l
         font=dict(size=10, color='black', family='Arial, sans-serif')
     )
     fig.write_image('{}/{}_train_valid_loss_per_epoch.png'.format(args.path, KL_type))
-
+'''
 def NN_eval(train_loader, test_loader):
 
     NN_train_list, NN_test_list = [], []
