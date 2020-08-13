@@ -40,7 +40,6 @@ class UnsupervisedTrainer(Trainer):
             self.train_set.to_monitor = ['ll']
             self.test_set.to_monitor = ['ll']
 
-
     @property
     def posteriors_loop(self):
         return ['train_set']

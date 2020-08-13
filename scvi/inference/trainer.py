@@ -386,7 +386,7 @@ class Trainer:
                     obj1_train = sum(obj1_train_list)/len(obj1_train_list)
                     obj2_train = sum(obj2_train_list)/len(obj2_train_list)
 
-                    gradnorm_weights = [[2*obj2_train/(obj1_train + obj2_train)], [2*obj1_train(obj1_train + obj2_train)]]
+                    gradnorm_weights = [[2*obj2_train/(obj1_train + obj2_train)], [2*obj1_train/(obj1_train + obj2_train)]]
 
                 if gradnorm_paretoMTL == True:
                     # gradnorm + paretoMTL
@@ -523,7 +523,7 @@ class Trainer:
         if gradnorm_paretoMTL==True:
             weightloss1 = torch.FloatTensor(gradnorm_weights[0]).clone().detach().requires_grad_(True)
             weightloss2 = torch.FloatTensor(gradnorm_weights[1]).clone().detach().requires_grad_(True)
-            gradnorm_weights = [torch.max(torch.FloatTensor([gradnorm_weight_lowlimit]), weightloss1), torch.min(torch.FloatTensor([2 - (gradnorm_weight_lowlimit)]), weightloss2)]
+            gradnorm_weights = [weightloss1, weightloss2]
 
             gradnorm_opt = torch.optim.Adam(gradnorm_weights, lr=gradnorm_lr)
             Gradloss = torch.nn.L1Loss()
