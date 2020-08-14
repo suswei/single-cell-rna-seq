@@ -35,6 +35,7 @@ fi
 # Run the job from the directory where it was launched (default)
 
 # The job command(s):
+module load gcc/8.3.0
 module load python/3.7.4
 python3 MINE_simulation1_sweep.py ${SLURM_ARRAY_TASK_ID}
 
