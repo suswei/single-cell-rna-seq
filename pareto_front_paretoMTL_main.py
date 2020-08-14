@@ -7,14 +7,12 @@ import torch
 import torch.utils.data
 from torch.autograd import Variable
 import torch.optim as optim
-
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
 from scvi.models.modules import MINE_Net, discrete_continuous_info, hsic
 import pickle
-
 import matplotlib.pyplot as plt
 
 def sample1_sample2(trainer_vae, sample_batch, batch_index, type):
