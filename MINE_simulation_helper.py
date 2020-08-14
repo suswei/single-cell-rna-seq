@@ -1,7 +1,9 @@
+import numpy as np
+import math
+import pandas as pd
 import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-import numpy as np
 from scvi.models.modules import  MINE_Net, discrete_continuous_info
 from scipy.stats import multivariate_normal
 from torch.distributions.multivariate_normal import MultivariateNormal
@@ -9,8 +11,6 @@ from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.categorical import Categorical
 from torch.utils.data import TensorDataset
 from torch.autograd import Variable
-import math
-import pandas as pd
 #import plotly.graph_objects as go
 
 def generate_data_MINE_simulation1(args):
@@ -18,24 +18,20 @@ def generate_data_MINE_simulation1(args):
     # weight of each category for the categorical variable
     p_tensor = torch.from_numpy(np.array(
         [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-         [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19],
+         [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
          [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
          [0.01, 0.01, 0.01, 0.01, 0.01, 0.03, 0.2, 0.2, 0.3, 0.22]])).type(torch.FloatTensor)
 
     # mean of the gaussian disribution
     mu_tensor = torch.from_numpy(np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 2, 4, 6, 8, 10, 12, 14, 16, 18],
-                                           [0, 0, 100, 100, 200, 200, 0, 0, 0, 0],
-                                           [0, 1, 2, 2, 2, 3, 3, 3, 3, 4], [0, 2, 4, 0, 0, 2, 0, 0, 0, 0],
-                                           [0, 20, 40, 60, 80, 100, 120, 140, 160, 180],
+                                           [0, 0, 100, 100, 200, 200, 0, 0, 0, 0], [0, 1, 2, 2, 2, 3, 3, 3, 3, 4],
+                                           [0, 2, 4, 0, 0, 2, 0, 0, 0, 0], [0, 20, 40, 60, 80, 100, 120, 140, 160, 180],
                                            [0, 20, 40, 60, 80, 100, 120, 140, 160, 180]])).type(torch.FloatTensor)
 
     # the sd matrix of the gaussian distribution
     sigma_tensor = torch.from_numpy(np.array([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                                              [1, 1, 20, 20, 40, 40, 1, 1, 1, 1],
-                                              [1, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5],
-                                              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                                              [1, 2, 3, 4, 5, 5, 8, 8, 10, 10],
+                                              [1, 1, 20, 20, 40, 40, 1, 1, 1, 1], [1, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5],
+                                              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 2, 3, 4, 5, 5, 8, 8, 10, 10],
                                               [1, 2, 3, 4, 5, 5, 8, 8, 10, 10]])).type(torch.FloatTensor)
 
     p_list = p_tensor[args.case_idx, :]
