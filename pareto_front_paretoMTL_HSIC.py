@@ -25,7 +25,7 @@ def main(taskid):
         'obj2_max': [0.06],
         'obj2_min': [0],
         'n_tasks': [2],
-        'MC': list(range(20)),
+        'MC': list(range(10)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
     }
     keys, values = zip(*hyperparameter_config.items())
@@ -33,7 +33,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --standardize --MCs 20 "
+    os.system("python3 pareto_front_paretoMTL_main.py --std_paretoMTL --MCs 10 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "        
               "--adv_estimator %s --n_epochs %s --lr %s --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "

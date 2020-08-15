@@ -310,10 +310,11 @@ class Trainer:
         return loss_minibatch_list, obj2_minibatch_list
 
     def pretrain_gradnorm_paretoMTL(self, pre_train: bool=False, pre_epochs: int=250, pre_lr: float=1e-3, eps: float = 0.01,
-                        pre_adv_epochs: int=100, adv_lr: float=5e-5, path: str='None', gradnorm_hypertune: bool=False,
-                        alpha: float=3, gradnorm_epochs: int=100, gradnorm_lr: float=1e-3, gradnorm_weights_idx: int=0,
-                        n_epochs: int=50, lr: float=1e-4, n_tasks: int=2, npref: int=10, pref_idx: int=0,
-                        gradnorm_paretoMTL: bool=False, gradnorm_weight_lowlimit: float=1e-6):
+                        pre_adv_epochs: int=100, adv_lr: float=5e-5, path: str='None', lr: float=1e-3, standardize: bool=False,
+                        gradnorm_hypertune: bool=False, alpha: float=3, gradnorm_epochs: int=100, gradnorm_lr: float=1e-3,
+                        std_paretoMTL: bool = False, obj1_max: float = 20000, obj1_min: float = 12000, obj2_max: float = 0.6, obj2_min: float = 0,
+                        gradnorm_paretoMTL: bool=False, gradnorm_weight_lowlimit: float=1e-6,
+                        n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0,):
 
         if pre_train == True:
             params = filter(lambda p: p.requires_grad, self.model.parameters())
@@ -354,8 +355,12 @@ class Trainer:
                 self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
                 # self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[30], gamma=0.5)
 
-            if gradnorm_hypertune == True:
+            if standardize == True:
+                obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(n_epochs=n_epochs, n_tasks=n_tasks, npref=npref, pref_idx=pref_idx)
 
+                return obj1_minibatch_list, obj2_minibatch_list
+
+            elif gradnorm_hypertune == True:
                 # Pretrain gradnorm
                 weightloss1 = [1]
                 weightloss2 = [1]
@@ -371,32 +376,32 @@ class Trainer:
                 gradnorm_weights_dict = pickle.load(open(gradnorm_weights_path, "rb"))
                 gradnorm_weights = gradnorm_weights_dict['gradnorm_weights']
                 '''
+                if std_paretoMTL == True:
+                    #standardize + paretoMTL
+                    obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(std_paretoMTL=std_paretoMTL, obj1_max=obj1_max,
+                        obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, n_epochs=n_epochs, n_tasks=n_tasks, npref=npref, pref_idx=pref_idx)
 
-                with torch.no_grad():
-                    self.model.eval()
-                    if self.adv_estimator == 'MINE':
-                        self.adv_model.eval()
-                    self.cal_loss = True
-                    self.cal_adv_loss = True
-                    obj1_train_list, obj2_train_list = [], []
-                    for tensors_list in self.data_loaders_loop():
-                        obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
-                        obj1_train_list.append(obj1_minibatch.data)
-                        obj2_train_list.append(obj2_minibatch.data)
-                    obj1_train = sum(obj1_train_list)/len(obj1_train_list)
-                    obj2_train = sum(obj2_train_list)/len(obj2_train_list)
+                elif gradnorm_paretoMTL == True:
+                    # gradnorm + paretoMTL
+                    with torch.no_grad():
+                        self.model.eval()
+                        if self.adv_estimator == 'MINE':
+                            self.adv_model.eval()
+                        self.cal_loss = True
+                        self.cal_adv_loss = True
+                        obj1_train_list, obj2_train_list = [], []
+                        for tensors_list in self.data_loaders_loop():
+                            obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
+                            obj1_train_list.append(obj1_minibatch.data)
+                            obj2_train_list.append(obj2_minibatch.data)
+                        obj1_train = sum(obj1_train_list)/len(obj1_train_list)
+                        obj2_train = sum(obj2_train_list)/len(obj2_train_list)
 
                     gradnorm_weights = [[2*obj2_train/(obj1_train + obj2_train)], [2*obj1_train/(obj1_train + obj2_train)]]
 
-                if gradnorm_paretoMTL == True:
-                    # gradnorm + paretoMTL
-                    obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(n_epochs=n_epochs, n_tasks=n_tasks,
-                        npref=npref, pref_idx=pref_idx, gradnorm_weights=gradnorm_weights, gradnorm_paretoMTL=True,
-                        gradnorm_lr=gradnorm_lr, alpha=alpha, gradnorm_weight_lowlimit=gradnorm_weight_lowlimit)
-                else:
-                    # gradnorm_weights remain constant during paretoMTL
-                    obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(n_epochs=n_epochs, n_tasks=n_tasks,
-                        npref=npref, pref_idx=pref_idx, gradnorm_weights=gradnorm_weights, gradnorm_paretoMTL=False)
+                    obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(gradnorm_weights=gradnorm_weights, gradnorm_paretoMTL=gradnorm_paretoMTL,
+                        gradnorm_lr=gradnorm_lr, alpha=alpha, gradnorm_weight_lowlimit=gradnorm_weight_lowlimit, n_epochs=n_epochs, n_tasks=n_tasks,
+                        npref=npref, pref_idx=pref_idx)
 
                 return obj1_minibatch_list, obj2_minibatch_list
 
@@ -515,8 +520,9 @@ class Trainer:
 
         return G1, G2, C1, C2
 
-    def paretoMTL(self, n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0, gradnorm_weights: list=[1,1],
-                  gradnorm_paretoMTL: bool=False, gradnorm_lr: float=1e-3, alpha: float=3, gradnorm_weight_lowlimit: float=1e-6):
+    def paretoMTL(self, std_paretoMTL: bool=False, obj1_max: float=20000, obj1_min: float=12000, obj2_max: float=0.6, obj2_min: float=0,
+                  gradnorm_weights: list=[1,1], gradnorm_paretoMTL: bool=False, gradnorm_lr: float=1e-3, alpha: float=3, gradnorm_weight_lowlimit: float=1e-6,
+                  n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0):
 
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
 
@@ -557,9 +563,16 @@ class Trainer:
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                #refer to gradnorm, gradnorm_weights are renormalized by number of objectives
-                obj1 = torch.div(obj1_minibatch * gradnorm_weights[0].data.tolist()[0], 2)
-                obj2 = torch.div(obj2_minibatch * gradnorm_weights[1].data.tolist()[0], 2)
+                if gradnorm_paretoMTL == True:
+                    #refer to gradnorm, gradnorm_weights are renormalized by number of objectives
+                    obj1 = torch.div(obj1_minibatch * gradnorm_weights[0].data.tolist()[0], 2)
+                    obj2 = torch.div(obj2_minibatch * gradnorm_weights[1].data.tolist()[0], 2)
+                elif std_paretoMTL == True:
+                    obj1 = (obj1_minibatch - obj1_min)/(obj1_max - obj1_min)
+                    obj2 = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+                else:
+                    obj1 = obj1_minibatch
+                    obj2 = obj2_minibatch
 
                 # calculate the weights
                 grads, losses_vec = self.paretoMTL_param(n_tasks, obj1, obj2)
@@ -587,8 +600,14 @@ class Trainer:
                         l01 = l1.data
                         l02 = l2.data
 
-                obj1 = torch.div(obj1_minibatch * gradnorm_weights[0], 2)
-                obj2 = torch.div(obj2_minibatch * gradnorm_weights[1], 2)
+                    obj1 = torch.div(obj1_minibatch * gradnorm_weights[0], 2)
+                    obj2 = torch.div(obj2_minibatch * gradnorm_weights[1], 2)
+                elif std_paretoMTL == True:
+                    obj1 = (obj1_minibatch - obj1_min) / (obj1_max - obj1_min)
+                    obj2 = (obj2_minibatch - obj2_min) / (obj2_max - obj2_min)
+                else:
+                    obj1 = obj1_minibatch
+                    obj2 = obj2_minibatch
 
                 for i in range(n_tasks):
                     if i == 0:
@@ -657,8 +676,15 @@ class Trainer:
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                obj1 = torch.div(obj1_minibatch * gradnorm_weights[0].data.tolist()[0], 2)
-                obj2 = torch.div(obj2_minibatch * gradnorm_weights[1].data.tolist()[0], 2)
+                if gradnorm_paretoMTL == True:
+                    obj1 = torch.div(obj1_minibatch * gradnorm_weights[0].data.tolist()[0], 2)
+                    obj2 = torch.div(obj2_minibatch * gradnorm_weights[1].data.tolist()[0], 2)
+                elif std_paretoMTL == True:
+                    obj1 = (obj1_minibatch - obj1_min)/(obj1_max - obj1_min)
+                    obj2 = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+                else:
+                    obj1 = obj1_minibatch
+                    obj2 = obj2_minibatch
 
                 # calculate the weights
                 grads, losses_vec = self.paretoMTL_param(n_tasks, obj1, obj2)
@@ -684,8 +710,14 @@ class Trainer:
                         l01 = l1.data
                         l02 = l2.data
 
-                obj1 = torch.div(obj1_minibatch * gradnorm_weights[0], 2)
-                obj2 = torch.div(obj2_minibatch * gradnorm_weights[1], 2)
+                    obj1 = torch.div(obj1_minibatch * gradnorm_weights[0], 2)
+                    obj2 = torch.div(obj2_minibatch * gradnorm_weights[1], 2)
+                elif std_paretoMTL == True:
+                    obj1 = (obj1_minibatch - obj1_min)/(obj1_max - obj1_min)
+                    obj2 = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+                else:
+                    obj1 = obj1_minibatch
+                    obj2 = obj2_minibatch
 
                 for i in range(n_tasks):
                     if i == 0:
