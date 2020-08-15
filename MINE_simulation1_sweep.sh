@@ -2,8 +2,8 @@
 
 # The name of the job:
 #SBATCH --job-name="MINE_simulation"
-#SBATCH --account=punim0890
-#SBATCH -p physical
+#SBATCH --account=punim0614
+#SBATCH -p mig
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=3
@@ -35,7 +35,7 @@ fi
 # Run the job from the directory where it was launched (default)
 
 # The job command(s):
-module load gcc/8.3.0
-module load python/3.7.4
+module load anaconda3/2020.02
+source activate sharedenv
 python3 MINE_simulation1_sweep.py ${SLURM_ARRAY_TASK_ID}
 
