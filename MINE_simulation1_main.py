@@ -4,15 +4,12 @@ from random import randint
 import pickle
 
 import numpy as np
-import math
 import pandas as pd
 import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from scvi.models.modules import MINE_Net, discrete_continuous_info
-from scipy.stats import multivariate_normal
 from torch.distributions.multivariate_normal import MultivariateNormal
-from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.categorical import Categorical
 from torch.utils.data import TensorDataset
 from torch.autograd import Variable
@@ -56,9 +53,16 @@ def generate_data_MINE_simulation1(args):
         x_tensor = torch.cat((x_tensor, x.reshape(1, 1).type(torch.FloatTensor)), 0)
         y_tensor = torch.cat((y_tensor, y.reshape(1, args.gaussian_dim)), 0)
 
-    return x_tensor, y_tensor
+    NN_estimator = discrete_continuous_info(torch.transpose(x_tensor[0:1000, :], 0, 1),
+                                            torch.transpose(y_tensor[0:1000, :], 0, 1))
 
-def train_valid_test_loader(x_tensor, y_tensor, args, kwargs):
+    return NN_estimator, x_tensor, y_tensor
+
+def train_valid_test_loader(x_tensor, y_tensor, args, KL_type, kwargs):
+
+    if KL_type == 'MI':
+        x_dataframe = pd.DataFrame.from_dict({'category': np.ndarray.tolist(x_tensor.numpy().ravel())})
+        x_tensor = torch.from_numpy(pd.get_dummies(x_dataframe['category']).values).type(torch.FloatTensor)
 
     train_size = args.samplesize
     valid_size = int(args.samplesize * 0.5)
@@ -73,10 +77,6 @@ def train_valid_test_loader(x_tensor, y_tensor, args, kwargs):
     return train_loader, valid_loader, test_loader
 
 def sample1_sample2_from_minibatch(args, KL_type, x, y):
-
-    if KL_type == 'MI':
-        x_dataframe = pd.DataFrame.from_dict({'category': np.ndarray.tolist(x.numpy().ravel())})
-        x = torch.from_numpy(pd.get_dummies(x_dataframe['category']).values).type(torch.FloatTensor)
 
     if args.cuda:
         x, y =  x.cuda(), y.cuda()
@@ -203,7 +203,10 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
     with torch.no_grad():
         MINE.eval()
         train_y_all = torch.empty(0, args.gaussian_dim)
-        train_x_all = torch.empty(0, 1)
+        if KL_type == 'MI':
+            train_x_all = torch.empty(0, args.category_num)
+        else:
+            train_x_all = torch.empty(0, 1)
 
         for train_batch_idx, (train_y, train_x) in enumerate(train_loader):
             train_y_all = torch.cat((train_y_all, train_y), 0)
@@ -215,7 +218,10 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
         train_MINE_estimator = torch.mean(train_t_all) - torch.log(torch.mean(train_et_all))
 
         test_y_all = torch.empty(0, args.gaussian_dim)
-        test_x_all = torch.empty(0, 1)
+        if KL_type == 'MI':
+            test_x_all = torch.empty(0, args.category_num)
+        else:
+            test_x_all = torch.empty(0, 1)
         for test_batch_idx, (test_y, test_x) in enumerate(test_loader):
             test_y_all = torch.cat((test_y_all, test_y), 0)
             test_x_all = torch.cat((test_x_all, test_x), 0)
@@ -226,21 +232,6 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
         test_MINE_estimator = torch.mean(test_t_all) - torch.log(torch.mean(test_et_all))
 
     return train_MINE_estimator.detach().item(), test_MINE_estimator.detach().item()
-
-def NN_eval(train_loader, test_loader):
-
-    NN_train_list, NN_test_list = [], []
-    for batch_idx, (y, x) in enumerate(train_loader):
-        NN_estimator = discrete_continuous_info(torch.transpose(x, 0, 1), torch.transpose(y, 0, 1))
-        NN_train_list.append(NN_estimator)
-    NN_train = sum(NN_train_list)/len(NN_train_list)
-
-    for batch_idx, (y, x) in enumerate(test_loader):
-        NN_estimator = discrete_continuous_info(torch.transpose(x, 0, 1), torch.transpose(y, 0, 1))
-        NN_test_list.append(NN_estimator)
-    NN_test = sum(NN_test_list) / len(NN_test_list)
-
-    return NN_train, NN_test
 
 def main():
     parser = argparse.ArgumentParser(description='MINE Simulation Study')
@@ -257,7 +248,7 @@ def main():
     parser.add_argument('--gaussian_dim', type=int, default=2,
                         help='the dimension of gaussian component conditioning on each category')
 
-    parser.add_argument('--samplesize', type=int, default=6400,
+    parser.add_argument('--samplesize', type=int, default=12800,
                         help='training sample size')
 
     parser.add_argument('--n_hidden_node', type=int, default=128,
@@ -272,7 +263,7 @@ def main():
     parser.add_argument('--unbiased_loss', action='store_true', default=False,
                         help='whether to use unbiased loss or not in MINE')
 
-    parser.add_argument('--batch_size', type=int, default=128,
+    parser.add_argument('--batch_size', type=int, default=256,
                         help='batch size for MINE training')
 
     parser.add_argument('--epochs', type=int, default=400,
@@ -302,16 +293,15 @@ def main():
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
-    x_tensor, y_tensor = generate_data_MINE_simulation1(args)
+    NN_estimator, x_tensor, y_tensor = generate_data_MINE_simulation1(args)
 
-    train_loader, valid_loader, test_loader = train_valid_test_loader(x_tensor, y_tensor, args, kwargs)
+    train_loader, valid_loader, test_loader = train_valid_test_loader(x_tensor, y_tensor, args, 'MI', kwargs)
     MI_MINE_train, MI_MINE_test = MINE_train(train_loader, valid_loader, test_loader, 'MI', args)
-    NN_train, NN_test = NN_eval(train_loader, test_loader)
 
     estimated_results = {'MI_MINE_train': [MI_MINE_train],
                          'MI_MINE_test': [MI_MINE_test],
-                         'NN_train': {NN_train},
-                         'NN_test': [NN_test]}
+                         'NN_estimator': [NN_estimator]
+                         }
 
     if not os.path.isdir('result/MINE_simulation1/taskid{}'.format(args.taskid)):
         os.makedirs('result/MINE_simulation1/taskid{}'.format(args.taskid))

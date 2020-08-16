@@ -74,59 +74,62 @@ def density_ratio(args, x, category_index, component_mean1, component_mean2, KL)
 
 
 def generate_data_MINE_simulation2(args):
+    #use random_state to make the p(y|x=0) and p(y|x=1) the same for different MCs in MINE simulation2
+    m1 = multivariate_normal(torch.zeros(args.gaussian_dim), torch.eye(args.gaussian_dim))
+    component_mean1 = torch.from_numpy(m1.rvs(size=args.mixture_component_num, random_state=8)).type(torch.FloatTensor)
 
-    if args.confounder_type == 'discrete':
+    m2 = multivariate_normal(torch.zeros(args.gaussian_dim) + torch.tensor(args.mean_diff),
+                            torch.eye(args.gaussian_dim))
+    component_mean2 = torch.from_numpy(m2.rvs(size=args.mixture_component_num, random_state=8)).type(torch.FloatTensor)
 
-        #use random_state to make the p(y|x=0) and p(y|x=1) the same for different MCs in MINE simulation2
-        m1 = multivariate_normal(torch.zeros(args.gaussian_dim), torch.eye(args.gaussian_dim))
-        component_mean1 = torch.from_numpy(m1.rvs(size=args.mixture_component_num, random_state=8)).type(torch.FloatTensor)
+    bernoulli = Bernoulli(torch.tensor([0.5])) #assume x=0 and x=1 are with equal probability
+    categorical = Categorical(torch.tensor([1/args.mixture_component_num]*args.mixture_component_num))
 
-        m2 = multivariate_normal(torch.zeros(args.gaussian_dim) + torch.tensor(args.mean_diff),
-                                torch.eye(args.gaussian_dim))
-        component_mean2 = torch.from_numpy(m2.rvs(size=args.mixture_component_num, random_state=8)).type(torch.FloatTensor)
+    log_density_ratio_list = []
+    x_tensor = torch.empty(0,1)
+    y_tensor = torch.empty(0, args.gaussian_dim)
+    for i in range(2*args.samplesize):
+        x = bernoulli.sample()
+        category_index = categorical.sample()
+        KL = 'joint-marginal'
+        y, log_density_ratio = density_ratio(args, x.item(), category_index.item(),
+                                                        component_mean1, component_mean2, KL)
 
-        bernoulli = Bernoulli(torch.tensor([0.5])) #assume x=0 and x=1 are with equal probability
-        categorical = Categorical(torch.tensor([1/args.mixture_component_num]*args.mixture_component_num))
+        x_tensor = torch.cat((x_tensor, x.reshape(1,1)),0)
+        y_tensor = torch.cat((y_tensor, y.reshape(1, args.gaussian_dim)),0)
+        log_density_ratio_list += [log_density_ratio]
 
-        log_density_ratio_list = []
-        x_tensor = torch.empty(0,1)
-        y_tensor = torch.empty(0, args.gaussian_dim)
-        for i in range(2*args.samplesize):
-            x = bernoulli.sample()
-            category_index = categorical.sample()
-            KL = 'joint-marginal'
-            y, log_density_ratio = density_ratio(args, x.item(), category_index.item(),
-                                                            component_mean1, component_mean2, KL)
+    empirical_mutual_info = sum(log_density_ratio_list) / len(log_density_ratio_list)
 
-            x_tensor = torch.cat((x_tensor, x.reshape(1,1)),0)
-            y_tensor = torch.cat((y_tensor, y.reshape(1, args.gaussian_dim)),0)
-            log_density_ratio_list += [log_density_ratio]
+    #approximate the empirical D(p(y|x=0) || p(y|x=1)), D means KL-divergence.
+    log_density_ratio_list2 = []
+    for i in range(2*args.samplesize):
+        category_index = categorical.sample()
+        KL = 'CD_KL_0_1' #'CD_KL_0_1' means conditional distribution 0 and conditional distribution 1.
+        log_density_ratio = density_ratio(args, 0, category_index.item(),
+                                                        component_mean1, component_mean2, KL)
+        log_density_ratio_list2 += [log_density_ratio]
+    empirical_CD_KL_0_1 = sum(log_density_ratio_list2)/len(log_density_ratio_list2)
 
-        empirical_mutual_info = sum(log_density_ratio_list) / len(log_density_ratio_list)
+    log_density_ratio_list3 = []
+    for i in range(2 * args.samplesize):
+        category_index = categorical.sample()
+        KL = 'CD_KL_1_0'
+        log_density_ratio = density_ratio(args, 1, category_index.item(),
+                                                     component_mean1, component_mean2, KL)
+        log_density_ratio_list3 += [log_density_ratio]
+    empirical_CD_KL_1_0 = sum(log_density_ratio_list3) / len(log_density_ratio_list3)
 
-        #approximate the empirical D(p(y|x=0) || p(y|x=1)), D means KL-divergence.
-        log_density_ratio_list2 = []
-        for i in range(2*args.samplesize):
-            category_index = categorical.sample()
-            KL = 'CD_KL_0_1' #'CD_KL_0_1' means conditional distribution 0 and conditional distribution 1.
-            log_density_ratio = density_ratio(args, 0, category_index.item(),
-                                                            component_mean1, component_mean2, KL)
-            log_density_ratio_list2 += [log_density_ratio]
-        empirical_CD_KL_0_1 = sum(log_density_ratio_list2)/len(log_density_ratio_list2)
+    NN_estimator = discrete_continuous_info(torch.transpose(x_tensor[0:256, :], 0, 1),
+                                                         torch.transpose(y_tensor[0:256, :], 0, 1))
 
-        log_density_ratio_list3 = []
-        for i in range(2 * args.samplesize):
-            category_index = categorical.sample()
-            KL = 'CD_KL_1_0'
-            log_density_ratio = density_ratio(args, 1, category_index.item(),
-                                                         component_mean1, component_mean2, KL)
-            log_density_ratio_list3 += [log_density_ratio]
-        empirical_CD_KL_1_0 = sum(log_density_ratio_list3) / len(log_density_ratio_list3)
+    return empirical_mutual_info, empirical_CD_KL_0_1, empirical_CD_KL_1_0, NN_estimator,  x_tensor, y_tensor
 
+def train_valid_test_loader(x_tensor, y_tensor, args, KL_type, kwargs):
 
-        return empirical_mutual_info, empirical_CD_KL_0_1, empirical_CD_KL_1_0, x_tensor, y_tensor
-
-def train_valid_test_loader(x_tensor, y_tensor, args, kwargs):
+    if KL_type == 'MI':
+        x_dataframe = pd.DataFrame.from_dict({'category': np.ndarray.tolist(x_tensor.numpy().ravel())})
+        x_tensor = torch.from_numpy(pd.get_dummies(x_dataframe['category']).values).type(torch.FloatTensor)
 
     train_size = args.samplesize
     valid_size = int(args.samplesize * 0.5)
@@ -141,10 +144,6 @@ def train_valid_test_loader(x_tensor, y_tensor, args, kwargs):
     return train_loader, valid_loader, test_loader
 
 def sample1_sample2_from_minibatch(args, KL_type, x, y):
-
-    if KL_type == 'MI':
-        x_dataframe = pd.DataFrame.from_dict({'category': np.ndarray.tolist(x.numpy().ravel())})
-        x = torch.from_numpy(pd.get_dummies(x_dataframe['category']).values).type(torch.FloatTensor)
 
     if args.cuda:
         x, y =  x.cuda(), y.cuda()
@@ -271,7 +270,10 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
     with torch.no_grad():
         MINE.eval()
         train_y_all = torch.empty(0, args.gaussian_dim)
-        train_x_all = torch.empty(0, 1)
+        if KL_type == 'MI':
+            train_x_all = torch.empty(0, args.category_num)
+        else:
+            train_x_all = torch.empty(0, 1)
 
         for train_batch_idx, (train_y, train_x) in enumerate(train_loader):
             train_y_all = torch.cat((train_y_all, train_y), 0)
@@ -283,7 +285,10 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
         train_MINE_estimator = torch.mean(train_t_all) - torch.log(torch.mean(train_et_all))
 
         test_y_all = torch.empty(0, args.gaussian_dim)
-        test_x_all = torch.empty(0, 1)
+        if KL_type == 'MI':
+            test_x_all = torch.empty(0, args.category_num)
+        else:
+            test_x_all = torch.empty(0, 1)
         for test_batch_idx, (test_y, test_x) in enumerate(test_loader):
             test_y_all = torch.cat((test_y_all, test_y), 0)
             test_x_all = torch.cat((test_x_all, test_x), 0)
@@ -294,21 +299,6 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
         test_MINE_estimator = torch.mean(test_t_all) - torch.log(torch.mean(test_et_all))
 
     return train_MINE_estimator.detach().item(), test_MINE_estimator.detach().item()
-
-def NN_eval(train_loader, test_loader):
-
-    NN_train_list, NN_test_list = [], []
-    for batch_idx, (y, x) in enumerate(train_loader):
-        NN_estimator = discrete_continuous_info(torch.transpose(x, 0, 1), torch.transpose(y, 0, 1))
-        NN_train_list.append(NN_estimator)
-    NN_train = sum(NN_train_list)/len(NN_train_list)
-
-    for batch_idx, (y, x) in enumerate(test_loader):
-        NN_estimator = discrete_continuous_info(torch.transpose(x, 0, 1), torch.transpose(y, 0, 1))
-        NN_test_list.append(NN_estimator)
-    NN_test = sum(NN_test_list) / len(NN_test_list)
-
-    return NN_train, NN_test
 
 def main():
     parser = argparse.ArgumentParser(description='MINE Simulation Study')
@@ -385,19 +375,17 @@ def main():
 
     args.path = path
 
-    empirical_mutual_info, empirical_CD_KL_0_1,empirical_CD_KL_1_0, x_tensor, y_tensor = generate_data_MINE_simulation2(args)
+    empirical_mutual_info, empirical_CD_KL_0_1,empirical_CD_KL_1_0, NN_estimator, x_tensor, y_tensor = generate_data_MINE_simulation2(args)
     print('empirical_mutual_info: {}, empirical_CD_KL_0_1: {}, empirical_CD_KL_1_0: {}'.format(
         empirical_mutual_info, empirical_CD_KL_0_1, empirical_CD_KL_1_0))
 
-    train_loader, valid_loader, test_loader = train_valid_test_loader(x_tensor, y_tensor, args, kwargs)
+    train_loader, valid_loader, test_loader = train_valid_test_loader(x_tensor, y_tensor, args, 'MI', kwargs)
     MI_MINE_train, MI_MINE_test = MINE_train(train_loader, valid_loader, test_loader, 'MI', args)
 
-    NN_train, NN_test = NN_eval(train_loader, test_loader)
-
-    train_loader, valid_loader, test_loader = train_valid_test_loader(x_tensor, y_tensor, args, kwargs)
+    train_loader, valid_loader, test_loader = train_valid_test_loader(x_tensor, y_tensor, args, 'CD_KL_0_1', kwargs)
     CD_KL_0_1_MINE_train, CD_KL_0_1_MINE_test = MINE_train(train_loader, valid_loader, test_loader, 'CD_KL_0_1', args)
 
-    train_loader, valid_loader, test_loader = train_valid_test_loader(x_tensor, y_tensor, args, kwargs)
+    train_loader, valid_loader, test_loader = train_valid_test_loader(x_tensor, y_tensor, args, 'CD_KL_1_0', kwargs)
     CD_KL_1_0_MINE_train, CD_KL_1_0_MINE_test = MINE_train(train_loader, valid_loader, test_loader, 'CD_KL_1_0', args)
 
     args_dict = vars(args)
@@ -407,8 +395,7 @@ def main():
     results = {'empirical_mutual_info': [empirical_mutual_info],
                'empirical_CD_KL_0_1': [empirical_CD_KL_0_1],
                'empirical_CD_KL_1_0': [empirical_CD_KL_1_0],
-               'NN_train': [NN_train],
-               'NN_test': [NN_test],
+               'NN_estimator': [NN_estimator],
                'MI_MINE_train': [MI_MINE_train],
                'MI_MINE_test': [MI_MINE_test],
                'CD_KL_0_1_MINE_train': [CD_KL_0_1_MINE_train],

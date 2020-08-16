@@ -7,7 +7,6 @@ def main(taskid):
     taskid = int(taskid[0])
 
     hyperparameter_config = {
-        'confounder_type': ['discrete'],
         'category_num': [2],
         'gaussian_dim': [2, 10],
         'mean_diff': [1, 5],
@@ -30,11 +29,11 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 MINE_simulation2_main.py --taskid %s --confounder_type %s --category_num %s --gaussian_dim %s "
+    os.system("python3 MINE_simulation2_main.py --taskid %s --category_num %s --gaussian_dim %s "
               "--mean_diff %s --mixture_component_num %s --gaussian_covariance_type %s --samplesize %s "
               "--n_hidden_node %s --n_hidden_layer %s --activation_fun %s --batch_size %s --epochs %s --lr %s "
               " --MC %s --unbiased_loss"
-              %(taskid, temp['confounder_type'], temp['category_num'],temp['gaussian_dim'], temp['mean_diff'],
+              %(taskid, temp['category_num'],temp['gaussian_dim'], temp['mean_diff'],
                 temp['mixture_component_num'], temp['gaussian_covariance_type'], temp['samplesize'],
                 temp['n_hidden_node'], temp['n_hidden_layer'], temp['activation_fun'], temp['batch_size'],
                 temp['epochs'], temp['lr'], temp['MC'])

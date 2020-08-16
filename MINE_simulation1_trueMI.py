@@ -8,7 +8,7 @@ import pickle
 if not os.path.isdir('result/MINE_simulation1'):
    os.makedirs('result/MINE_simulation1')
 
-def y_pdf_entropy(y1, y2, p_list):
+def y_pdf_entropy(y1, y2):
     gaussian_dim = 2
     y_pdf = 0
     for i in range(len(p_list)):
