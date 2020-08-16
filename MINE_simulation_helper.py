@@ -219,6 +219,128 @@ def MINE_unbiased_loss(ma_et, t, et):
 
     return loss
 
+def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
+
+    #MINE_MI uses MINE to estimate mutual information between y and x, where x changes into dummy variable
+    #MINE_CD_KL uses MINE to estimate D(p(y|x=0)||p(y|x=1)) in MINE_simulation2, both networks use unbiased_loss=True
+
+    if KL_type == 'MI':
+        input_dim = args.gaussian_dim + args.category_num
+    else:
+        input_dim = args.gaussian_dim
+    MINE = MINE_Net(input_dim=input_dim, n_hidden=args.n_hidden_node, n_layers=args.n_hidden_layer,
+                    activation_fun=args.activation_fun, unbiased_loss=args.unbiased_loss, initial=args.w_initial)
+
+    opt_MINE = optim.Adam(MINE.parameters(), lr=args.lr)
+    scheduler_MINE_MI = ReduceLROnPlateau(opt_MINE, mode='min', factor=0.1, patience=10, verbose=True)
+
+    MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch = [], [], [], []
+    for epoch in range(args.epochs):
+
+        MINE.train()
+
+        for batch_idx, (y, x) in enumerate(train_loader):
+
+            sample1, sample2 = sample1_sample2_from_minibatch(args, KL_type, x, y)
+            t = MINE(sample1)
+            et = torch.exp(MINE(sample2))
+
+            if args.unbiased_loss:
+                if MINE.ma_et is None:
+                    MINE.ma_et = torch.mean(et).detach().item() #detach means will not calculate gradient for ma_et, ma_et is just a number
+                MINE.ma_et = (1 - MINE.ma_rate) * MINE.ma_et + MINE.ma_rate * torch.mean(et).detach().item()
+
+                #Pay attention, even if use unbiased_loss, this unbiased loss is not our MINE estimator,
+                #The MINE estimator is still torch.mean(t) - torch.log(torch.mean(et)) after training
+                #the unbiased_loss is only for getting unbiased gradient.
+                loss = MINE_unbiased_loss(MINE.ma_et, t, et)
+            else:
+                loss = -(torch.mean(t) - torch.log(torch.mean(et)))
+
+            MINE_estimator_minibatch = torch.mean(t) - torch.log(torch.mean(et))
+
+            opt_MINE.zero_grad()
+            loss.backward()
+            opt_MINE.step()
+
+            #diagnosis
+            MINE_estimator_minibatch_list.append(MINE_estimator_minibatch.item())
+            # draw the loss together with MINE estimator, therefore change loss into negative of loss
+            #if not using unbiased loss, then negative of loss equals MINE estimator
+            negative_loss_minibatch_list.append(-loss.item())
+
+        if epoch % args.log_interval == 0:
+            print('Train Epoch: {} \tMINE_estimator_minibatch: {:.6f}\tnegative_loss_minibatch: {:.6f}'.format(epoch, MINE_estimator_minibatch.data.item(), -loss.data.item()))
+
+        # diagnoisis of overfitting
+        with torch.no_grad():  # to save memory, no intermediate activations used for gradient calculation is stored.
+
+            MINE.eval()
+
+            valid_loss_minibatch_list = []
+            for valid_batch_idx, (valid_y, valid_x) in enumerate(valid_loader):
+
+                valid_sample1, valid_sample2 = sample1_sample2_from_minibatch(args, KL_type, valid_x, valid_y)
+                valid_t = MINE(valid_sample1)
+                valid_et = torch.exp(MINE(valid_sample2))
+
+                if args.unbiased_loss == True:
+                    valid_loss_minibatch = MINE_unbiased_loss(MINE.ma_et, valid_t, valid_et)
+                else:
+                    valid_loss_minibatch = -(torch.mean(valid_t) - torch.log(torch.mean(valid_et)))
+
+                valid_loss_minibatch_list.append(valid_loss_minibatch.item())
+
+            valid_loss_one = np.average(valid_loss_minibatch_list)
+            scheduler_MINE_MI.step(valid_loss_one)
+            valid_loss_epoch.append(valid_loss_one)
+
+            train_loss_minibatch_list = []
+            for train_batch_idx, (train_y, train_x) in enumerate(train_loader):
+
+                train_sample1, train_sample2 = sample1_sample2_from_minibatch(args, KL_type, train_x, train_y)
+                train_t = MINE(train_sample1)
+                train_et = torch.exp(MINE(train_sample2))
+
+                if args.unbiased_loss == True:
+                    train_loss_minibatch = MINE_unbiased_loss(MINE.ma_et, train_t, train_et)
+                else:
+                    train_loss_minibatch = -(torch.mean(train_t) - torch.log(torch.mean(train_et)))
+
+                train_loss_minibatch_list.append(train_loss_minibatch.item())
+
+            train_loss_one = np.average(train_loss_minibatch_list)
+            train_loss_epoch.append(train_loss_one)
+
+    #diagnosis_loss_plot(args, KL_type, MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch)
+
+    with torch.no_grad():
+        MINE.eval()
+        train_y_all = torch.empty(0, args.gaussian_dim)
+        train_x_all = torch.empty(0, 1)
+
+        for train_batch_idx, (train_y, train_x) in enumerate(train_loader):
+            train_y_all = torch.cat((train_y_all, train_y), 0)
+            train_x_all = torch.cat((train_x_all, train_x), 0)
+
+        train_sample1_all, train_sample2_all = sample1_sample2_from_minibatch(args, KL_type, train_x_all, train_y_all)
+        train_t_all = MINE(train_sample1_all)
+        train_et_all = torch.exp(MINE(train_sample2_all))
+        train_MINE_estimator = torch.mean(train_t_all) - torch.log(torch.mean(train_et_all))
+
+        test_y_all = torch.empty(0, args.gaussian_dim)
+        test_x_all = torch.empty(0, 1)
+        for test_batch_idx, (test_y, test_x) in enumerate(test_loader):
+            test_y_all = torch.cat((test_y_all, test_y), 0)
+            test_x_all = torch.cat((test_x_all, test_x), 0)
+
+        test_sample1_all, test_sample2_all = sample1_sample2_from_minibatch(args, KL_type, test_x_all, test_y_all)
+        test_t_all = MINE(test_sample1_all)
+        test_et_all = torch.exp(MINE(test_sample2_all))
+        test_MINE_estimator = torch.mean(test_t_all) - torch.log(torch.mean(test_et_all))
+
+    return train_MINE_estimator.detach().item(), test_MINE_estimator.detach().item()
+
 '''
 def diagnosis_loss_plot(args, KL_type, MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch):
 

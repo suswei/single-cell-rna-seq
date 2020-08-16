@@ -1,13 +1,111 @@
 import os
-import numpy as np
-from scvi.models.modules import MINE_Net
-import torch
-import torch.optim as optim
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from MINE_simulation_helper import generate_data_MINE_simulation1, train_valid_test_loader, sample1_sample2_from_minibatch, MINE_unbiased_loss, NN_eval
 import argparse
 from random import randint
 import pickle
+
+import numpy as np
+import math
+import pandas as pd
+import torch
+import torch.optim as optim
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from scvi.models.modules import MINE_Net, discrete_continuous_info
+from scipy.stats import multivariate_normal
+from torch.distributions.multivariate_normal import MultivariateNormal
+from torch.distributions.bernoulli import Bernoulli
+from torch.distributions.categorical import Categorical
+from torch.utils.data import TensorDataset
+from torch.autograd import Variable
+#import plotly.graph_objects as go
+
+def generate_data_MINE_simulation1(args):
+    # The parameters for the 7 cases
+    # weight of each category for the categorical variable
+    p_tensor = torch.from_numpy(np.array(
+        [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+         [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+         [0.01, 0.01, 0.01, 0.01, 0.01, 0.03, 0.2, 0.2, 0.3, 0.22]])).type(torch.FloatTensor)
+
+    # mean of the gaussian disribution
+    mu_tensor = torch.from_numpy(np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 2, 4, 6, 8, 10, 12, 14, 16, 18],
+                                           [0, 0, 100, 100, 200, 200, 0, 0, 0, 0], [0, 1, 2, 2, 2, 3, 3, 3, 3, 4],
+                                           [0, 2, 4, 0, 0, 2, 0, 0, 0, 0], [0, 20, 40, 60, 80, 100, 120, 140, 160, 180],
+                                           [0, 20, 40, 60, 80, 100, 120, 140, 160, 180]])).type(torch.FloatTensor)
+
+    # the sd matrix of the gaussian distribution
+    sigma_tensor = torch.from_numpy(np.array([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                                              [1, 1, 20, 20, 40, 40, 1, 1, 1, 1], [1, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5],
+                                              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 2, 3, 4, 5, 5, 8, 8, 10, 10],
+                                              [1, 2, 3, 4, 5, 5, 8, 8, 10, 10]])).type(torch.FloatTensor)
+
+    p_list = p_tensor[args.case_idx, :]
+    mu_list = mu_tensor[args.case_idx, :]
+    sigma_list = sigma_tensor[args.case_idx, :]
+
+    x_tensor = torch.empty(0, 1)
+    y_tensor = torch.empty(0, args.gaussian_dim)
+
+    categorical = Categorical(p_list)
+
+    for i in range(2 * args.samplesize):
+        x = categorical.sample()
+
+        y = MultivariateNormal(torch.FloatTensor([mu_list[x.item()].item()] * args.gaussian_dim),
+                               ((sigma_list[x.item()]) ** 2) * torch.eye(args.gaussian_dim)).sample()
+        x_tensor = torch.cat((x_tensor, x.reshape(1, 1).type(torch.FloatTensor)), 0)
+        y_tensor = torch.cat((y_tensor, y.reshape(1, args.gaussian_dim)), 0)
+
+    return x_tensor, y_tensor
+
+def train_valid_test_loader(x_tensor, y_tensor, args, kwargs):
+
+    train_size = args.samplesize
+    valid_size = int(args.samplesize * 0.5)
+    test_size = 2 * args.samplesize - train_size - valid_size
+    dataset_train, dataset_valid, dataset_test = torch.utils.data.random_split(TensorDataset(y_tensor, x_tensor),
+                                                                               [train_size, valid_size, test_size])
+
+    train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=args.batch_size, shuffle=True, **kwargs)
+    valid_loader = torch.utils.data.DataLoader(dataset_valid, batch_size=args.batch_size, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size, shuffle=True, **kwargs)
+
+    return train_loader, valid_loader, test_loader
+
+def sample1_sample2_from_minibatch(args, KL_type, x, y):
+
+    if KL_type == 'MI':
+        x_dataframe = pd.DataFrame.from_dict({'category': np.ndarray.tolist(x.numpy().ravel())})
+        x = torch.from_numpy(pd.get_dummies(x_dataframe['category']).values).type(torch.FloatTensor)
+
+    if args.cuda:
+        x, y =  x.cuda(), y.cuda()
+    else:
+        x, y =  Variable(x, requires_grad=True), Variable(y, requires_grad=True),
+
+    if KL_type == 'MI':
+        y_x = torch.cat((y, x), 1) #joint
+        shuffle_index = torch.randperm(y.shape[0])
+        shuffle_y_x = torch.cat((y[shuffle_index], x), 1) #marginal
+        return y_x, shuffle_y_x
+    else:
+        #make the training sample size equals batchsize*some_integer
+        #such that y_x0 and y_x1 will not be empty.
+        y_x0 = y[(x[:, 0] == 0).nonzero().squeeze(1)]
+        y_x1 = y[(x[:, 0] == 1).nonzero().squeeze(1)]
+
+        if KL_type == 'CD_KL_0_1':
+            return y_x0, y_x1
+        elif KL_type == 'CD_KL_1_0':
+            return y_x1, y_x0
+
+def MINE_unbiased_loss(ma_et, t, et):
+
+    loss = -(torch.mean(t) - (1 / ma_et) * torch.mean(et))
+    # loss can also be calculated in the following way, it is the same as above
+    #loss = -(torch.mean(t) - torch.log(torch.mean(et)) * torch.mean(et).detach() / ma_et)
+
+    return loss
 
 def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
 
@@ -102,8 +200,6 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
             train_loss_one = np.average(train_loss_minibatch_list)
             train_loss_epoch.append(train_loss_one)
 
-    #diagnosis_loss_plot(args, KL_type, MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch)
-
     with torch.no_grad():
         MINE.eval()
         train_y_all = torch.empty(0, args.gaussian_dim)
@@ -130,6 +226,21 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
         test_MINE_estimator = torch.mean(test_t_all) - torch.log(torch.mean(test_et_all))
 
     return train_MINE_estimator.detach().item(), test_MINE_estimator.detach().item()
+
+def NN_eval(train_loader, test_loader):
+
+    NN_train_list, NN_test_list = [], []
+    for batch_idx, (y, x) in enumerate(train_loader):
+        NN_estimator = discrete_continuous_info(torch.transpose(x, 0, 1), torch.transpose(y, 0, 1))
+        NN_train_list.append(NN_estimator)
+    NN_train = sum(NN_train_list)/len(NN_train_list)
+
+    for batch_idx, (y, x) in enumerate(test_loader):
+        NN_estimator = discrete_continuous_info(torch.transpose(x, 0, 1), torch.transpose(y, 0, 1))
+        NN_test_list.append(NN_estimator)
+    NN_test = sum(NN_test_list) / len(NN_test_list)
+
+    return NN_train, NN_test
 
 def main():
     parser = argparse.ArgumentParser(description='MINE Simulation Study')
