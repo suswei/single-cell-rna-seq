@@ -42,7 +42,7 @@ def main():
     parser.add_argument('--unbiased_loss', action='store_true', default=False,
                         help='whether to use unbiased loss or not in MINE')
 
-    parser.add_argument('--batchsize', type=int, default=128,
+    parser.add_argument('--batch_size', type=int, default=128,
                         help='batch size for MINE training')
 
     parser.add_argument('--epochs', type=int, default=400,

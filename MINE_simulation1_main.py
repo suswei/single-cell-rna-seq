@@ -62,9 +62,9 @@ def train_valid_test_loader(x_tensor, y_tensor, args, kwargs):
     dataset_train, dataset_valid, dataset_test = torch.utils.data.random_split(TensorDataset(y_tensor, x_tensor),
                                                                                [train_size, valid_size, test_size])
 
-    train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=args.batchsize, shuffle=True, **kwargs)
-    valid_loader = torch.utils.data.DataLoader(dataset_valid, batch_size=args.batchsize, shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=args.batchsize, shuffle=True, **kwargs)
+    train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=args.batch_size, shuffle=True, **kwargs)
+    valid_loader = torch.utils.data.DataLoader(dataset_valid, batch_size=args.batch_size, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size, shuffle=True, **kwargs)
 
     return train_loader, valid_loader, test_loader
 
@@ -270,7 +270,7 @@ def main():
     parser.add_argument('--unbiased_loss', action='store_true', default=False,
                         help='whether to use unbiased loss or not in MINE')
 
-    parser.add_argument('--batchsize', type=int, default=128,
+    parser.add_argument('--batch_size', type=int, default=128,
                         help='batch size for MINE training')
 
     parser.add_argument('--epochs', type=int, default=400,
