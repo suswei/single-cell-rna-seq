@@ -425,6 +425,7 @@ def main( ):
                 obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(path=args.save_path,
                     lr=args.lr, adv_lr=args.adv_lr, gradnorm_paretoMTL=args.gradnorm_paretoMTL,
                     alpha=args.alpha, gradnorm_lr=args.gradnorm_lr, gradnorm_weight_lowlimit=args.gradnorm_weight_lowlimit,
+                    obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min,
                     n_epochs=args.n_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
 
         #obj1 for the whole training and testing set
@@ -482,13 +483,13 @@ def main( ):
                             args.gradnorm_epochs, args.gradnorm_lr, obj1_train, obj2_train, asw_train, nmi_train, ari_train, uca_train, be_train)
             draw_diagnosis_plot(obj1_minibatch_list, obj2_minibatch_list, 'obj1 minibatch', 'obj2 minibatch', gradnorm_title, gradnorm_path)
         elif args.std_paretoMTL == True:
-            args.save_path = './result/pareto_front_paretoMTL/{}/{}/std_paretoMTL_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
-            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/std_paretoMTL_{}taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
-                os.makedirs('./result/pareto_front_paretoMTL/{}/{}/std_paretoMTL_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
+            args.save_path = './result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
+            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/std_{}taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
+                os.makedirs('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
         elif args.gradnorm_paretoMTL == True:
-            args.save_path = './result/pareto_front_paretoMTL/{}/{}/gradnorm_paretoMTL_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)
-            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/gradnorm_paretoMTL_{}taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)):
-                os.makedirs('./result/pareto_front_paretoMTL/{}/{}/gradnorm_paretoMTL_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid))
+            args.save_path = './result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)
+            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/gradnorm_{}taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)):
+                os.makedirs('./result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid))
 
         args_dict = vars(args)
         with open('{}/config.pkl'.format(args.save_path), 'wb') as f:

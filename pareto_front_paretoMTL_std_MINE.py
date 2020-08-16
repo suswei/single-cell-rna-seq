@@ -8,7 +8,7 @@ def main(taskid):
 
     # dataset_name could be 'muris_tabula'
     # nuisance_variable is 'batch'
-    # conf_estimator means estimator for confounding effect, it could be 'MINE', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
+    # conf_estimator means estimator for confounding effect, it could be 'MINE', 'HSIC', 'NN' (NN stands for nearest neighbor)
     hyperparameter_config = {
         'dataset_name': ['muris_tabula'],
         'confounder': ['batch'],
@@ -17,13 +17,17 @@ def main(taskid):
         'n_hidden': [128],
         'n_latent': [10],
         'batch_size': [128],
-        'adv_estimator': ['HSIC'],
-        'n_epochs': [50],
+        'adv_estimator': ['MINE'],
+        'adv_n_hidden': [128],
+        'adv_n_layers': [10],
+        'adv_activation_fun': ['ELU'],
         'lr': [1e-3],
-        'obj1_max': [22155],
-        'obj1_min': [10883],
-        'obj2_max': [0.06],
-        'obj2_min': [0],
+        'adv_lr': [5e-5],
+        'obj1_max': [20344],
+        'obj1_min': [10631],
+        'obj2_max': [0.63],
+        'obj2_min': [-0.1],
+        'n_epochs': [100],
         'n_tasks': [2],
         'MC': list(range(10)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
@@ -35,13 +39,15 @@ def main(taskid):
 
     os.system("python3 pareto_front_paretoMTL_main.py --std_paretoMTL --MCs 10 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
-              "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "        
-              "--adv_estimator %s --n_epochs %s --lr %s --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "
+              "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
+              "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
+              "--lr %s --adv_lr %s  --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s --n_epochs %s "
               "--n_tasks %s --MC %s --npref %s --pref_idx %s"
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
-                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['n_epochs'], temp['lr'],
-                 temp['obj1_max'], temp['obj1_min'], temp['obj2_max'], temp['obj2_min'], temp['n_tasks'], temp['MC'],
-                 temp['npref_prefidx']['npref'], temp['npref_prefidx']['pref_idx'])
+                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['adv_n_hidden'],
+                 temp['adv_n_layers'], temp['adv_activation_fun'], temp['lr'], temp['adv_lr'], temp['obj1_max'],
+                 temp['obj1_min'], temp['obj2_max'], temp['obj2_min'], temp['n_epochs'], temp['n_tasks'],
+                 temp['MC'], temp['npref_prefidx']['npref'], temp['npref_prefidx']['pref_idx'])
               )
 
 if __name__ == "__main__":

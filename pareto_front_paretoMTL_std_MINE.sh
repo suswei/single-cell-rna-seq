@@ -10,7 +10,7 @@
 #SBATCH --cpus-per-task=1
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=1-0:0:00
+#SBATCH --time=2-0:0:00
 
 # Batch arrays
 #SBATCH --array=0-99
@@ -38,5 +38,5 @@ fi
 module load anaconda3/2020.02
 source activate sharedenv
 module load web_proxy
-python3 pareto_front_paretoMTL_MINE.py ${SLURM_ARRAY_TASK_ID}
+python3 pareto_front_paretoMTL_std_MINE.py ${SLURM_ARRAY_TASK_ID}
 

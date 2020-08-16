@@ -397,7 +397,9 @@ class Trainer:
                         obj1_train = sum(obj1_train_list)/len(obj1_train_list)
                         obj2_train = sum(obj2_train_list)/len(obj2_train_list)
 
-                    gradnorm_weights = [[2*obj2_train/(obj1_train + obj2_train)], [2*obj1_train/(obj1_train + obj2_train)]]
+                    weightloss1 = (obj1_train - obj1_min)/(obj1_train*(obj1_max - obj1_min))
+                    weightloss2 = (obj2_train - obj2_min)/(obj2_train * (obj2_max - obj2_min))
+                    gradnorm_weights = [[2*weightloss1/(weightloss1 + weightloss2)], [2*weightloss2/(weightloss1 + weightloss2)]]
 
                     obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(gradnorm_weights=gradnorm_weights, gradnorm_paretoMTL=gradnorm_paretoMTL,
                         gradnorm_lr=gradnorm_lr, alpha=alpha, gradnorm_weight_lowlimit=gradnorm_weight_lowlimit, n_epochs=n_epochs, n_tasks=n_tasks,
