@@ -45,7 +45,7 @@ def main(taskid):
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
               "--lr %s --adv_lr %s  --alpha %s --gradnorm_lr %s --gradnorm_weight_lowlimit %s "
-              "--obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s"
+              "--obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "
               "--n_epochs %s --n_tasks %s --MC %s --npref %s --pref_idx %s"
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'],
