@@ -253,7 +253,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
                 #Pay attention, even if use unbiased_loss, this unbiased loss is not our MINE estimator,
                 #The MINE estimator is still torch.mean(t) - torch.log(torch.mean(et)) after training
                 #the unbiased_loss is only for getting unbiased gradient.
-                loss = MINE_unbiased_loss(args, MINE.ma_et, t, et)
+                loss = MINE_unbiased_loss(MINE.ma_et, t, et)
             else:
                 loss = -(torch.mean(t) - torch.log(torch.mean(et)))
 
@@ -285,7 +285,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
                 valid_et = torch.exp(MINE(valid_sample2))
 
                 if args.unbiased_loss == True:
-                    valid_loss_minibatch = MINE_unbiased_loss(args, MINE.ma_et, valid_t, valid_et)
+                    valid_loss_minibatch = MINE_unbiased_loss(MINE.ma_et, valid_t, valid_et)
                 else:
                     valid_loss_minibatch = -(torch.mean(valid_t) - torch.log(torch.mean(valid_et)))
 
@@ -303,7 +303,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
                 train_et = torch.exp(MINE(train_sample2))
 
                 if args.unbiased_loss == True:
-                    train_loss_minibatch = MINE_unbiased_loss(args, MINE.ma_et, train_t, train_et)
+                    train_loss_minibatch = MINE_unbiased_loss(MINE.ma_et, train_t, train_et)
                 else:
                     train_loss_minibatch = -(torch.mean(train_t) - torch.log(torch.mean(train_et)))
 
