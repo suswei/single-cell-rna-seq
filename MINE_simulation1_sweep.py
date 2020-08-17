@@ -10,13 +10,13 @@ def main(taskid):
         'case_idx': list(range(7)),
         'category_num': [10],
         'gaussian_dim': [2],
-        'samplesize': [12800],
+        'samplesize': [25600],
         'n_hidden_node': [128],
         'n_hidden_layer': [10],
         'activation_fun': ['ELU'],
-        'batch_size': [256],
+        'batch_size': [512],
         'epochs': [400],
-        'lr': [5e-4],
+        'lr': [5e-5],
         'MC': list(range(20))
     }
     keys, values = zip(*hyperparameter_config.items())
@@ -24,9 +24,9 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 MINE_simulation1_main.py --taskid %s --case_idx %s --category_num %s --gaussian_dim %s "
+    os.system("python3 MINE_simulation1_main.py --unbiased_loss --taskid %s --case_idx %s --category_num %s --gaussian_dim %s "
               "--samplesize %s --n_hidden_node %s --n_hidden_layer %s --activation_fun %s --batch_size %s "
-              "--epochs %s --lr %s --MC %s --unbiased_loss"
+              "--epochs %s --lr %s --MC %s"
               %(taskid, temp['case_idx'], temp['category_num'],temp['gaussian_dim'], temp['samplesize'],
                 temp['n_hidden_node'], temp['n_hidden_layer'], temp['activation_fun'], temp['batch_size'],
                 temp['epochs'], temp['lr'], temp['MC'])

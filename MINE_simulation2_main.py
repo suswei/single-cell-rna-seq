@@ -72,7 +72,6 @@ def density_ratio(args, x, category_index, component_mean1, component_mean2, KL)
 
         return log_density_ratio #for empirical D(p(y|x=0)||p(y|x=1))
 
-
 def generate_data_MINE_simulation2(args):
     #use random_state to make the p(y|x=0) and p(y|x=1) the same for different MCs in MINE simulation2
     m1 = multivariate_normal(torch.zeros(args.gaussian_dim), torch.eye(args.gaussian_dim))
@@ -120,8 +119,8 @@ def generate_data_MINE_simulation2(args):
         log_density_ratio_list3 += [log_density_ratio]
     empirical_CD_KL_1_0 = sum(log_density_ratio_list3) / len(log_density_ratio_list3)
 
-    NN_estimator = discrete_continuous_info(torch.transpose(x_tensor[0:256, :], 0, 1),
-                                                         torch.transpose(y_tensor[0:256, :], 0, 1))
+    NN_estimator = discrete_continuous_info(torch.transpose(x_tensor[0:1000, :], 0, 1),
+                                                         torch.transpose(y_tensor[0:1000, :], 0, 1))
 
     return empirical_mutual_info, empirical_CD_KL_0_1, empirical_CD_KL_1_0, NN_estimator,  x_tensor, y_tensor
 
@@ -187,13 +186,14 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
                     activation_fun=args.activation_fun, unbiased_loss=args.unbiased_loss, initial=args.w_initial)
 
     opt_MINE = optim.Adam(MINE.parameters(), lr=args.lr)
-    scheduler_MINE_MI = ReduceLROnPlateau(opt_MINE, mode='min', factor=0.1, patience=10, verbose=True)
+    scheduler_MINE_MI = torch.optim.lr_scheduler.MultiStepLR(opt_MINE, milestones=[200], gamma=0.5)
+    #scheduler_MINE_MI = ReduceLROnPlateau(opt_MINE, mode='min', factor=0.1, patience=10, verbose=True)
 
     MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch = [], [], [], []
     for epoch in range(args.epochs):
 
         MINE.train()
-
+        scheduler_MINE_MI.step()
         for batch_idx, (y, x) in enumerate(train_loader):
 
             sample1, sample2 = sample1_sample2_from_minibatch(args, KL_type, x, y)
@@ -227,6 +227,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
         if epoch % args.log_interval == 0:
             print('Train Epoch: {} \tMINE_estimator_minibatch: {:.6f}\tnegative_loss_minibatch: {:.6f}'.format(epoch, MINE_estimator_minibatch.data.item(), -loss.data.item()))
 
+        '''
         # diagnoisis of overfitting
         with torch.no_grad():  # to save memory, no intermediate activations used for gradient calculation is stored.
 
@@ -247,7 +248,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
                 valid_loss_minibatch_list.append(valid_loss_minibatch.item())
 
             valid_loss_one = np.average(valid_loss_minibatch_list)
-            scheduler_MINE_MI.step(valid_loss_one)
+            #scheduler_MINE_MI.step(valid_loss_one)
             valid_loss_epoch.append(valid_loss_one)
 
             train_loss_minibatch_list = []
@@ -266,6 +267,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
 
             train_loss_one = np.average(train_loss_minibatch_list)
             train_loss_epoch.append(train_loss_one)
+        '''
 
     with torch.no_grad():
         MINE.eval()
@@ -339,10 +341,10 @@ def main():
     parser.add_argument('--batch_size', type=int, default=128,
                         help='batch size for MINE training')
 
-    parser.add_argument('--epochs', type=int, default=400,
+    parser.add_argument('--epochs', type=int, default=200,
                         help='number of epochs in MINE training')
 
-    parser.add_argument('--lr', type=float, default=5e-4,
+    parser.add_argument('--lr', type=float, default=5e-5,
                         help='learning rate in MINE training')
 
     parser.add_argument('--MC', type=int, default=0,
