@@ -48,7 +48,7 @@ def MINE_simulation1_summary(hyperparameter_config, save_path):
 
     results_config_mean_std = pd.concat([results_config_mean_std, trueMI], axis=1)
 
-    case_idx_list = ['case{}'.format(k) for k in range(7)]
+    case_idx_list = ['case{}'.format(k+1) for k in range(7)]
 
     for type in ['train','test']:
         fig = go.Figure(data=[
@@ -63,13 +63,23 @@ def MINE_simulation1_summary(hyperparameter_config, save_path):
         # Change the bar mode
         fig.update_layout(barmode='group')
         fig.update_layout(
+            width=1000,
+            height=800,
+            margin=dict(
+                l=1,
+                r=1,
+                b=20,
+                t=25,
+                pad=1
+            ),
+            font=dict(size=20, color='black', family='Arial, sans-serif'),
             title={'text': type,
-                   'y': 0.92,
+                   'y': 1,
                    'x': 0.47,
                    'xanchor': 'center',
-                   'yanchor': 'top'},
-            font=dict(size=10, color='black', family='Arial, sans-serif')
+                   'yanchor': 'top'}
         )
+        fig.update_xaxes(title_font=dict(size=15, family='Arial, sans-serif', color='black'))
         fig.write_image(save_path + '/{}.png'.format(type))
 
 def MINE_simulation2_summary(hyperparameter_config, save_path):
@@ -103,7 +113,7 @@ def MINE_simulation2_summary(hyperparameter_config, save_path):
 
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
-    case_idx_list = ['case{}'.format(k) for k in range(len(hyperparameter_experiments))]
+    case_idx_list = ['case{}'.format(k+1) for k in range(len(hyperparameter_experiments))]
 
     for type in ['train', 'test']:
         fig = go.Figure(data=[
@@ -119,13 +129,23 @@ def MINE_simulation2_summary(hyperparameter_config, save_path):
         # Change the bar mode
         fig.update_layout(barmode='group')
         fig.update_layout(
+            width=1000,
+            height=800,
+            margin=dict(
+                l=1,
+                r=1,
+                b=20,
+                t=25,
+                pad=1
+            ),
+            font=dict(size=20, color='black', family='Arial, sans-serif'),
             title={'text': type,
-                   'y': 0.92,
+                   'y': 1,
                    'x': 0.47,
                    'xanchor': 'center',
-                   'yanchor': 'top'},
-            font=dict(size=10, color='black', family='Arial, sans-serif')
+                   'yanchor': 'top'}
         )
+        fig.update_xaxes(title_font=dict(size=15, family='Arial, sans-serif', color='black'))
         fig.write_image(save_path + '/{}.png'.format(type))
 
 

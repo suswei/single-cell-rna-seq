@@ -61,7 +61,7 @@ def MINE_after_trainerVae(trainer_vae):
 
     MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=5e-5)
 
-    for epoch in range(200):
+    for epoch in range(2):
         MINE_network.train()
         for tensors_list in trainer_vae.data_loaders_loop():
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list[0]
@@ -305,12 +305,14 @@ def main( ):
     parser.add_argument('--obj2_min', type=float, default=-0.1,
                         help='minimum value for objective 2')
 
+    parser.add_argument('--n_samples_tsne', type=int, default=1500,
+                        help='the number of samples for tsne plot')
+
     parser.add_argument('--MCs', type=int, default=100,
                         help='the number to repeat pareto MTL')
 
     parser.add_argument('--MC', type=int, default=0,
                         help='which MC')
-
 
     # general usage
     parser.add_argument('--use_cuda', action='store_true', default=False,
@@ -408,9 +410,11 @@ def main( ):
         if args.pref_idx == 0:
             obj2_max = max(obj2_minibatch_list) * (1 + 0.1)  # 1 + 0.1 or 1-0.1 is for variation in different MCs
             obj2_min = min(obj2_minibatch_list) * (1 - 0.1)
+            print('obj2_max: {}, obj2_min: {}'.format(obj2_max, obj2_min))
         if args.pref_idx == 9:
             obj1_max = max(obj1_minibatch_list) * (1 + 0.1)
             obj1_min = min(obj1_minibatch_list) * (1 - 0.1)
+            print('obj1_max: {}, obj1_min: {}'.format(obj1_max, obj1_min))
     else:
         if args.gradnorm_hypertune == True:
             gradnorm_weights, weightloss1_list, weightloss2_list, obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(
@@ -445,8 +449,6 @@ def main( ):
         be_test = trainer_vae.test_set.entropy_batch_mixing()
 
         results_dict = {
-                        'obj1_minibatch_list': obj1_minibatch_list,
-                        'obj2_minibatch_list': obj2_minibatch_list,
                         'obj1_train': [obj1_train],
                         'obj2_train': [obj2_train],
                         'NN_train': [NN_train],
@@ -470,9 +472,12 @@ def main( ):
             if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/gradnorm_hypertune/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)):
                 os.makedirs('./result/pareto_front_paretoMTL/{}/{}/gradnorm_hypertune/taskid{}'.format(args.dataset_name, args.confounder, args.taskid))
 
-            results_dict.update({'gradnorm_weights': gradnorm_weights})
-            results_dict.update({'gradnorm_weightloss1_list': weightloss1_list})
-            results_dict.update({'gradnorm_weightloss2_list': weightloss2_list})
+            results_dict.update({'gradnorm_weights': gradnorm_weights,
+                                 'gradnorm_weightloss1_list': weightloss1_list,
+                                 'gradnorm_weightloss2_list': weightloss2_list,
+                                 'obj1_minibatch_list': obj1_minibatch_list,
+                                 'obj2_minibatch_list': obj2_minibatch_list
+                                 })
 
             gradnorm_path = os.path.dirname(args.save_path) + '/taskid{}_weightloss_minibatch'.format(args.taskid)
             gradnorm_title = 'alpha: {}, epochs: {}, lr: {}'.format(args.alpha, args.gradnorm_epochs, args.gradnorm_lr)
@@ -482,14 +487,21 @@ def main( ):
             gradnorm_title = 'alpha: {}, epochs: {}, lr: {},\nobj1_train: {:.2f}, NN_train: {:.2f},\nasw_train: {:.2f}, nmi_train: {:.2f}, ari_train:{:.2f},\nuca_train: {:.2f}, be_train: {:.2f}'.format(args.alpha,
                             args.gradnorm_epochs, args.gradnorm_lr, obj1_train, obj2_train, asw_train, nmi_train, ari_train, uca_train, be_train)
             draw_diagnosis_plot(obj1_minibatch_list, obj2_minibatch_list, 'obj1 minibatch', 'obj2 minibatch', gradnorm_title, gradnorm_path)
-        elif args.std_paretoMTL == True:
-            args.save_path = './result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
-            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/std_{}taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
-                os.makedirs('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
-        elif args.gradnorm_paretoMTL == True:
-            args.save_path = './result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)
-            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/gradnorm_{}taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)):
-                os.makedirs('./result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid))
+        else:
+            if args.std_paretoMTL == True:
+                args.save_path = './result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
+                if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/std_{}taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
+                    os.makedirs('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
+            elif args.gradnorm_paretoMTL == True:
+                args.save_path = './result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)
+                if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/gradnorm_{}taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)):
+                    os.makedirs('./result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid))
+
+            if args.pref_idx == 0 or args.pref_idx==9:
+                trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches', save_name=args.save_path + '/tsne_batch_train')
+                trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='labels',save_name=args.save_path + '/tsne_labels_train')
+                trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches', save_name=args.save_path + '/tsne_batch_test')
+                trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='labels', save_name=args.save_path + '/tsne_labels_test')
 
         args_dict = vars(args)
         with open('{}/config.pkl'.format(args.save_path), 'wb') as f:

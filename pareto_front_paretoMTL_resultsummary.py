@@ -19,15 +19,24 @@ def draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path):
     fig.update_traces(textposition='top center')
 
     fig.update_layout(
+        width=700,
+        height=700,
+        margin=dict(
+            l=20,
+            r=1,
+            b=20,
+            t=120,
+            pad=1
+        ),
+        font=dict(size=15, color='black', family='Arial, sans-serif'),
         title={'text': fig_title,
-               'y': 0.92,
+               'y': 0.99,
                'x': 0.47,
                'xanchor': 'center',
-               'yanchor': 'top'},
-        xaxis_title="obj1",
-        yaxis_title="obj2",
-        font=dict(size=10, color='black', family='Arial, sans-serif')
+               'yanchor': 'top'}
     )
+    fig.update_xaxes(title_text='obj1', title_font=dict(size=15, family='Arial, sans-serif', color='black'))
+    fig.update_yaxes(title_text='obj2', title_font=dict(size=15, family='Arial, sans-serif', color='black'))
     fig.write_image(save_path)
 
 def draw_mean_metrics(dataframe, y_axis_variable, save_path):
@@ -39,16 +48,29 @@ def draw_mean_metrics(dataframe, y_axis_variable, save_path):
                              error_y=dict(type='data', array=dataframe.loc[:, '{}_std_{}'.format(y_axis_variable, balance_advestimator)].values.tolist()),
                              mode='lines+markers', name= '{}'.format(balance_advestimator))
                       )
-    fig.update_xaxes(title_text='preference index')
-
     fig.update_layout(
+        width=1000,
+        height=800,
+        margin=dict(
+            l=1,
+            r=1,
+            b=20,
+            t=25,
+            pad=1
+        ),
+        font=dict(size=15, color='black', family='Arial, sans-serif'),
         title={'text': '{}_mean'.format(y_axis_variable),
-               'y': 0.9,
+               'y': 1,
                'x': 0.47,
                'xanchor': 'center',
                'yanchor': 'top'},
-        font=dict(size=10, color='black', family='Arial, sans-serif')
+        xaxis=dict(
+            tickmode='linear',
+            tick0=0,
+            dtick=1
+        )
     )
+    fig.update_xaxes(title_text='preference index', title_font=dict(size=15, family='Arial, sans-serif', color='black'))
     fig.write_image(save_path + '/{}_mean.png'.format(y_axis_variable))
 
 def draw_hypervolume(list1, list2, list3, fig_title, save_path):
@@ -60,14 +82,25 @@ def draw_hypervolume(list1, list2, list3, fig_title, save_path):
                          )
                   ) #text=[statistics.mean(MINE_list), statistics.mean(HSIC_list)]
     #fig.update_traces(texttemplate='%{text:.0f}', textposition='inside')
+    fig.update_yaxes()
     fig.update_layout(
+        width=800,
+        height=800,
+        margin=dict(
+            l=20,
+            r=1,
+            b=1,
+            t=25,
+            pad=1
+        ),
+        font=dict(size=15, color='black', family='Arial, sans-serif'),
         title={'text': fig_title,
-               'y': 0.92,
+               'y': 1,
                'x': 0.47,
                'xanchor': 'center',
-               'yanchor': 'top'},
-        font=dict(size=10, color='black', family='Arial, sans-serif')
+               'yanchor': 'top'}
     )
+    fig.update_yaxes(title_text='hypervolume', title_font=dict(size=15, family='Arial, sans-serif', color='black'))
     fig.write_image(save_path)
 
 def create_video(video_save_path, image_paths):
@@ -100,17 +133,25 @@ def pareto_front(hyperparameter_config, dataframe, dir_path):
                         save_path = dir_path + '/{}'.format(balance_advestimator) + '/paretoMTL_MC{}_{}_{}_{}.png'.format(MC, balance_advestimator.split('_')[1], pareto_front_type, type)
 
                         if pareto_front_type == 'whole':
-
-                            fig_title = 'obj1: negative_ELBO, obj2: {}, {}, {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {}'.format(
-                                balance_advestimator.split('_')[1], pareto_front_type, type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC)
+                            if balance_advestimator == 'gradnorm_MINE':
+                                fig_title = 'obj1: negative_ELBO, obj2: {}, {}, {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {},<br>gradnorm_weight_lowlimit: {:.6E}'.format(
+                                    balance_advestimator.split('_')[1], pareto_front_type, type, temp['pre_epochs'],
+                                    temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC, temp['gradnorm_weight_lowlimit'])
+                            else:
+                                fig_title = 'obj1: negative_ELBO, obj2: {}, {}, {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {}'.format(
+                                    balance_advestimator.split('_')[1], pareto_front_type, type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC)
 
                             obj1 = dataframe_oneMC.loc[:, 'obj1_{}'.format(type)].values.tolist()
                             obj2 = dataframe_oneMC.loc[:, 'obj2_{}'.format(type)].values.tolist()
                             draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path)
                         elif pareto_front_type in ['NN']:
-
-                            fig_title = 'obj1: negative_ELBO, obj2: NN(for {}), {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {}'.format(
-                                balance_advestimator.split('_')[1], type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC)
+                            if balance_advestimator == 'gradnorm_MINE':
+                                fig_title = 'obj1: negative_ELBO, obj2: NN(for {}), {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {},<br>gradnorm_weight_lowlimit: {:.6E}'.format(
+                                    balance_advestimator.split('_')[1], type, temp['pre_epochs'], temp['pre_lr'],
+                                    temp['adv_lr'], temp['n_epochs'], temp['lr'], MC, temp['gradnorm_weight_lowlimit'])
+                            else:
+                                fig_title = 'obj1: negative_ELBO, obj2: NN(for {}), {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {}'.format(
+                                    balance_advestimator.split('_')[1], type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC)
 
                             obj1 = dataframe_oneMC.loc[:, 'obj1_{}'.format(type)].values.tolist()
                             obj2 = dataframe_oneMC.loc[:, '{}_{}'.format(pareto_front_type,type)].values.tolist()
@@ -225,7 +266,7 @@ def hypervolume_compare(hyperparameter_config, dataframe, dir_path):
                         hypervolume_std_MINE += [hv.compute(ref_point)]
                     else:
                         hypervolume_std_HSIC += [hv.compute(ref_point)]
-        fig_title = 'compare hypervolume of pareto front among gradnorm_MINE, std_MINE and std_HSIC'
+        fig_title = type
         save_path = dir_path + '/hypervolume_compare_{}.png'.format(type)
         draw_hypervolume(list1=hypervolume_gradnorm_MINE, list2=hypervolume_std_MINE, list3= hypervolume_std_HSIC, fig_title=fig_title, save_path=save_path)
 
@@ -236,8 +277,9 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
         'pre_epochs': [250],
         'pre_lr': [1e-3],
         'adv_lr': [5e-5],
-        'n_epochs': [50],
+        'n_epochs': [100],
         'lr': [1e-3],
+        'gradnorm_weight_lowlimit': [1e-6],
         'MC': list(range(10)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
     }

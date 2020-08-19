@@ -6,8 +6,8 @@
 #SBATCH -p mig
 
 #SBATCH --nodes=1
-#SBATCH --ntasks=3
 #SBATCH --cpus-per-task=1
+#SBATCH --mem 100
 
 # The maximum running time of the job in days-hours:mins:sec
 #SBATCH --time=1-12:0:00

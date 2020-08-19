@@ -21,7 +21,7 @@ def main(taskid):
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'pre_epochs': [250],
+        'pre_epochs': [200],
         'pre_adv_epochs': [100],
         'pre_lr': [1e-3],
         'adv_lr': [5e-5],
