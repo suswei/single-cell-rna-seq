@@ -14,7 +14,7 @@ from scvi.models.modules import MINE_Net
 from tqdm import trange
 
 from scvi.inference.posterior import Posterior
-import plotly.graph_objects as go
+#import plotly.graph_objects as go
 import pickle
 
 from paretoMTL_helper import circle_points, get_d_paretomtl_init, get_d_paretomtl
