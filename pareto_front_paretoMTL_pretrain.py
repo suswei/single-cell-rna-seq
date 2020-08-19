@@ -22,7 +22,7 @@ def main(taskid):
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
         'pre_epochs': [200],
-        'pre_adv_epochs': [100],
+        'pre_adv_epochs': [200],
         'pre_lr': [1e-3],
         'adv_lr': [5e-5],
         'MC': list(range(10))

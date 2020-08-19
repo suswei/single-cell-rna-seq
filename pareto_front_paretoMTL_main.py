@@ -253,7 +253,7 @@ def main( ):
     parser.add_argument('--gradnorm_hypertune', action='store_true', default=False,
                         help='whether to tune hyperparameter for gradnorm')
 
-    parser.add_argument('--alpha', type=float, default=3,
+    parser.add_argument('--alpha', type=float, default=2,
                         help='hyperparameter alpha for gradnorm')
 
     parser.add_argument('--gradnorm_epochs', type=int, default=100,
@@ -424,14 +424,14 @@ def main( ):
             if args.std_paretoMTL == True:
                 obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
                     std_paretoMTL=args.std_paretoMTL,obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min,
-                    n_epochs = args.n_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx)
+                    n_epochs = args.n_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
             elif args.gradnorm_paretoMTL == True:
                 obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(path=args.save_path,
                     lr=args.lr, adv_lr=args.adv_lr, gradnorm_paretoMTL=args.gradnorm_paretoMTL,
                     alpha=args.alpha, gradnorm_lr=args.gradnorm_lr, gradnorm_weight_lowlimit=args.gradnorm_weight_lowlimit,
                     obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min,
-                    n_epochs=args.n_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
-        '''
+                    n_epochs=args.n_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx, taskid=args.taskid)
+
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
@@ -494,7 +494,7 @@ def main( ):
                     os.makedirs('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
             elif args.gradnorm_paretoMTL == True:
                 args.save_path = './result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)
-                if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/gradnorm_{}taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)):
+                if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)):
                     os.makedirs('./result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid))
 
             if args.pref_idx == 0 or args.pref_idx==9:
@@ -510,7 +510,7 @@ def main( ):
         with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
             pickle.dump(results_dict, f)
         print(results_dict)
-        '''
+
 # Run the actual program
 if __name__ == "__main__":
     main()

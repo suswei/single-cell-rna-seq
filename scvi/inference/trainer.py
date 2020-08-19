@@ -14,7 +14,7 @@ from scvi.models.modules import MINE_Net
 from tqdm import trange
 
 from scvi.inference.posterior import Posterior
-#import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 import pickle
 
 from paretoMTL_helper import circle_points, get_d_paretomtl_init, get_d_paretomtl
@@ -314,7 +314,7 @@ class Trainer:
                         gradnorm_hypertune: bool=False, alpha: float=3, gradnorm_epochs: int=100, gradnorm_lr: float=1e-3,
                         std_paretoMTL: bool = False, obj1_max: float = 20000, obj1_min: float = 12000, obj2_max: float = 0.6, obj2_min: float = 0,
                         gradnorm_paretoMTL: bool=False, gradnorm_weight_lowlimit: float=1e-6,
-                        n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0,):
+                        n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0, taskid: int=0):
 
         if pre_train == True:
             params = filter(lambda p: p.requires_grad, self.model.parameters())
@@ -379,11 +379,10 @@ class Trainer:
                 if std_paretoMTL == True:
                     #standardize + paretoMTL
                     obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(std_paretoMTL=std_paretoMTL, obj1_max=obj1_max,
-                        obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, n_epochs=n_epochs, n_tasks=n_tasks, npref=npref, pref_idx=pref_idx)
+                        obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, n_epochs=n_epochs, n_tasks=n_tasks, npref=npref, pref_idx=pref_idx, path=path, taskid=taskid)
 
                 elif gradnorm_paretoMTL == True:
                     # gradnorm + paretoMTL
-                    '''
                     with torch.no_grad():
                         self.model.eval()
                         if self.adv_estimator == 'MINE':
@@ -401,11 +400,10 @@ class Trainer:
                     weightloss1 = (obj1_train - obj1_min)/(obj1_train*(obj1_max - obj1_min))
                     weightloss2 = (obj2_train - obj2_min)/(obj2_train * (obj2_max - obj2_min))
                     gradnorm_weights = [[2*weightloss1/(weightloss1 + weightloss2)], [2*weightloss2/(weightloss1 + weightloss2)]]
-                    '''
-                    gradnorm_weights = [[1],[1]]
+
                     obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(gradnorm_weights=gradnorm_weights, gradnorm_paretoMTL=gradnorm_paretoMTL,
                         gradnorm_lr=gradnorm_lr, alpha=alpha, gradnorm_weight_lowlimit=gradnorm_weight_lowlimit, n_epochs=n_epochs, n_tasks=n_tasks,
-                        npref=npref, pref_idx=pref_idx)
+                        npref=npref, pref_idx=pref_idx, path=path, taskid=taskid)
 
                 return obj1_minibatch_list, obj2_minibatch_list
 
@@ -526,7 +524,7 @@ class Trainer:
 
     def paretoMTL(self, std_paretoMTL: bool=False, obj1_max: float=20000, obj1_min: float=12000, obj2_max: float=0.6, obj2_min: float=0,
                   gradnorm_weights: list=[1,1], gradnorm_paretoMTL: bool=False, gradnorm_lr: float=1e-3, alpha: float=3, gradnorm_weight_lowlimit: float=1e-6,
-                  n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0):
+                  n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0, path: str=None, taskid: int=0):
 
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
 
@@ -538,11 +536,11 @@ class Trainer:
             gradnorm_opt = torch.optim.Adam(gradnorm_weights, lr=gradnorm_lr)
             Gradloss = torch.nn.L1Loss()
 
-        obj1_minibatch_list, obj2_minibatch_list = [], []
+        obj1_minibatch_list, obj2_minibatch_list, obj1_train_list, obj1_test_list = [], [], [], []
         # run at most 2 epochs to find the initial solution
         # stop early once a feasible solution is found
         # usually can be found with a few steps
-        '''
+
         for t in range(2):
 
             self.model.train()
@@ -651,7 +649,7 @@ class Trainer:
                 continue
             # break the loop once a feasible solutions is found
             break
-        '''
+
         # run n_epochs of ParetoMTL
         for self.epoch in range(n_epochs):
 
@@ -756,6 +754,38 @@ class Trainer:
                     loss_total.backward()
                     self.optimizer.step()
 
+            #diagnosis
+            if pref_idx==9 and self.n_epochs % 10 == 0:
+                with torch.no_grad():
+                    self.model.eval()
+                    self.cal_loss = True
+                    self.cal_adv_loss = False
+                    obj1_minibatch_train_eval, obj1_minibatch_test_eval = [],[]
+                    for tensors_list in self.train_set:
+                        obj1_minibatch, _, _ = self.two_loss(tensors_list)
+                        obj1_minibatch_train_eval.append(obj1_minibatch.data)
+                    for tensors_list in self.test_set:
+                        obj1_minibatch, _, _ = self.two_loss(tensors_list)
+                        obj1_minibatch_test_eval.append(obj1_minibatch.data)
+                obj1_train_list.append(sum(obj1_minibatch_train_eval)/len(obj1_minibatch_train_eval))
+                obj1_test_list.append(sum(obj1_minibatch_test_eval) / len(obj1_minibatch_test_eval))
+
+        plt.figure()
+        plt.plot(np.arange(0, len(obj1_train_list), 1), obj1_train_list)
+        plt.plot(np.arange(0, len(obj1_test_list), 1), obj1_test_list)
+        plt.xticks(np.arange(0, len(obj1_train_list), 1))
+        plt.title('train error vs test error', fontsize=10)
+        plt.ylabel('error (negative ELBO)')
+        if std_paretoMTL==True and self.adv_estimator=='MINE':
+            path = os.path.dirname(os.path.dirname(path)) + '/std_MINE/taskid{}'.format(taskid)
+        elif std_paretoMTL==True and self.adv_estimator=='HSIC':
+            path = os.path.dirname(os.path.dirname(path)) + '/std_HSIC/taskid{}'.format(taskid)
+        elif gradnorm_paretoMTL==True and self.adv_estimator=='MINE':
+            path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_MINE/taskid{}'.format(taskid)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        plt.savefig("{}/train_test_error.png".format(path))
+        plt.close()
         return obj1_minibatch_list, obj2_minibatch_list
 
     def paretoMTL_param(self, n_tasks, obj1, obj2):

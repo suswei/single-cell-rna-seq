@@ -30,7 +30,7 @@ def main(taskid):
         'obj1_min': [10631],
         'obj2_max': [0.63],
         'obj2_min': [-0.1],
-        'n_epochs': [2],
+        'n_epochs': [100],
         'n_tasks': [2],
         'MC': list(range(10)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
