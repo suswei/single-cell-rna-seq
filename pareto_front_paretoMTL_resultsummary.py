@@ -25,12 +25,12 @@ def draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path):
             l=20,
             r=1,
             b=20,
-            t=120,
+            t=110,
             pad=1
         ),
         font=dict(size=15, color='black', family='Arial, sans-serif'),
         title={'text': fig_title,
-               'y': 0.99,
+               'y': 0.97,
                'x': 0.47,
                'xanchor': 'center',
                'yanchor': 'top'}

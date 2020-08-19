@@ -61,7 +61,7 @@ def MINE_after_trainerVae(trainer_vae):
 
     MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=5e-5)
 
-    for epoch in range(2):
+    for epoch in range(200):
         MINE_network.train()
         for tensors_list in trainer_vae.data_loaders_loop():
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list[0]
@@ -431,7 +431,7 @@ def main( ):
                     alpha=args.alpha, gradnorm_lr=args.gradnorm_lr, gradnorm_weight_lowlimit=args.gradnorm_weight_lowlimit,
                     obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min,
                     n_epochs=args.n_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
-
+        '''
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
@@ -510,6 +510,7 @@ def main( ):
         with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
             pickle.dump(results_dict, f)
         print(results_dict)
+        '''
 # Run the actual program
 if __name__ == "__main__":
     main()

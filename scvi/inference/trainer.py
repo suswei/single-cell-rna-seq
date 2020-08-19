@@ -383,6 +383,7 @@ class Trainer:
 
                 elif gradnorm_paretoMTL == True:
                     # gradnorm + paretoMTL
+                    '''
                     with torch.no_grad():
                         self.model.eval()
                         if self.adv_estimator == 'MINE':
@@ -400,7 +401,8 @@ class Trainer:
                     weightloss1 = (obj1_train - obj1_min)/(obj1_train*(obj1_max - obj1_min))
                     weightloss2 = (obj2_train - obj2_min)/(obj2_train * (obj2_max - obj2_min))
                     gradnorm_weights = [[2*weightloss1/(weightloss1 + weightloss2)], [2*weightloss2/(weightloss1 + weightloss2)]]
-
+                    '''
+                    gradnorm_weights = [[1],[1]]
                     obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(gradnorm_weights=gradnorm_weights, gradnorm_paretoMTL=gradnorm_paretoMTL,
                         gradnorm_lr=gradnorm_lr, alpha=alpha, gradnorm_weight_lowlimit=gradnorm_weight_lowlimit, n_epochs=n_epochs, n_tasks=n_tasks,
                         npref=npref, pref_idx=pref_idx)
@@ -540,6 +542,7 @@ class Trainer:
         # run at most 2 epochs to find the initial solution
         # stop early once a feasible solution is found
         # usually can be found with a few steps
+        '''
         for t in range(2):
 
             self.model.train()
@@ -648,7 +651,7 @@ class Trainer:
                 continue
             # break the loop once a feasible solutions is found
             break
-
+        '''
         # run n_epochs of ParetoMTL
         for self.epoch in range(n_epochs):
 
