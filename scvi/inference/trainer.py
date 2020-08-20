@@ -379,7 +379,8 @@ class Trainer:
                 if std_paretoMTL == True:
                     #standardize + paretoMTL
                     obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(std_paretoMTL=std_paretoMTL, obj1_max=obj1_max,
-                        obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, n_epochs=n_epochs, n_tasks=n_tasks, npref=npref, pref_idx=pref_idx, path=path, taskid=taskid)
+                        obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, n_epochs=n_epochs, n_tasks=n_tasks, npref=npref, pref_idx=pref_idx,
+                        path=path, taskid=taskid)
 
                 elif gradnorm_paretoMTL == True:
                     # gradnorm + paretoMTL
@@ -524,7 +525,7 @@ class Trainer:
 
     def paretoMTL(self, std_paretoMTL: bool=False, obj1_max: float=20000, obj1_min: float=12000, obj2_max: float=0.6, obj2_min: float=0,
                   gradnorm_weights: list=[1,1], gradnorm_paretoMTL: bool=False, gradnorm_lr: float=1e-3, alpha: float=3, gradnorm_weight_lowlimit: float=1e-6,
-                  n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0, path: str=None, taskid: int=0):
+                  n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0, path: str='.', taskid: int=0):
 
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
 
@@ -753,39 +754,39 @@ class Trainer:
                 else:
                     loss_total.backward()
                     self.optimizer.step()
-
-            #diagnosis
-            if pref_idx==9 and self.n_epochs % 10 == 0:
-                with torch.no_grad():
-                    self.model.eval()
-                    self.cal_loss = True
-                    self.cal_adv_loss = False
-                    obj1_minibatch_train_eval, obj1_minibatch_test_eval = [],[]
-                    for tensors_list in self.train_set:
-                        obj1_minibatch, _, _ = self.two_loss(tensors_list)
-                        obj1_minibatch_train_eval.append(obj1_minibatch.data)
-                    for tensors_list in self.test_set:
-                        obj1_minibatch, _, _ = self.two_loss(tensors_list)
-                        obj1_minibatch_test_eval.append(obj1_minibatch.data)
-                obj1_train_list.append(sum(obj1_minibatch_train_eval)/len(obj1_minibatch_train_eval))
-                obj1_test_list.append(sum(obj1_minibatch_test_eval) / len(obj1_minibatch_test_eval))
-
-        plt.figure()
-        plt.plot(np.arange(0, len(obj1_train_list), 1), obj1_train_list)
-        plt.plot(np.arange(0, len(obj1_test_list), 1), obj1_test_list)
-        plt.xticks(np.arange(0, len(obj1_train_list), 1))
-        plt.title('train error vs test error', fontsize=10)
-        plt.ylabel('error (negative ELBO)')
-        if std_paretoMTL==True and self.adv_estimator=='MINE':
-            path = os.path.dirname(os.path.dirname(path)) + '/std_MINE/taskid{}'.format(taskid)
-        elif std_paretoMTL==True and self.adv_estimator=='HSIC':
-            path = os.path.dirname(os.path.dirname(path)) + '/std_HSIC/taskid{}'.format(taskid)
-        elif gradnorm_paretoMTL==True and self.adv_estimator=='MINE':
-            path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_MINE/taskid{}'.format(taskid)
-        if not os.path.exists(path):
-            os.makedirs(path)
-        plt.savefig("{}/train_test_error.png".format(path))
-        plt.close()
+            # diagnosis
+            if std_paretoMTL == True or gradnorm_paretoMTL==True:
+                if pref_idx==9 and self.epoch % 10 == 0:
+                    with torch.no_grad():
+                        self.model.eval()
+                        self.cal_loss = True
+                        self.cal_adv_loss = False
+                        obj1_minibatch_train_eval, obj1_minibatch_test_eval = [],[]
+                        for tensors_list in self.train_set:
+                            obj1_minibatch, _, _ = self.two_loss(tensors_list)
+                            obj1_minibatch_train_eval.append(obj1_minibatch.data)
+                        for tensors_list in self.test_set:
+                            obj1_minibatch, _, _ = self.two_loss(tensors_list)
+                            obj1_minibatch_test_eval.append(obj1_minibatch.data)
+                    obj1_train_list.append(sum(obj1_minibatch_train_eval)/len(obj1_minibatch_train_eval))
+                    obj1_test_list.append(sum(obj1_minibatch_test_eval) / len(obj1_minibatch_test_eval))
+        if std_paretoMTL==True or gradnorm_paretoMTL==True:
+            plt.figure()
+            plt.plot(np.arange(0, len(obj1_train_list), 1), obj1_train_list)
+            plt.plot(np.arange(0, len(obj1_test_list), 1), obj1_test_list)
+            plt.xticks(np.arange(0, len(obj1_train_list), 1))
+            plt.title('train error vs test error', fontsize=10)
+            plt.ylabel('error (negative ELBO)')
+            if std_paretoMTL==True and self.adv_estimator=='MINE':
+                path = os.path.dirname(os.path.dirname(path)) + '/std_MINE/taskid{}'.format(taskid)
+            elif std_paretoMTL==True and self.adv_estimator=='HSIC':
+                path = os.path.dirname(os.path.dirname(path)) + '/std_HSIC/taskid{}'.format(taskid)
+            elif gradnorm_paretoMTL==True and self.adv_estimator=='MINE':
+                path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_MINE/taskid{}'.format(taskid)
+            if not os.path.exists(path):
+                os.makedirs(path)
+            plt.savefig("{}/train_test_error.png".format(path))
+            plt.close()
         return obj1_minibatch_list, obj2_minibatch_list
 
     def paretoMTL_param(self, n_tasks, obj1, obj2):
