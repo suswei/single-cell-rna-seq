@@ -231,7 +231,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
                     activation_fun=args.activation_fun, unbiased_loss=args.unbiased_loss, initial=args.w_initial)
 
     opt_MINE = optim.Adam(MINE.parameters(), lr=args.lr)
-    scheduler_MINE_MI = ReduceLROnPlateau(opt_MINE, mode='min', factor=0.1, patience=10, verbose=True)
+    # scheduler_MINE_MI = torch.optim.lr_scheduler.MultiStepLR(opt_MINE, milestones=[200], gamma=0.5)
 
     MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch = [], [], [], []
     for epoch in range(args.epochs):
@@ -268,6 +268,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
             #if not using unbiased loss, then negative of loss equals MINE estimator
             negative_loss_minibatch_list.append(-loss.item())
 
+        #scheduler_MINE_MI.step()
         if epoch % args.log_interval == 0:
             print('Train Epoch: {} \tMINE_estimator_minibatch: {:.6f}\tnegative_loss_minibatch: {:.6f}'.format(epoch, MINE_estimator_minibatch.data.item(), -loss.data.item()))
 
