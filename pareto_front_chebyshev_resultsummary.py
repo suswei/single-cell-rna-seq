@@ -177,7 +177,7 @@ def mean_metrics_scales(dataframe, save_path):
     create_video(video_save_path=save_path + '/mean_metric.mp4', image_paths = image_paths)
 
 def pareto_front_summary(dataset: str='muris_tabula', confounder: str='batch'):
-    dir_path = './result/pareto_front_scVI_MINE/{}/{}'.format(dataset, confounder)
+    dir_path = './result/pareto_front_chebyshev/{}/{}'.format(dataset, confounder)
     hyperparameter_config = {
         'scale': [ele / 10 for ele in range(0, 11)],
         'MCs': 20 * [1]

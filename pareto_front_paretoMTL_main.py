@@ -268,7 +268,7 @@ def main( ):
 
     #for paretoMTL
 
-    parser.add_argument('--n_epochs', type=int, default=50,
+    parser.add_argument('--n_epochs', type=int, default=100,
                         help='number of epochs to train scVI and MINE')
 
     parser.add_argument('--lr', type=float, default=1e-3,
@@ -405,8 +405,8 @@ def main( ):
                         pre_adv_epochs=args.pre_adv_epochs, adv_lr=args.adv_lr, path=args.save_path)
     elif args.standardize == True:
         obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(
-            path=args.save_path, standardize=args.standardize, n_epochs=args.n_epochs, n_tasks=args.n_tasks,
-            npref=args.npref, pref_idx=args.pref_idx)
+            path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, n_epochs=args.n_epochs,
+            n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
         if args.pref_idx == 0:
             obj2_max = max(obj2_minibatch_list) * (1 + 0.1)  # 1 + 0.1 or 1-0.1 is for variation in different MCs
             obj2_min = min(obj2_minibatch_list) * (1 - 0.1)

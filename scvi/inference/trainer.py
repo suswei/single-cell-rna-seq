@@ -530,6 +530,7 @@ class Trainer:
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
 
         if gradnorm_paretoMTL==True:
+            print('initial weightloss1: {}'.format(gradnorm_weights[0][0]))
             weightloss1 = torch.FloatTensor(gradnorm_weights[0]).clone().detach().requires_grad_(True)
             weightloss2 = torch.FloatTensor(gradnorm_weights[1]).clone().detach().requires_grad_(True)
             gradnorm_weights = [weightloss1, weightloss2]
@@ -537,7 +538,7 @@ class Trainer:
             gradnorm_opt = torch.optim.Adam(gradnorm_weights, lr=gradnorm_lr)
             Gradloss = torch.nn.L1Loss()
 
-        obj1_minibatch_list, obj2_minibatch_list, obj1_train_list, obj1_test_list = [], [], [], []
+        obj1_minibatch_list, obj2_minibatch_list, obj1_train_list, obj1_test_list, weightloss1_list, weighted_obj1_list, weighted_obj2_list = [], [], [], [], [], [], []
         # run at most 2 epochs to find the initial solution
         # stop early once a feasible solution is found
         # usually can be found with a few steps
@@ -552,16 +553,13 @@ class Trainer:
                 if self.adv_estimator == 'MINE':
                     self.cal_loss = False
                     self.cal_adv_loss = True
-                    # minibatch_number = 0
-                    for adv_tensors_list in self.data_loaders_loop():
-                        # minibatch_number += 1
-                        _, adv_loss, _ = self.two_loss(*adv_tensors_list)
-                        self.adv_optimizer.zero_grad()
-                        self.optimizer.zero_grad()
-                        adv_loss.backward()
-                        self.adv_optimizer.step()
-                        # if minibatch_number == 20:
-                        #    break
+                    for adv_epoch in range(1):
+                        for adv_tensors_list in self.data_loaders_loop():
+                            _, adv_loss, _ = self.two_loss(*adv_tensors_list)
+                            self.adv_optimizer.zero_grad()
+                            self.optimizer.zero_grad()
+                            adv_loss.backward()
+                            self.adv_optimizer.step()
 
                 self.cal_loss = True
                 self.cal_adv_loss = True
@@ -665,16 +663,13 @@ class Trainer:
                 if self.adv_estimator == 'MINE':
                     self.cal_loss = False
                     self.cal_adv_loss = True
-                    # minibatch_number = 0
-                    for adv_tensors_list in self.data_loaders_loop():
-                        # minibatch_number += 1
-                        _, adv_loss, _ = self.two_loss(*adv_tensors_list)
-                        self.adv_optimizer.zero_grad()
-                        self.optimizer.zero_grad()
-                        adv_loss.backward()
-                        self.adv_optimizer.step()
-                        # if minibatch_number == 20:
-                        #    break
+                    for adv_epoch in range(1):
+                        for adv_tensors_list in self.data_loaders_loop():
+                            _, adv_loss, _ = self.two_loss(*adv_tensors_list)
+                            self.adv_optimizer.zero_grad()
+                            self.optimizer.zero_grad()
+                            adv_loss.backward()
+                            self.adv_optimizer.step()
 
                 self.cal_loss = True
                 self.cal_adv_loss = True
@@ -716,6 +711,10 @@ class Trainer:
 
                     obj1 = torch.div(obj1_minibatch * gradnorm_weights[0], 2)
                     obj2 = torch.div(obj2_minibatch * gradnorm_weights[1], 2)
+
+                    weighted_obj1_list.append(obj1.data)
+                    weighted_obj2_list.append(obj2.data)
+                    print('weighted_obj1: {}, weighted_obj2: {}'.format(obj1.data, obj2.data))
                 elif std_paretoMTL == True:
                     obj1 = (obj1_minibatch - obj1_min)/(obj1_max - obj1_min)
                     obj2 = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
@@ -749,14 +748,16 @@ class Trainer:
 
                     # Renormalizing the losses weights
                     coef = 2 / torch.add(weightloss1, weightloss2)
-                    gradnorm_weights = [torch.max(torch.FloatTensor([gradnorm_weight_lowlimit]), coef * weightloss1),
-                                        torch.min(torch.FloatTensor([2 - (gradnorm_weight_lowlimit)]), coef * weightloss2)]
+                    gradnorm_weights = [torch.min(torch.max(torch.FloatTensor([gradnorm_weight_lowlimit]), coef * weightloss1), torch.FloatTensor([1e-4])),
+                                        torch.max(torch.min(torch.FloatTensor([2 - (gradnorm_weight_lowlimit)]), coef * weightloss2), torch.FloatTensor([2-(1e-4)]))]
+                    print('weightloss1: {}'.format(gradnorm_weights[0].data.tolist()[0]))
+                    weightloss1_list.append(gradnorm_weights[0].data.tolist()[0])
                 else:
                     loss_total.backward()
                     self.optimizer.step()
             # diagnosis
             if std_paretoMTL == True or gradnorm_paretoMTL==True:
-                if pref_idx==9 and self.epoch % 10 == 0:
+                if self.epoch % 10 == 0:
                     with torch.no_grad():
                         self.model.eval()
                         self.cal_loss = True
@@ -770,10 +771,36 @@ class Trainer:
                             obj1_minibatch_test_eval.append(obj1_minibatch.data)
                     obj1_train_list.append(sum(obj1_minibatch_train_eval)/len(obj1_minibatch_train_eval))
                     obj1_test_list.append(sum(obj1_minibatch_test_eval) / len(obj1_minibatch_test_eval))
+
+        if gradnorm_paretoMTL==True:
+            plt.figure()
+            plt.plot(np.arange(0, len(weightloss1_list), 1), weightloss1_list)
+            plt.xticks(np.arange(0, len(weightloss1_list), 1))
+            plt.title('weight for objective 1', fontsize=10)
+            plt.ylabel('weight')
+            path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_MINE/taskid{}'.format(taskid)
+            if not os.path.exists(path):
+                os.makedirs(path)
+            plt.savefig("{}/weightloss1.png".format(path))
+            plt.close()
+
+            plt.figure()
+            plt.plot(np.arange(0, len(weighted_obj1_list), 1), weighted_obj1_list, label='weighted_obj1')
+            plt.plot(np.arange(0, len(weighted_obj2_list), 1), weighted_obj2_list, label='weighted_obj2')
+            plt.legend()
+            plt.xticks(np.arange(0, len(weightloss1_list), 1))
+            plt.title('weighted obj1 and obj2', fontsize=10)
+            path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_MINE/taskid{}'.format(taskid)
+            if not os.path.exists(path):
+                os.makedirs(path)
+            plt.savefig("{}/weighted_objs.png".format(path))
+            plt.close()
+
         if std_paretoMTL==True or gradnorm_paretoMTL==True:
             plt.figure()
-            plt.plot(np.arange(0, len(obj1_train_list), 1), obj1_train_list)
-            plt.plot(np.arange(0, len(obj1_test_list), 1), obj1_test_list)
+            plt.plot(np.arange(0, len(obj1_train_list), 1), obj1_train_list, label='obj1_train')
+            plt.plot(np.arange(0, len(obj1_test_list), 1), obj1_test_list, label='obj1_test')
+            plt.legend()
             plt.xticks(np.arange(0, len(obj1_train_list), 1))
             plt.title('train error vs test error', fontsize=10)
             plt.ylabel('error (negative ELBO)')

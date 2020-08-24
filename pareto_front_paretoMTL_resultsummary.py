@@ -272,14 +272,14 @@ def hypervolume_compare(hyperparameter_config, dataframe, dir_path):
 
 def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
 
-    dir_path = './result/pareto_front_paretoMTL/{}/{}'.format(dataset, confounder)
+    dir_path = './result/pareto_front_paretoMTL4/{}/{}'.format(dataset, confounder)
     hyperparameter_config = {
         'pre_epochs': [250],
         'pre_lr': [1e-3],
         'adv_lr': [5e-5],
         'n_epochs': [100],
         'lr': [1e-3],
-        'gradnorm_weight_lowlimit': [1e-6],
+        'gradnorm_weight_lowlimit': [1e-5],
         'MC': list(range(10)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
     }
