@@ -140,7 +140,7 @@ def HSIC_NN_train_test(trainer_vae, type):
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
         _, _, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
         if type == 'HSIC':
-            estimator_minibatch_train = hsic(z, batch_dummy)
+            estimator_minibatch_train = hsic(z, batch_index.type(torch.FloatTensor))
             estimator_train_list.append(estimator_minibatch_train.item())
         elif type == 'NN':
             estimator_minibatch_train = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
@@ -152,7 +152,7 @@ def HSIC_NN_train_test(trainer_vae, type):
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
         _, _, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
         if type == 'HSIC':
-            estimator_minibatch_test = hsic(z, batch_dummy)
+            estimator_minibatch_test = hsic(z, batch_index.type(torch.FloatTensor))
             estimator_test_list.append(estimator_minibatch_test.item())
         elif type == 'NN':
             estimator_minibatch_test = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
@@ -490,7 +490,7 @@ def main( ):
         else:
             if args.std_paretoMTL == True:
                 args.save_path = './result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
-                if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/std_{}taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
+                if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
                     os.makedirs('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
             elif args.gradnorm_paretoMTL == True:
                 args.save_path = './result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)

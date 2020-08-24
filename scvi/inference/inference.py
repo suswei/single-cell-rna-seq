@@ -120,7 +120,10 @@ class UnsupervisedTrainer(Trainer):
             shuffle_z_batch = torch.cat((z[shuffle_index], batch_dummy), 1)  # marginal
             return z_batch, shuffle_z_batch
         elif self.adv_estimator == 'HSIC':
-            return z, batch_dummy
+            if self.use_cuda == True:
+                batch_index = batch_index.type(torch.FloatTensor).cuda()
+            batch_index = Variable(batch_index.type(torch.FloatTensor), requires_grad=True)
+            return z, batch_index
 
     def adv_loss(self, sample1, sample2):
         if self.adv_estimator == 'MINE':
