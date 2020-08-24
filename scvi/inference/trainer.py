@@ -750,8 +750,6 @@ class Trainer:
                     coef = 2 / torch.add(weightloss1, weightloss2)
                     gradnorm_weights = [torch.max(torch.FloatTensor([gradnorm_weight_lowlimit]), coef * weightloss1),
                         torch.min(torch.FloatTensor([2 - (gradnorm_weight_lowlimit)]), coef * weightloss2)]
-                    #gradnorm_weights = [torch.min(torch.max(torch.FloatTensor([gradnorm_weight_lowlimit]), coef * weightloss1), torch.FloatTensor([1e-4])),
-                    #                    torch.max(torch.min(torch.FloatTensor([2 - (gradnorm_weight_lowlimit)]), coef * weightloss2), torch.FloatTensor([2-(1e-4)]))]
                     print('weightloss1: {}'.format(gradnorm_weights[0].data.tolist()[0]))
                     weightloss1_list.append(gradnorm_weights[0].data.tolist()[0])
                 else:
