@@ -8,6 +8,39 @@ import statistics
 import plotly.graph_objects as go
 import cv2
 
+def simple_cull(inputPoints, dominates):
+    paretoPoints = set()
+    candidateRowNr = 0
+    dominatedPoints = set()
+    while True:
+        candidateRow = inputPoints[candidateRowNr]
+        inputPoints.remove(candidateRow)
+        rowNr = 0
+        nonDominated = True
+        while len(inputPoints) != 0 and rowNr < len(inputPoints):
+            row = inputPoints[rowNr]
+            if dominates(candidateRow, row):
+                # If it is worse on all features remove the row from the array
+                inputPoints.remove(row)
+                dominatedPoints.add(tuple(row))
+            elif dominates(row, candidateRow):
+                nonDominated = False
+                dominatedPoints.add(tuple(candidateRow))
+                rowNr += 1
+            else:
+                rowNr += 1
+
+        if nonDominated:
+            # add the non-dominated point to the Pareto frontier
+            paretoPoints.add(tuple(candidateRow))
+
+        if len(inputPoints) == 0:
+            break
+    return paretoPoints, dominatedPoints
+
+def dominates(row, candidateRow):
+    return sum([row[x] <= candidateRow[x] for x in range(len(row))]) == len(row)
+
 def draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path):
 
     fig = go.Figure()
@@ -257,9 +290,14 @@ def hypervolume_compare(hyperparameter_config, dataframe, dir_path):
 
                 for MC in range(dataframe_adv.MC.max() + 1):
                     dataframe_oneMC = dataframe_adv[dataframe_adv.MC.eq(MC)]
-                    obj1_list = dataframe_oneMC.loc[:,'obj1_{}'.format(type)].values.tolist()
+                    obj1_list = dataframe_oneMC.loc[:, 'obj1_{}'.format(type)].values.tolist()
                     NN_list = dataframe_oneMC.loc[:, 'NN_{}'.format(type)].values.tolist()
-                    hv = hypervolume([[obj1_list[k], NN_list[k]] for k in range(len(obj1_list))])
+
+                    #when calculate the hypervolume, get rid of the dominated points first, then calculate the hypervolume
+                    inputPoints1 = [[obj1_list[k], NN_list[k]] for k in range(len(obj1_list))]
+                    paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates)
+                    pp = np.array(list(paretoPoints1))
+                    hv = hypervolume([[pp[:,0][k], pp[:,1][k]] for k in range(pp.shape[0])])
                     if balance_advestimator == 'gradnorm_MINE':
                         hypervolume_gradnorm_MINE += [hv.compute(ref_point)]
                     elif balance_advestimator == 'std_MINE':
