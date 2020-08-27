@@ -806,12 +806,10 @@ class Trainer:
             plt.xticks(np.arange(0, len(obj1_train_list), 1))
             plt.title('train error vs test error', fontsize=10)
             plt.ylabel('error (negative ELBO)')
-            if std_paretoMTL==True and self.adv_estimator=='MINE':
-                path = os.path.dirname(os.path.dirname(path)) + '/std_MINE/taskid{}'.format(taskid)
-            elif std_paretoMTL==True and self.adv_estimator=='HSIC':
-                path = os.path.dirname(os.path.dirname(path)) + '/std_HSIC/taskid{}'.format(taskid)
-            elif gradnorm_paretoMTL==True and self.adv_estimator=='MINE':
-                path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_MINE/taskid{}'.format(taskid)
+            if std_paretoMTL==True:
+                path = os.path.dirname(os.path.dirname(path)) + '/std_{}/taskid{}'.format(self.adv_estimator, taskid)
+            elif gradnorm_paretoMTL==True:
+                path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_{}/taskid{}'.format(self.adv_estimator, taskid)
             if not os.path.exists(path):
                 os.makedirs(path)
             plt.savefig("{}/train_test_error.png".format(path))
