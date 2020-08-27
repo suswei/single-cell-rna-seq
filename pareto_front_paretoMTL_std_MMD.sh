@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="MINE_simulation"
+#SBATCH --job-name="pareto_front"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem 100
+#SBATCH --mem 7200
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=1-6:0:00
+#SBATCH --time=1-12:0:00
 
 # Batch arrays
-#SBATCH --array=0-319
+#SBATCH --array=0-99
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
@@ -37,4 +37,6 @@ fi
 # The job command(s):
 module load anaconda3/2020.07
 source activate sharedenv
-python3 MINE_simulation2_sweep.py ${SLURM_ARRAY_TASK_ID}
+module load web_proxy
+python3 pareto_front_paretoMTL_std_MMD.py ${SLURM_ARRAY_TASK_ID}
+

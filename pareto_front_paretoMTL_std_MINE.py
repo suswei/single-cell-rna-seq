@@ -37,9 +37,9 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --std_paretoMTL --MCs 10 "
+    os.system("python3 pareto_front_paretoMTL_main.py --std_paretoMTL --use_batches --MCs 10 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
-              "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
+              "--n_layers_decoder %s --n_hidden %s --n_latent %s --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
               "--lr %s --adv_lr %s  --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s --n_epochs %s "
               "--n_tasks %s --MC %s --npref %s --pref_idx %s"

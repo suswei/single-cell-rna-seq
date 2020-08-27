@@ -10,12 +10,11 @@ import torch
 from torch.autograd import Variable
 from sklearn.model_selection._split import _validate_shuffle_split
 from torch.utils.data.sampler import SubsetRandomSampler
-from scvi.models.modules import MINE_Net
+from scvi.models.modules import MINE_Net, MMD_loss
 from tqdm import trange
 
 from scvi.inference.posterior import Posterior
 import matplotlib.pyplot as plt
-import pickle
 
 from paretoMTL_helper import circle_points, get_d_paretomtl_init, get_d_paretomtl
 
@@ -43,7 +42,8 @@ class Trainer:
     def __init__(self, model, gene_dataset, use_cuda=True, metrics_to_monitor=None, benchmark=False,
                  verbose=False, frequency=None, weight_decay=1e-6, early_stopping_kwargs=dict(),
                  data_loader_kwargs=dict(), save_path='None', batch_size=128, adv_estimator='None',
-                 adv_n_hidden=128, adv_n_layers=10, adv_activation_fun='ELU', unbiased_loss=True, adv_w_initial='Normal'):
+                 adv_n_hidden=128, adv_n_layers=10, adv_activation_fun='ELU', unbiased_loss=True, adv_w_initial='Normal',
+                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5):
 
         self.model = model
         self.gene_dataset = gene_dataset
@@ -54,6 +54,8 @@ class Trainer:
             adv_input_dim = self.model.n_latent + self.model.n_batch
             self.adv_model = MINE_Net(input_dim=adv_input_dim, n_hidden=adv_n_hidden, n_layers=adv_n_layers,
                              activation_fun=adv_activation_fun, unbiased_loss=unbiased_loss, initial=adv_w_initial)
+        elif self.adv_estimator == 'MMD':
+            self.MMD_loss = MMD_loss(kernel_mul = MMD_kernel_mul, kernel_num = MMD_kernel_num)
 
         self.data_loader_kwargs = {
             "batch_size": batch_size,

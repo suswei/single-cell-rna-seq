@@ -11,7 +11,7 @@ from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
-from scvi.models.modules import MINE_Net, discrete_continuous_info, hsic
+from scvi.models.modules import MINE_Net, discrete_continuous_info, hsic, MMD_loss
 import pickle
 import matplotlib.pyplot as plt
 
@@ -33,7 +33,9 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index, type):
 
         return sample1, sample2, z, batch_dummy
     else:
-        return None, None, z, batch_dummy
+        z_batch0 = z[(batch_index[:, 0] == 0).nonzero().squeeze(1)]
+        z_batch1 = z[(batch_index[:, 0] == 1).nonzero().squeeze(1)]
+        return z_batch0, z_batch1, z, batch_dummy
 
 def obj1_train_test(trainer_vae):
 
@@ -132,15 +134,19 @@ def MINE_after_trainerVae(trainer_vae):
 
     return MINE_estimator_train.detach().item(), MINE_estimator_test.detach().item()
 
-def HSIC_NN_train_test(trainer_vae, type):
+def HSIC_MMD_NN_train_test(trainer_vae, type, args):
 
+    MMD_loss_fun = MMD_loss(args.MMD_kernel_mul, args.MMD_kernel_num)
     estimator_train_list, estimator_test_list = [], []
     for tensors_list in trainer_vae.train_set:
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
-        _, _, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
+        z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
         if type == 'HSIC':
             estimator_minibatch_train = hsic(z, batch_index.type(torch.FloatTensor))
+            estimator_train_list.append(estimator_minibatch_train.item())
+        elif type == 'MMD':
+            estimator_minibatch_train = MMD_loss_fun(z_batch0, z_batch1)
             estimator_train_list.append(estimator_minibatch_train.item())
         elif type == 'NN':
             estimator_minibatch_train = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
@@ -150,9 +156,12 @@ def HSIC_NN_train_test(trainer_vae, type):
     for tensors_list in trainer_vae.test_set:
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
-        _, _, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
+        z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
         if type == 'HSIC':
             estimator_minibatch_test = hsic(z, batch_index.type(torch.FloatTensor))
+            estimator_test_list.append(estimator_minibatch_test.item())
+        elif type == 'MMD':
+            estimator_minibatch_test = MMD_loss_fun(z_batch0, z_batch1)
             estimator_test_list.append(estimator_minibatch_test.item())
         elif type == 'NN':
             estimator_minibatch_test = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
@@ -232,6 +241,13 @@ def main( ):
 
     parser.add_argument('--unbiased_loss', action='store_true', default=True,
                         help='whether to use unbiased loss or not in MINE')
+
+    #for MMD
+    parser.add_argument('--MMD_kernel_mul', type=float, default=2.0,
+                        help='the multiplier value to calculate bandwidth')
+
+    parser.add_argument('--MMD_kernel_num', type=int, default=5,
+                        help='the number of kernels to get MMD')
 
     #for pre_train
     parser.add_argument('--pre_train', action='store_true', default=False,
@@ -396,6 +412,10 @@ def main( ):
     elif args.adv_estimator == 'HSIC':
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator)
+    elif args.adv_estimator == 'MMD':
+        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
+                                          seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
+                                          MMD_kernel_mul=args.MMD_kernel_mul, MMD_kernel_num=args.MMD_kernel_num)
 
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
     trainer_vae.kl_weight = 1
@@ -438,9 +458,11 @@ def main( ):
         if trainer_vae.adv_estimator == 'MINE':
             obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae)
         elif trainer_vae.adv_estimator == 'HSIC':
-            obj2_train, obj2_test = HSIC_NN_train_test(trainer_vae,'HSIC')
+            obj2_train, obj2_test = HSIC_MMD_NN_train_test(trainer_vae,'HSIC', args)
+        elif trainer_vae.adv_estimator == 'MMD':
+            obj2_train, obj2_test = HSIC_MMD_NN_train_test(trainer_vae, 'MMD', args)
 
-        NN_train, NN_test = HSIC_NN_train_test(trainer_vae, 'NN')
+        NN_train, NN_test = HSIC_MMD_NN_train_test(trainer_vae, 'NN', args)
 
         asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
         be_train = trainer_vae.train_set.entropy_batch_mixing()

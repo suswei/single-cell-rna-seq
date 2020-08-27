@@ -79,7 +79,7 @@ class UnsupervisedTrainer(Trainer):
                 x_ = torch.log(1 + x_)
             qz_m, qz_v, z = self.model.z_encoder(x_, None)
 
-            sample1, sample2 = self.adv_load_minibatch(z, batch_index)
+            sample1, sample2, _, _ = self.adv_load_minibatch(z, batch_index)
             adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
 
         elif self.cal_loss == True and self.cal_adv_loss == True:
@@ -124,6 +124,13 @@ class UnsupervisedTrainer(Trainer):
                 batch_index = batch_index.type(torch.FloatTensor).cuda()
             batch_index = Variable(batch_index.type(torch.FloatTensor), requires_grad=True)
             return z, batch_index
+        elif self.adv_estimator == 'MMD':
+            if self.use_cuda == True:
+                batch_index = batch_index.type(torch.FloatTensor).cuda()
+            batch_index = Variable(batch_index.type(torch.FloatTensor), requires_grad=True)
+            z_batch0 = z[(batch_index[:, 0] == 0).nonzero().squeeze(1)]
+            z_batch1 = z[(batch_index[:, 0] == 1).nonzero().squeeze(1)]
+            return z_batch0, z_batch1
 
     def adv_loss(self, sample1, sample2):
         if self.adv_estimator == 'MINE':
@@ -148,8 +155,11 @@ class UnsupervisedTrainer(Trainer):
         elif self.adv_estimator == 'HSIC':
             hsic_minibatch = hsic(sample1, sample2)
             loss = hsic_minibatch
-
             return loss, hsic_minibatch
+        elif self.adv_estimator == 'MMD':
+            mmd_minibatch = self.MMD_loss(sample1, sample2)
+            loss = mmd_minibatch
+            return loss, mmd_minibatch
 
 class AdapterTrainer(UnsupervisedTrainer):
     def __init__(self, model, gene_dataset, posterior_test, frequency=5):
