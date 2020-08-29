@@ -75,7 +75,7 @@ def draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path):
 def draw_mean_metrics(dataframe, y_axis_variable, save_path):
     fig = go.Figure()
 
-    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_HSIC']:
+    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_MMD']:
         fig.add_trace(go.Scatter(x=dataframe.loc[:, 'pref_idx'].values.tolist(),
                              y=dataframe.loc[:, '{}_mean_{}'.format(y_axis_variable, balance_advestimator)].values.tolist(),
                              error_y=dict(type='data', array=dataframe.loc[:, '{}_std_{}'.format(y_axis_variable, balance_advestimator)].values.tolist()),
@@ -109,7 +109,7 @@ def draw_mean_metrics(dataframe, y_axis_variable, save_path):
 def draw_hypervolume(list1, list2, list3, fig_title, save_path):
 
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=['gradnorm_MINE','std_MINE','std_HSIC'],
+    fig.add_trace(go.Bar(x=['gradnorm_MINE','std_MINE','std_MMD'],
                          y=[statistics.mean(list1), statistics.mean(list2), statistics.mean(list3)],
                          error_y=dict(type='data', array=[statistics.stdev(list1), statistics.stdev(list2), statistics.stdev(list3)])
                          )
@@ -151,7 +151,7 @@ def pareto_front(hyperparameter_config, dataframe, dir_path):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_HSIC']:
+    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_MMD']:
         dataframe_adv = dataframe[dataframe.balance_advestimator.eq(balance_advestimator)]
 
         for temp in hyperparameter_experiments:
@@ -219,7 +219,7 @@ def mean_metrics(hyperparameter_config, dataframe, dir_path):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_HSIC']:
+    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_MMD']:
         for temp in hyperparameter_experiments:
             dataframe_adv = dataframe[dataframe.balance_advestimator.eq(balance_advestimator)]
             dataframe_mean_std = dataframe_adv.groupby('pref_idx').agg(
@@ -281,9 +281,9 @@ def hypervolume_compare(hyperparameter_config, dataframe, dir_path):
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     for type in ['train','test']:
-        hypervolume_gradnorm_MINE, hypervolume_std_MINE, hypervolume_std_HSIC = [], [], []
+        hypervolume_gradnorm_MINE, hypervolume_std_MINE, hypervolume_std_MMD = [], [], []
 
-        for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_HSIC']:
+        for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_MMD']:
             for temp in hyperparameter_experiments:
 
                 dataframe_adv = dataframe[dataframe.balance_advestimator.eq(balance_advestimator)]
@@ -303,10 +303,10 @@ def hypervolume_compare(hyperparameter_config, dataframe, dir_path):
                     elif balance_advestimator == 'std_MINE':
                         hypervolume_std_MINE += [hv.compute(ref_point)]
                     else:
-                        hypervolume_std_HSIC += [hv.compute(ref_point)]
+                        hypervolume_std_MMD += [hv.compute(ref_point)]
         fig_title = type
         save_path = dir_path + '/hypervolume_compare_{}.png'.format(type)
-        draw_hypervolume(list1=hypervolume_gradnorm_MINE, list2=hypervolume_std_MINE, list3= hypervolume_std_HSIC, fig_title=fig_title, save_path=save_path)
+        draw_hypervolume(list1=hypervolume_gradnorm_MINE, list2=hypervolume_std_MINE, list3= hypervolume_std_MMD, fig_title=fig_title, save_path=save_path)
 
 def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
 
@@ -324,7 +324,7 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_HSIC']:
+    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_MMD']:
         dir_path_subset = dir_path + '/{}'.format(balance_advestimator)
         for i in range(len(hyperparameter_experiments)):
             config_path = dir_path_subset + '/taskid{}/config.pkl'.format(i)
