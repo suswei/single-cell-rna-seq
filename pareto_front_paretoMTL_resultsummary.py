@@ -312,7 +312,7 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
 
     dir_path = './result/pareto_front_paretoMTL/{}/{}'.format(dataset, confounder)
     hyperparameter_config = {
-        'pre_epochs': [250],
+        'pre_epochs': [200],
         'pre_lr': [1e-3],
         'adv_lr': [5e-5],
         'n_epochs': [100],
