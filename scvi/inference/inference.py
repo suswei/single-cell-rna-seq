@@ -79,7 +79,7 @@ class UnsupervisedTrainer(Trainer):
                 x_ = torch.log(1 + x_)
             qz_m, qz_v, z = self.model.z_encoder(x_, None)
 
-            sample1, sample2, _, _ = self.adv_load_minibatch(z, batch_index)
+            sample1, sample2= self.adv_load_minibatch(z, batch_index)
             adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
 
         elif self.cal_loss == True and self.cal_adv_loss == True:
