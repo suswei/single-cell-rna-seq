@@ -11,7 +11,7 @@ from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
-from scvi.models.modules import MINE_Net, discrete_continuous_info, hsic, MMD_loss
+from scvi.models.modules import MINE_Net, discrete_continuous_info, MMD_loss
 import pickle
 import matplotlib.pyplot as plt
 
@@ -30,9 +30,13 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index, type):
         sample1 = torch.cat((z, batch_dummy), 1)  # joint
         shuffle_index = torch.randperm(z.shape[0])
         sample2 = torch.cat((z[shuffle_index], batch_dummy), 1)
-
         return sample1, sample2, z, batch_dummy
     else:
+        if type == 'stdz_MMD':
+            # standardize each dimension for z
+            z_mean = torch.mean(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
+            z_std = torch.std(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
+            z = (z - z_mean) / z_std  # element by element
         z_batch0 = z[(batch_index[:, 0] == 0).nonzero().squeeze(1)]
         z_batch1 = z[(batch_index[:, 0] == 1).nonzero().squeeze(1)]
         return z_batch0, z_batch1, z, batch_dummy
@@ -142,10 +146,7 @@ def HSIC_MMD_NN_train_test(trainer_vae, type, args):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
         z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
-        if type == 'HSIC':
-            estimator_minibatch_train = hsic(z, batch_index.type(torch.FloatTensor))
-            estimator_train_list.append(estimator_minibatch_train.item())
-        elif type == 'MMD':
+        if type == 'MMD':
             estimator_minibatch_train = MMD_loss_fun(z_batch0, z_batch1)
             estimator_train_list.append(estimator_minibatch_train.item())
         elif type == 'NN':
@@ -157,10 +158,7 @@ def HSIC_MMD_NN_train_test(trainer_vae, type, args):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
         z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
-        if type == 'HSIC':
-            estimator_minibatch_test = hsic(z, batch_index.type(torch.FloatTensor))
-            estimator_test_list.append(estimator_minibatch_test.item())
-        elif type == 'MMD':
+        if type == 'MMD':
             estimator_minibatch_test = MMD_loss_fun(z_batch0, z_batch1)
             estimator_test_list.append(estimator_minibatch_test.item())
         elif type == 'NN':
@@ -409,10 +407,7 @@ def main( ):
                                           seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
                                           adv_n_hidden=args.adv_n_hidden, adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
                                           unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial)
-    elif args.adv_estimator == 'HSIC':
-        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
-                                          seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator)
-    elif args.adv_estimator == 'MMD':
+    elif args.adv_estimator in ['MMD','stdz_MMD']:
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
                                           MMD_kernel_mul=args.MMD_kernel_mul, MMD_kernel_num=args.MMD_kernel_num)
@@ -457,10 +452,10 @@ def main( ):
 
         if trainer_vae.adv_estimator == 'MINE':
             obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae)
-        elif trainer_vae.adv_estimator == 'HSIC':
-            obj2_train, obj2_test = HSIC_MMD_NN_train_test(trainer_vae,'HSIC', args)
         elif trainer_vae.adv_estimator == 'MMD':
             obj2_train, obj2_test = HSIC_MMD_NN_train_test(trainer_vae, 'MMD', args)
+        elif trainer_vae.adv_estimator == 'stdz_MMD':
+            obj2_train, obj2_test = HSIC_MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
 
         NN_train, NN_test = HSIC_MMD_NN_train_test(trainer_vae, 'NN', args)
 

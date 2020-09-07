@@ -371,38 +371,6 @@ def discrete_continuous_info(d, c, k:int = 3, base: float = 2):
     f = (scipy.special.digamma(d.shape[1]) - av_psi_Nd + psi_ks - m_tot/(d.shape[1]))/math.log(base)
     return f
 
-#Use HSIC to measure the independence between two random variables
-# The original code is refered to https://github.com/romain-lopez/HCV
-from scipy.special import gamma
-import torch
-
-def bandwidth(d):
-    """
-    in the case of Gaussian random variables and the use of a RBF kernel,
-    this can be used to select the bandwidth according to the median heuristic
-    """
-    gz = 2 * gamma(0.5 * (d + 1)) / gamma(0.5 * d)
-    return 1. / (2. * gz ** 2)
-
-def K(x1, x2, gamma=1.):
-    dist_table = torch.unsqueeze(x1, 0) - torch.unsqueeze(x2, 1)
-    return torch.t(torch.exp(-gamma * torch.sum(dist_table ** 2, -1)))
-
-def hsic(z, s):
-    # use a gaussian RBF for every variable
-
-    d_z = z.shape[1]
-    d_s = s.shape[1]
-
-    zz = K(z, z, gamma=bandwidth(d_z))
-    ss = K(s, s, gamma=bandwidth(d_s))
-
-    hsic = 0
-    hsic += torch.mean(zz * ss)
-    hsic += torch.mean(zz) * torch.mean(ss)
-    hsic -= 2 * torch.mean(torch.mean(zz, dim=1) * torch.mean(ss, dim=1))
-    return torch.sqrt(hsic)
-
 #code is referred to https://github.com/ZongxianLee/MMD_Loss.Pytorch/blob/master/mmd_loss.py
 import torch.nn as nn
 class MMD_loss(nn.Module):
@@ -422,7 +390,7 @@ class MMD_loss(nn.Module):
         if self.fix_sigma:
             bandwidth = self.fix_sigma
         else:
-            bandwidth = torch.sum(L2_distance.data) / (n_samples**2-n_samples)
+            bandwidth = torch.median(L2_distance.data)
         bandwidth /= self.kernel_mul ** (self.kernel_num // 2)
         bandwidth_list = [bandwidth * (self.kernel_mul**i) for i in range(self.kernel_num)]
         kernel_val = [torch.exp(-L2_distance / bandwidth_temp) for bandwidth_temp in bandwidth_list]

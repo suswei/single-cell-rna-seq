@@ -54,7 +54,7 @@ class Trainer:
             adv_input_dim = self.model.n_latent + self.model.n_batch
             self.adv_model = MINE_Net(input_dim=adv_input_dim, n_hidden=adv_n_hidden, n_layers=adv_n_layers,
                              activation_fun=adv_activation_fun, unbiased_loss=unbiased_loss, initial=adv_w_initial)
-        elif self.adv_estimator == 'MMD':
+        elif self.adv_estimator in ['MMD','stdz_MMD']:
             self.MMD_loss = MMD_loss(kernel_mul = MMD_kernel_mul, kernel_num = MMD_kernel_num)
 
         self.data_loader_kwargs = {

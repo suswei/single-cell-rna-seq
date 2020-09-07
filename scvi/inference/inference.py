@@ -5,7 +5,7 @@ from . import Trainer
 import numpy as np
 from torch.autograd import Variable
 import pandas as pd
-from scvi.models.modules import discrete_continuous_info, hsic
+from scvi.models.modules import discrete_continuous_info
 
 plt.switch_backend('agg')
 
@@ -119,15 +119,15 @@ class UnsupervisedTrainer(Trainer):
             shuffle_index = torch.randperm(z.shape[0])
             shuffle_z_batch = torch.cat((z[shuffle_index], batch_dummy), 1)  # marginal
             return z_batch, shuffle_z_batch
-        elif self.adv_estimator == 'HSIC':
+        elif self.adv_estimator in ['MMD','stdz_MMD']:
             if self.use_cuda == True:
                 batch_index = batch_index.type(torch.FloatTensor).cuda()
             batch_index = Variable(batch_index.type(torch.FloatTensor), requires_grad=True)
-            return z, batch_index
-        elif self.adv_estimator == 'MMD':
-            if self.use_cuda == True:
-                batch_index = batch_index.type(torch.FloatTensor).cuda()
-            batch_index = Variable(batch_index.type(torch.FloatTensor), requires_grad=True)
+            if self.adv_estimator == 'stdz_MMD':
+                #standardize each dimension for z
+                z_mean = torch.mean(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
+                z_std = torch.std(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
+                z = (z - z_mean)/z_std #element by element
             z_batch0 = z[(batch_index[:, 0] == 0).nonzero().squeeze(1)]
             z_batch1 = z[(batch_index[:, 0] == 1).nonzero().squeeze(1)]
             return z_batch0, z_batch1
@@ -152,11 +152,7 @@ class UnsupervisedTrainer(Trainer):
             MINE_estimator_minibatch = torch.mean(t) - torch.log(torch.mean(et))
 
             return loss, MINE_estimator_minibatch
-        elif self.adv_estimator == 'HSIC':
-            hsic_minibatch = hsic(sample1, sample2)
-            loss = hsic_minibatch
-            return loss, hsic_minibatch
-        elif self.adv_estimator == 'MMD':
+        else:
             mmd_minibatch = self.MMD_loss(sample1, sample2)
             loss = mmd_minibatch
             return loss, mmd_minibatch
