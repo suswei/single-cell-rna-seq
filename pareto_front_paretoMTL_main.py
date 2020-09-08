@@ -138,7 +138,7 @@ def MINE_after_trainerVae(trainer_vae):
 
     return MINE_estimator_train.detach().item(), MINE_estimator_test.detach().item()
 
-def HSIC_MMD_NN_train_test(trainer_vae, type, args):
+def MMD_NN_train_test(trainer_vae, type, args):
 
     MMD_loss_fun = MMD_loss(args.MMD_kernel_mul, args.MMD_kernel_num)
     estimator_train_list, estimator_test_list = [], []
@@ -146,7 +146,7 @@ def HSIC_MMD_NN_train_test(trainer_vae, type, args):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
         z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
-        if type == 'MMD':
+        if type in ['stdz_MMD','MMD']:
             estimator_minibatch_train = MMD_loss_fun(z_batch0, z_batch1)
             estimator_train_list.append(estimator_minibatch_train.item())
         elif type == 'NN':
@@ -158,7 +158,7 @@ def HSIC_MMD_NN_train_test(trainer_vae, type, args):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
         z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
-        if type == 'MMD':
+        if type in ['stdz_MMD','MMD']:
             estimator_minibatch_test = MMD_loss_fun(z_batch0, z_batch1)
             estimator_test_list.append(estimator_minibatch_test.item())
         elif type == 'NN':
@@ -453,11 +453,11 @@ def main( ):
         if trainer_vae.adv_estimator == 'MINE':
             obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae)
         elif trainer_vae.adv_estimator == 'MMD':
-            obj2_train, obj2_test = HSIC_MMD_NN_train_test(trainer_vae, 'MMD', args)
+            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
         elif trainer_vae.adv_estimator == 'stdz_MMD':
-            obj2_train, obj2_test = HSIC_MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
+            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
 
-        NN_train, NN_test = HSIC_MMD_NN_train_test(trainer_vae, 'NN', args)
+        NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
 
         asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
         be_train = trainer_vae.train_set.entropy_batch_mixing()
