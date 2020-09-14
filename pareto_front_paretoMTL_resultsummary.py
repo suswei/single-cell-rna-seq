@@ -6,9 +6,8 @@ import pickle
 from pygmo import hypervolume
 import statistics
 import plotly.graph_objects as go
-import cv2
 
-def simple_cull(inputPoints, dominates):
+def simple_cull(inputPoints, dominates, return_index: bool=False):
     paretoPoints = set()
     candidateRowNr = 0
     dominatedPoints = set()
@@ -19,11 +18,11 @@ def simple_cull(inputPoints, dominates):
         nonDominated = True
         while len(inputPoints) != 0 and rowNr < len(inputPoints):
             row = inputPoints[rowNr]
-            if dominates(candidateRow, row):
+            if dominates(candidateRow, row, return_index):
                 # If it is worse on all features remove the row from the array
                 inputPoints.remove(row)
                 dominatedPoints.add(tuple(row))
-            elif dominates(row, candidateRow):
+            elif dominates(row, candidateRow, return_index):
                 nonDominated = False
                 dominatedPoints.add(tuple(candidateRow))
                 rowNr += 1
@@ -38,17 +37,36 @@ def simple_cull(inputPoints, dominates):
             break
     return paretoPoints, dominatedPoints
 
-def dominates(row, candidateRow):
-    return sum([row[x] <= candidateRow[x] for x in range(len(row))]) == len(row)
+def dominates(row, candidateRow, return_index):
+    if return_index == True:
+        return sum([row[x+1] <= candidateRow[x+1] for x in range(len(row)-1)]) == len(row)-1
+    else:
+        return sum([row[x] <= candidateRow[x] for x in range(len(row))]) == len(row)
 
 def draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path):
 
+    inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
+    paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates)
+    pp = np.array(list(paretoPoints1))
+    dp = np.array(list(dominatedPoints1))
+
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x = obj1,
-                         y = obj2,
-                         text = ['pref_idx:{}'.format(i) for i in pref_idx_list],
-                         mode='markers+text')
+    fig.add_trace(go.Scatter(x=obj1,
+                             y=obj2,
+                             text=['{}'.format(i) for i in pref_idx_list],
+                             mode='markers+text', showlegend=False)
                   )
+    if dp.shape[0]>0:
+        fig.add_trace(go.Scatter(x = dp[:,0].tolist(),
+                             y = dp[:,1].tolist(),
+                             mode='markers', name='dominated points',marker_color='rgba(0, 0, 255, .9)')
+                      )
+    if pp.shape[0]>0:
+        fig.add_trace(go.Scatter(x = pp[:,0].tolist(),
+                             y = pp[:,1].tolist(),
+                             mode='markers', name='non-dominated points', marker_color='rgba(255, 25, 52, .9)')
+                      )
+
     fig.update_traces(textposition='top center')
 
     fig.update_layout(
@@ -71,15 +89,16 @@ def draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path):
     fig.update_xaxes(title_text='obj1', title_font=dict(size=15, family='Arial, sans-serif', color='black'))
     fig.update_yaxes(title_text='obj2', title_font=dict(size=15, family='Arial, sans-serif', color='black'))
     fig.write_image(save_path)
+    return pp.shape[0]/len(obj1)
 
-def draw_mean_metrics(dataframe, y_axis_variable, save_path):
+def draw_mean_metrics(dataframe, methods_list, y_axis_variable, save_path):
     fig = go.Figure()
 
-    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_MMD']:
-        fig.add_trace(go.Scatter(x=dataframe.loc[:, 'pref_idx'].values.tolist(),
+    for balance_advestimator in methods_list:
+        fig.add_trace(go.Scatter(x=[k+1 for k in dataframe.loc[:, 'pref_idx'].values.tolist()],
                              y=dataframe.loc[:, '{}_mean_{}'.format(y_axis_variable, balance_advestimator)].values.tolist(),
                              error_y=dict(type='data', array=dataframe.loc[:, '{}_std_{}'.format(y_axis_variable, balance_advestimator)].values.tolist()),
-                             mode='lines+markers', name= '{}'.format(balance_advestimator))
+                             mode='lines+markers', name= '{}'.format(balance_advestimator), connectgaps=True)
                       )
     fig.update_layout(
         width=1000,
@@ -106,12 +125,16 @@ def draw_mean_metrics(dataframe, y_axis_variable, save_path):
     fig.update_xaxes(title_text='preference index', title_font=dict(size=15, family='Arial, sans-serif', color='black'))
     fig.write_image(save_path + '/{}_mean.png'.format(y_axis_variable))
 
-def draw_hypervolume(list1, list2, list3, fig_title, save_path):
+def draw_barplot(data_array, methods_list, y_axis_variable, fig_title, save_path):
+
+    y_list, stdev_list = [], []
+    for i in range(data_array.shape[0]):
+        y_list += [statistics.mean(data_array[i,:].tolist())]
+        stdev_list += [statistics.stdev(data_array[i, :].tolist())]
 
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=['gradnorm_MINE','std_MINE','std_MMD'],
-                         y=[statistics.mean(list1), statistics.mean(list2), statistics.mean(list3)],
-                         error_y=dict(type='data', array=[statistics.stdev(list1), statistics.stdev(list2), statistics.stdev(list3)])
+    fig.add_trace(go.Bar(x=methods_list, y=y_list,
+                         error_y=dict(type='data', array=stdev_list)
                          )
                   ) #text=[statistics.mean(MINE_list), statistics.mean(HSIC_list)]
     #fig.update_traces(texttemplate='%{text:.0f}', textposition='inside')
@@ -133,144 +156,127 @@ def draw_hypervolume(list1, list2, list3, fig_title, save_path):
                'xanchor': 'center',
                'yanchor': 'top'}
     )
-    fig.update_yaxes(title_text='hypervolume', title_font=dict(size=15, family='Arial, sans-serif', color='black'))
+    fig.update_yaxes(title_text=y_axis_variable, title_font=dict(size=15, family='Arial, sans-serif', color='black'))
     fig.write_image(save_path)
 
-def create_video(video_save_path, image_paths):
-    #image_paths is a list of image paths to read images into a video
-    frame = cv2.imread(image_paths[0])
-    height, width, layers = frame.shape
-    video = cv2.VideoWriter(video_save_path, 0, 1, (width, height))
-    for file_path in image_paths:
-        video.write(cv2.imread(file_path))
-    cv2.destroyAllWindows()
-    video.release()
-
-def pareto_front(hyperparameter_config, dataframe, dir_path):
+def pareto_front(hyperparameter_config, dataframe, methods_list, dir_path):
 
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_MMD']:
-        dataframe_adv = dataframe[dataframe.balance_advestimator.eq(balance_advestimator)]
-
-        for temp in hyperparameter_experiments:
-
-            for MC in range(dataframe_adv.MC.max()+1):
-                dataframe_oneMC = dataframe_adv[dataframe_adv.MC.eq(MC)]
-
-                pref_idx_list = dataframe_oneMC.loc[:, 'pref_idx'].values.tolist()
-                for pareto_front_type in ['whole', 'NN']: #'asw', 'nmi', 'ari', 'uca'
-                    for type in ['train', 'test']:
+    for temp in hyperparameter_experiments:
+        for type in ['train', 'test']:
+            paretoPoints_percent_array = np.empty((0, dataframe.MC.max()+1))
+            for balance_advestimator in methods_list:
+                dataframe_adv = dataframe[dataframe.balance_advestimator.eq(balance_advestimator)]
+                paretoPoints_percent_one = []
+                for pareto_front_type in ['whole', 'NN']:  # 'asw', 'nmi', 'ari', 'uca'
+                    for MC in range(dataframe_adv.MC.max()+1):
+                        dataframe_oneMC = dataframe_adv[dataframe_adv.MC.eq(MC)]
+                        pref_idx_list = [k+1 for k in dataframe_oneMC.loc[:, 'pref_idx'].values.tolist()]
 
                         save_path = dir_path + '/{}'.format(balance_advestimator) + '/paretoMTL_MC{}_{}_{}_{}.png'.format(MC, balance_advestimator.split('_')[1], pareto_front_type, type)
 
                         if pareto_front_type == 'whole':
-                            if balance_advestimator == 'gradnorm_MINE':
-                                fig_title = 'obj1: negative_ELBO, obj2: {}, {}, {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {},<br>gradnorm_weight_lowlimit: {:.6E}'.format(
-                                    balance_advestimator.split('_')[1], pareto_front_type, type, temp['pre_epochs'],
-                                    temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC, temp['gradnorm_weight_lowlimit'])
-                            else:
-                                fig_title = 'obj1: negative_ELBO, obj2: {}, {}, {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {}'.format(
-                                    balance_advestimator.split('_')[1], pareto_front_type, type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC)
-
+                            fig_title = 'obj1: negative_ELBO, obj2: {}, {}, {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {}'.format(
+                                balance_advestimator.split('_')[1], pareto_front_type, type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC)
                             obj1 = dataframe_oneMC.loc[:, 'obj1_{}'.format(type)].values.tolist()
                             obj2 = dataframe_oneMC.loc[:, 'obj2_{}'.format(type)].values.tolist()
-                            draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path)
+                            percent = draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path)
+                            paretoPoints_percent_one += [percent]
                         elif pareto_front_type in ['NN']:
-                            if balance_advestimator == 'gradnorm_MINE':
-                                fig_title = 'obj1: negative_ELBO, obj2: NN(for {}), {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {},<br>gradnorm_weight_lowlimit: {:.6E}'.format(
-                                    balance_advestimator.split('_')[1], type, temp['pre_epochs'], temp['pre_lr'],
-                                    temp['adv_lr'], temp['n_epochs'], temp['lr'], MC, temp['gradnorm_weight_lowlimit'])
-                            else:
-                                fig_title = 'obj1: negative_ELBO, obj2: NN(for {}), {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {}'.format(
-                                    balance_advestimator.split('_')[1], type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC)
-
+                            fig_title = 'obj1: negative_ELBO, obj2: NN(for {}), {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}, MC: {}'.format(
+                                balance_advestimator.split('_')[1], type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'], MC)
                             obj1 = dataframe_oneMC.loc[:, 'obj1_{}'.format(type)].values.tolist()
                             obj2 = dataframe_oneMC.loc[:, '{}_{}'.format(pareto_front_type,type)].values.tolist()
+                            _ = draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path)
+                    if pareto_front_type == 'whole':
+                        paretoPoints_percent_array = np.concatenate((paretoPoints_percent_array,np.array([paretoPoints_percent_one])),axis=0)
 
-                            draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path)
-                        '''
-                        else:
-                            fig_title = 'obj1: be, obj2: {}, {}, {},<br>pre_epochs: {}, pre_lr: {}, adv_lr: {},<br>n_epochs:{}, lr: {}'.format(
-                                pareto_front_type, temp['adv_estimator'], type, temp['pre_epochs'], temp['pre_lr'], temp['adv_lr'], temp['n_epochs'], temp['lr'])
-    
-                            obj1 = dataframe_oneMC.loc[:, 'be_{}'.format(type)].values.tolist()
-                            obj2 = dataframe_oneMC.loc[:, '{}_{}'.format(pareto_front_type, type)].values.tolist()
-    
-                            draw_pareto_front(obj1, obj2, pref_idx_list, fig_title, save_path)
-                        '''
-    '''
-    video_save_path = dir_path + '/paretoMTL.mp4'
+            draw_barplot(data_array=paretoPoints_percent_array, methods_list=methods_list, y_axis_variable='ParetoPoints percent',
+                         fig_title=type, save_path=dir_path + '/ParetoPoints_percent_{}.png'.format(type))
 
-    image_paths = []
-    for temp in hyperparameter_experiments:
-        for pareto_front_type in ['whole', 'NN', 'asw', 'nmi', 'ari', 'uca']:
-            for type in ['train','test']:
-                one_image_path = dir_path + '/paretoMTL_{}_{}_{}.png'.format(temp['adv_estimator'], pareto_front_type, type)
-                if os.path.isfile(one_image_path):
-                    image_paths += [one_image_path]
 
-    create_video(video_save_path, image_paths)
-    '''
+def mean_metrics(hyperparameter_config, dataframe, methods_list, dir_path):
 
-def mean_metrics(hyperparameter_config, dataframe, dir_path):
+    dataframe['row_idx'] = list(range(dataframe.shape[0]))
 
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_MMD']:
-        for temp in hyperparameter_experiments:
-            dataframe_adv = dataframe[dataframe.balance_advestimator.eq(balance_advestimator)]
-            dataframe_mean_std = dataframe_adv.groupby('pref_idx').agg(
-                obj1_train_mean=('obj1_train', 'mean'),
-                obj1_train_std=('obj1_train', 'std'),
-                obj2_train_mean=('obj2_train', 'mean'),
-                obj2_train_std=('obj2_train', 'std'),
-                NN_train_mean=('NN_train','mean'),
-                NN_train_std=('NN_train','std'),
-                obj1_test_mean=('obj1_test', 'mean'),
-                obj1_test_std=('obj1_test', 'std'),
-                obj2_test_mean=('obj2_test', 'mean'),
-                obj2_test_std=('obj2_test', 'std'),
-                NN_test_mean=('NN_test', 'mean'),
-                NN_test_std=('NN_test', 'std'),
-                asw_train_mean=('asw_train', 'mean'),
-                asw_train_std=('asw_train', 'std'),
-                nmi_train_mean=('nmi_train', 'mean'),
-                nmi_train_std=('nmi_train', 'std'),
-                ari_train_mean=('ari_train', 'mean'),
-                ari_train_std=('ari_train', 'std'),
-                uca_train_mean=('uca_train', 'mean'),
-                uca_train_std=('uca_train', 'std'),
-                be_train_mean=('be_train', 'mean'),
-                be_train_std=('be_train', 'std'),
-                asw_test_mean=('asw_test', 'mean'),
-                asw_test_std=('asw_test', 'std'),
-                nmi_test_mean=('nmi_test', 'mean'),
-                nmi_test_std=('nmi_test', 'std'),
-                ari_test_mean=('ari_test', 'mean'),
-                ari_test_std=('ari_test', 'std'),
-                uca_test_mean=('uca_test', 'mean'),
-                uca_test_std=('uca_test', 'std'),
-                be_test_mean=('be_test', 'mean'),
-                be_test_std=('be_test', 'std')
-            ).reset_index()
+    for temp in hyperparameter_experiments:
+        for type in ['train', 'test']:
+            for balance_advestimator in methods_list:
+                dataframe_adv = dataframe[dataframe.balance_advestimator.eq(balance_advestimator)]
 
-            dataframe_mean_std.rename(columns=dict(zip(dataframe_mean_std.columns[1:], [column + '_{}'.format(balance_advestimator) for column in dataframe_mean_std.columns[1:]])),
-                        inplace=True)
+                #for each MC, only keep the ParetoPoints
+                for MC in range(dataframe_adv.MC.max()+1):
+                    dataframe_oneMC = dataframe_adv[dataframe_adv.MC.eq(MC)]
+                    row_index = dataframe_oneMC.row_idx.values.tolist()
+                    obj1 = dataframe_oneMC.loc[:, 'obj1_{}'.format(type)].values.tolist()
+                    obj2 = dataframe_oneMC.loc[:, 'obj2_{}'.format(type)].values.tolist()
+                    inputPoints1 = [[row_index[k], obj1[k], obj2[k]] for k in range(len(obj1))]  # index needed
+                    paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates, return_index=True)
+                    pp = np.array(list(paretoPoints1))
+                    dataframe_adv_ParetoPoints_oneMC = dataframe_oneMC[dataframe_oneMC['row_idx'].isin([int(k) for k in pp[:,0].tolist()])]
+                    if MC==0:
+                        dataframe_adv_ParetoPoints = dataframe_adv_ParetoPoints_oneMC
+                    else:
+                        dataframe_adv_ParetoPoints = pd.concat([dataframe_adv_ParetoPoints,dataframe_adv_ParetoPoints_oneMC],axis=0)
 
-        if balance_advestimator == 'gradnorm_MINE':
-            dataframe_mean_std_total = dataframe_mean_std
-        else:
-            dataframe_mean_std_total = dataframe_mean_std_total.merge(dataframe_mean_std, on='pref_idx')
+                if type=='train':
+                    dataframe_mean_std = dataframe_adv_ParetoPoints.groupby('pref_idx').agg(
+                        obj1_train_mean=('obj1_train', 'mean'),
+                        obj1_train_std=('obj1_train', 'std'),
+                        obj2_train_mean=('obj2_train', 'mean'),
+                        obj2_train_std=('obj2_train', 'std'),
+                        NN_train_mean=('NN_train','mean'),
+                        NN_train_std=('NN_train','std'),
+                        asw_train_mean=('asw_train', 'mean'),
+                        asw_train_std=('asw_train', 'std'),
+                        nmi_train_mean=('nmi_train', 'mean'),
+                        nmi_train_std=('nmi_train', 'std'),
+                        ari_train_mean=('ari_train', 'mean'),
+                        ari_train_std=('ari_train', 'std'),
+                        uca_train_mean=('uca_train', 'mean'),
+                        uca_train_std=('uca_train', 'std'),
+                        be_train_mean=('be_train', 'mean'),
+                        be_train_std=('be_train', 'std')
+                    ).reset_index()
+                else:
+                    dataframe_mean_std = dataframe_adv_ParetoPoints.groupby('pref_idx').agg(
+                        obj1_test_mean=('obj1_test', 'mean'),
+                        obj1_test_std=('obj1_test', 'std'),
+                        obj2_test_mean=('obj2_test', 'mean'),
+                        obj2_test_std=('obj2_test', 'std'),
+                        NN_test_mean=('NN_test', 'mean'),
+                        NN_test_std=('NN_test', 'std'),
+                        asw_test_mean=('asw_test', 'mean'),
+                        asw_test_std=('asw_test', 'std'),
+                        nmi_test_mean=('nmi_test', 'mean'),
+                        nmi_test_std=('nmi_test', 'std'),
+                        ari_test_mean=('ari_test', 'mean'),
+                        ari_test_std=('ari_test', 'std'),
+                        uca_test_mean=('uca_test', 'mean'),
+                        uca_test_std=('uca_test', 'std'),
+                        be_test_mean=('be_test', 'mean'),
+                        be_test_std=('be_test', 'std')
+                    ).reset_index()
 
-    for variable in ['obj1', 'NN', 'asw','nmi','ari','uca','be']:
-        for type in ['train','test']:
-            y_axis_variable = '{}_{}'.format(variable, type)
-            draw_mean_metrics(dataframe_mean_std_total, y_axis_variable, dir_path)
 
-def hypervolume_compare(hyperparameter_config, dataframe, dir_path):
+                dataframe_mean_std.rename(columns=dict(zip(dataframe_mean_std.columns[1:], [column + '_{}'.format(balance_advestimator) for column in dataframe_mean_std.columns[1:]])),
+                            inplace=True)
+
+                if balance_advestimator == methods_list[0]:
+                    dataframe_mean_std_total = dataframe_mean_std
+                else:
+                    dataframe_mean_std_total = dataframe_mean_std_total.merge(dataframe_mean_std, how='outer', on='pref_idx')
+
+            for variable in ['obj1', 'NN', 'asw','nmi','ari','uca','be']:
+                y_axis_variable = '{}_{}'.format(variable, type)
+                draw_mean_metrics(dataframe_mean_std_total, methods_list, y_axis_variable, dir_path)
+
+def hypervolume_compare(hyperparameter_config, dataframe, methods_list, dir_path):
 
     #get the reference point to calculate hypervolume
     obj1_max = dataframe.loc[:,['obj1_train','obj1_test']].max(axis=0).max()
@@ -280,12 +286,12 @@ def hypervolume_compare(hyperparameter_config, dataframe, dir_path):
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    for type in ['train','test']:
-        hypervolume_gradnorm_MINE, hypervolume_std_MINE, hypervolume_std_MMD = [], [], []
+    for temp in hyperparameter_experiments:
+        for type in ['train','test']:
+            hypervolume_array = np.empty((0,dataframe.MC.max() + 1))
 
-        for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_MMD']:
-            for temp in hyperparameter_experiments:
-
+            for balance_advestimator in methods_list:
+                hypervolume_list = []
                 dataframe_adv = dataframe[dataframe.balance_advestimator.eq(balance_advestimator)]
 
                 for MC in range(dataframe_adv.MC.max() + 1):
@@ -298,17 +304,13 @@ def hypervolume_compare(hyperparameter_config, dataframe, dir_path):
                     paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates)
                     pp = np.array(list(paretoPoints1))
                     hv = hypervolume([[pp[:,0][k], pp[:,1][k]] for k in range(pp.shape[0])])
-                    if balance_advestimator == 'gradnorm_MINE':
-                        hypervolume_gradnorm_MINE += [hv.compute(ref_point)]
-                    elif balance_advestimator == 'std_MINE':
-                        hypervolume_std_MINE += [hv.compute(ref_point)]
-                    else:
-                        hypervolume_std_MMD += [hv.compute(ref_point)]
-        fig_title = type
-        save_path = dir_path + '/hypervolume_compare_{}.png'.format(type)
-        draw_hypervolume(list1=hypervolume_gradnorm_MINE, list2=hypervolume_std_MINE, list3= hypervolume_std_MMD, fig_title=fig_title, save_path=save_path)
+                    hypervolume_list += [hv.compute(ref_point)]
+                hypervolume_array = np.concatenate((hypervolume_array, np.array([hypervolume_list])),axis=0)
+            fig_title = type
+            save_path = dir_path + '/hypervolume_compare_{}.png'.format(type)
+            draw_barplot(data_array=hypervolume_array, methods_list=methods_list, y_axis_variable='hypervolume', fig_title=fig_title, save_path=save_path)
 
-def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
+def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch', methods_list: list=['std_MINE','std_MMD']):
 
     dir_path = './result/pareto_front_paretoMTL/{}/{}'.format(dataset, confounder)
     hyperparameter_config = {
@@ -317,14 +319,13 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
         'adv_lr': [5e-5],
         'n_epochs': [100],
         'lr': [1e-3],
-        'gradnorm_weight_lowlimit': [1e-5],
         'MC': list(range(10)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    for balance_advestimator in ['gradnorm_MINE', 'std_MINE', 'std_MMD']:
+    for balance_advestimator in methods_list:
         dir_path_subset = dir_path + '/{}'.format(balance_advestimator)
         for i in range(len(hyperparameter_experiments)):
             config_path = dir_path_subset + '/taskid{}/config.pkl'.format(i)
@@ -343,7 +344,7 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
                 results_config.update({'balance_advestimator': [balance_advestimator]})
                 results_config.update(results)
 
-                if balance_advestimator == 'gradnorm_MINE' and i == 0:
+                if balance_advestimator == methods_list[0] and i == 0:
                     results_config_total = pd.DataFrame.from_dict(results_config)
                 else:
                     results_config_total = pd.concat([results_config_total, pd.DataFrame.from_dict(results_config)], axis=0)
@@ -351,8 +352,8 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch'):
     del hyperparameter_config['npref_prefidx']
     del hyperparameter_config['MC']
 
-    pareto_front(hyperparameter_config= hyperparameter_config, dataframe=results_config_total, dir_path=dir_path)
+    pareto_front(hyperparameter_config= hyperparameter_config, dataframe=results_config_total, methods_list=methods_list, dir_path=dir_path)
 
-    mean_metrics(hyperparameter_config=hyperparameter_config, dataframe=results_config_total, dir_path=dir_path)
+    mean_metrics(hyperparameter_config=hyperparameter_config, dataframe=results_config_total, methods_list=methods_list, dir_path=dir_path)
 
-    hypervolume_compare(hyperparameter_config=hyperparameter_config, dataframe=results_config_total, dir_path=dir_path)
+    hypervolume_compare(hyperparameter_config=hyperparameter_config, dataframe=results_config_total, methods_list=methods_list, dir_path=dir_path)
