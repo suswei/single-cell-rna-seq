@@ -32,7 +32,7 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index, type):
         sample2 = torch.cat((z[shuffle_index], batch_dummy), 1)
         return sample1, sample2, z, batch_dummy
     else:
-        if type == 'stdz_MMD':
+        if type == 'stdzMMD':
             # standardize each dimension for z
             z_mean = torch.mean(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
             z_std = torch.std(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
@@ -146,7 +146,7 @@ def MMD_NN_train_test(trainer_vae, type, args):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
         z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
-        if type in ['stdz_MMD','MMD']:
+        if type in ['stdzMMD','MMD']:
             estimator_minibatch_train = MMD_loss_fun(z_batch0, z_batch1)
             estimator_train_list.append(estimator_minibatch_train.item())
         elif type == 'NN':
@@ -158,7 +158,7 @@ def MMD_NN_train_test(trainer_vae, type, args):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
         z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
-        if type in ['stdz_MMD','MMD']:
+        if type in ['stdzMMD','MMD']:
             estimator_minibatch_test = MMD_loss_fun(z_batch0, z_batch1)
             estimator_test_list.append(estimator_minibatch_test.item())
         elif type == 'NN':
@@ -240,6 +240,16 @@ def main( ):
     parser.add_argument('--unbiased_loss', action='store_true', default=True,
                         help='whether to use unbiased loss or not in MINE')
 
+    #for empirical MI
+    parser.add_argument('--empirical_MI', action='store_true', default=False,
+                        help='whether to calculate empirical MI during training')
+
+    parser.add_argument('--batch_ratio', type=list, default=[],
+                        help='the list showing the percent of each batch in the dataset')
+
+    parser.add_argument('--nsamples', type=int, default=1000,
+                        help='number of samples from aggregated posterior to get empirical MI')
+
     #for MMD
     parser.add_argument('--MMD_kernel_mul', type=float, default=2.0,
                         help='the multiplier value to calculate bandwidth')
@@ -263,18 +273,6 @@ def main( ):
     parser.add_argument('--adv_lr', type=float, default=5e-5,
                         help='learning rate in MINE pre-training and adversarial training')
 
-    #for gradnorm
-    parser.add_argument('--gradnorm_hypertune', action='store_true', default=False,
-                        help='whether to tune hyperparameter for gradnorm')
-
-    parser.add_argument('--alpha', type=float, default=2,
-                        help='hyperparameter alpha for gradnorm')
-
-    parser.add_argument('--gradnorm_epochs', type=int, default=100,
-                        help='epochs for gradnorm training')
-
-    parser.add_argument('--gradnorm_lr', type=float, default=1e-3,
-                        help='learning rate for gradnorm training')
 
     #to get min and max for obj1 and obj2 to standardize
     parser.add_argument('--standardize', action='store_true', default=False,
@@ -282,8 +280,11 @@ def main( ):
 
     #for paretoMTL
 
-    parser.add_argument('--n_epochs', type=int, default=100,
+    parser.add_argument('--epochs', type=int, default=100,
                         help='number of epochs to train scVI and MINE')
+
+    parser.add_argument('--adv_epochs', type=int, default=1,
+                        help='number of epochs to train MINE adversarially')
 
     parser.add_argument('--lr', type=float, default=1e-3,
                         help='learning rate for paretoMTL')
@@ -359,30 +360,28 @@ def main( ):
     if args.pre_train == True:
         desired_seed = int(desired_seeds[0, args.taskid])
     else:
-        if args.gradnorm_hypertune == True:
-            desired_seed = int(desired_seeds[0, 0])
-        else:
-            desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
+        desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
 
     if args.pre_train == True:
         args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)
         if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)):
             os.makedirs('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid))
     else:
-        if args.gradnorm_hypertune == True:
-            args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, 0)
-            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, 0)):
-                print('Error: please pretrain first!')
-        else:
-            args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))
-            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))):
-                print('Error: please pretrain first!')
+        args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))
+        if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))):
+            print('Error: please pretrain first!')
+
+    if args.empirical_MI == True:
+        for i in range(gene_dataset.n_batches-1):
+            ratio_perbatch = gene_dataset.batch_indices[gene_dataset.batch_indices[:,0]==i].shape[0]/gene_dataset.batch_indices.shape[0]
+            args.batch_ratio +=[ratio_perbatch]
+        args.batch_ratio += [1-sum(args.batch_ratio)]
 
     # calculate ratio to split the gene_dataset into training and testing dataset
     # to avoid the case when there are very few input data points of the last minibatch in every epoch
     intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (
             int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
-    args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e6) / 1e6
+    args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e10) / 1e10
 
     # If train vae alone
     # vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
@@ -406,47 +405,36 @@ def main( ):
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
                                           adv_n_hidden=args.adv_n_hidden, adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
-                                          unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial)
-    elif args.adv_estimator in ['MMD','stdz_MMD']:
+                                          unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+    elif args.adv_estimator in ['MMD','stdzMMD']:
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
-                                          MMD_kernel_mul=args.MMD_kernel_mul, MMD_kernel_num=args.MMD_kernel_num)
+                                          MMD_kernel_mul=args.MMD_kernel_mul, MMD_kernel_num=args.MMD_kernel_num, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
     trainer_vae.kl_weight = 1
 
     if args.pre_train == True:
-        trainer_vae.pretrain_gradnorm_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
+        trainer_vae.pretrain_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
                         pre_adv_epochs=args.pre_adv_epochs, adv_lr=args.adv_lr, path=args.save_path)
     elif args.standardize == True:
-        obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(
-            path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, n_epochs=args.n_epochs,
-            n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
+        obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_paretoMTL(
+            path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs,
+            adv_epochs=args.adv_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
         if args.pref_idx == 0:
-            obj2_max = max(obj2_minibatch_list) * (1 + 0.1)  # 1 + 0.1 or 1-0.1 is for variation in different MCs
-            obj2_min = min(obj2_minibatch_list) * (1 - 0.1)
+            obj2_max = max(obj2_minibatch_list)
+            obj2_min = min(obj2_minibatch_list)
             print('obj2_max: {}, obj2_min: {}'.format(obj2_max, obj2_min))
         if args.pref_idx == 9:
-            obj1_max = max(obj1_minibatch_list) * (1 + 0.1)
-            obj1_min = min(obj1_minibatch_list) * (1 - 0.1)
+            obj1_max = max(obj1_minibatch_list)
+            obj1_min = min(obj1_minibatch_list)
             print('obj1_max: {}, obj1_min: {}'.format(obj1_max, obj1_min))
-    else:
-        if args.gradnorm_hypertune == True:
-            gradnorm_weights, weightloss1_list, weightloss2_list, obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(
-                path=args.save_path, gradnorm_hypertune=args.gradnorm_hypertune, lr=args.lr, adv_lr=args.adv_lr, alpha=args.alpha,
-                gradnorm_epochs=args.gradnorm_epochs, gradnorm_lr=args.gradnorm_lr)
-        else:
-            if args.std_paretoMTL == True:
-                obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
-                    std_paretoMTL=args.std_paretoMTL,obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min,
-                    n_epochs = args.n_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
-            elif args.gradnorm_paretoMTL == True:
-                obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_gradnorm_paretoMTL(path=args.save_path,
-                    lr=args.lr, adv_lr=args.adv_lr, gradnorm_paretoMTL=args.gradnorm_paretoMTL,
-                    alpha=args.alpha, gradnorm_lr=args.gradnorm_lr, gradnorm_weight_lowlimit=args.gradnorm_weight_lowlimit,
-                    obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min,
-                    n_epochs=args.n_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx, taskid=args.taskid)
+    elif args.std_paretoMTL == True:
+        obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
+            std_paretoMTL=args.std_paretoMTL,obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min,
+            epochs = args.epochs, adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
 
+        '''
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
@@ -454,8 +442,8 @@ def main( ):
             obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae)
         elif trainer_vae.adv_estimator == 'MMD':
             obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
-        elif trainer_vae.adv_estimator == 'stdz_MMD':
-            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
+        elif trainer_vae.adv_estimator == 'stdzMMD':
+            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdzMMD', args)
 
         NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
 
@@ -484,41 +472,15 @@ def main( ):
                         'be_test': [be_test]
                         }
 
-        if args.gradnorm_hypertune == True:
-            args.save_path = './result/pareto_front_paretoMTL/{}/{}/gradnorm_hypertune/taskid{}'.format(args.dataset_name, args.confounder,args.taskid)
-            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/gradnorm_hypertune/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)):
-                os.makedirs('./result/pareto_front_paretoMTL/{}/{}/gradnorm_hypertune/taskid{}'.format(args.dataset_name, args.confounder, args.taskid))
+        args.save_path = './result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
+        if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
+            os.makedirs('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
 
-            results_dict.update({'gradnorm_weights': gradnorm_weights,
-                                 'gradnorm_weightloss1_list': weightloss1_list,
-                                 'gradnorm_weightloss2_list': weightloss2_list,
-                                 'obj1_minibatch_list': obj1_minibatch_list,
-                                 'obj2_minibatch_list': obj2_minibatch_list
-                                 })
-
-            gradnorm_path = os.path.dirname(args.save_path) + '/taskid{}_weightloss_minibatch'.format(args.taskid)
-            gradnorm_title = 'alpha: {}, epochs: {}, lr: {}'.format(args.alpha, args.gradnorm_epochs, args.gradnorm_lr)
-            draw_diagnosis_plot(weightloss1_list, weightloss2_list, 'weight for obj1', 'weight for obj2', gradnorm_title, gradnorm_path)
-
-            gradnorm_path = os.path.dirname(args.save_path) + '/taskid{}_obj_minibatch'.format(args.taskid)
-            gradnorm_title = 'alpha: {}, epochs: {}, lr: {},\nobj1_train: {:.2f}, NN_train: {:.2f},\nasw_train: {:.2f}, nmi_train: {:.2f}, ari_train:{:.2f},\nuca_train: {:.2f}, be_train: {:.2f}'.format(args.alpha,
-                            args.gradnorm_epochs, args.gradnorm_lr, obj1_train, obj2_train, asw_train, nmi_train, ari_train, uca_train, be_train)
-            draw_diagnosis_plot(obj1_minibatch_list, obj2_minibatch_list, 'obj1 minibatch', 'obj2 minibatch', gradnorm_title, gradnorm_path)
-        else:
-            if args.std_paretoMTL == True:
-                args.save_path = './result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
-                if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
-                    os.makedirs('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
-            elif args.gradnorm_paretoMTL == True:
-                args.save_path = './result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)
-                if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid)):
-                    os.makedirs('./result/pareto_front_paretoMTL/{}/{}/gradnorm_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator,args.taskid))
-
-            if args.pref_idx == 0 or args.pref_idx==9:
-                trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches', save_name=args.save_path + '/tsne_batch_train')
-                trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='labels',save_name=args.save_path + '/tsne_labels_train')
-                trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches', save_name=args.save_path + '/tsne_batch_test')
-                trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='labels', save_name=args.save_path + '/tsne_labels_test')
+        if args.pref_idx == 0 or args.pref_idx==9:
+            trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches', save_name=args.save_path + '/tsne_batch_train')
+            trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='labels',save_name=args.save_path + '/tsne_labels_train')
+            trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches', save_name=args.save_path + '/tsne_batch_test')
+            trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='labels', save_name=args.save_path + '/tsne_labels_test')
 
         args_dict = vars(args)
         with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
@@ -527,7 +489,7 @@ def main( ):
         with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
             pickle.dump(results_dict, f)
         print(results_dict)
-
+        '''
 # Run the actual program
 if __name__ == "__main__":
     main()

@@ -17,10 +17,10 @@ def main(taskid):
         'n_hidden': [128],
         'n_latent': [10],
         'batch_size': [128],
-        'adv_estimator': ['stdz_MMD'],
+        'adv_estimator': ['stdzMMD'],
         'MMD_kernel_mul': [1.5],
         'MMD_kernel_num': [10],
-        'n_epochs': [100],
+        'epochs': [100],
         'lr': [1e-3],
         'obj1_max': [24000],
         'obj1_min': [10479],
@@ -39,11 +39,11 @@ def main(taskid):
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "        
               "--adv_estimator %s --MMD_kernel_mul %s --MMD_kernel_num %s "
-              "--n_epochs %s --lr %s --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "
+              "--epochs %s --lr %s --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "
               "--n_tasks %s --MC %s --npref %s --pref_idx %s"
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['MMD_kernel_mul'],
-                 temp['MMD_kernel_num'], temp['n_epochs'], temp['lr'],
+                 temp['MMD_kernel_num'], temp['epochs'], temp['lr'],
                  temp['obj1_max'], temp['obj1_min'], temp['obj2_max'], temp['obj2_min'], temp['n_tasks'], temp['MC'],
                  temp['npref_prefidx']['npref'], temp['npref_prefidx']['pref_idx'])
               )

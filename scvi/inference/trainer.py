@@ -43,7 +43,7 @@ class Trainer:
                  verbose=False, frequency=None, weight_decay=1e-6, early_stopping_kwargs=dict(),
                  data_loader_kwargs=dict(), save_path='None', batch_size=128, adv_estimator='None',
                  adv_n_hidden=128, adv_n_layers=10, adv_activation_fun='ELU', unbiased_loss=True, adv_w_initial='Normal',
-                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5):
+                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5, batch_ratio: list=[], nsamples: int=1e5):
 
         self.model = model
         self.gene_dataset = gene_dataset
@@ -56,6 +56,9 @@ class Trainer:
                              activation_fun=adv_activation_fun, unbiased_loss=unbiased_loss, initial=adv_w_initial)
         elif self.adv_estimator in ['MMD','stdz_MMD']:
             self.MMD_loss = MMD_loss(kernel_mul = MMD_kernel_mul, kernel_num = MMD_kernel_num)
+
+        self.batch_ratio = batch_ratio
+        self.nsamples = nsamples
 
         self.data_loader_kwargs = {
             "batch_size": batch_size,
@@ -234,89 +237,10 @@ class Trainer:
         return type_class(model, gene_dataset, shuffle=shuffle, indices=indices, use_cuda=self.use_cuda,
                           data_loader_kwargs=self.data_loader_kwargs)
 
-    def adversarial_train(self, pre_n_epochs, pre_lr, pre_adv_epochs, adv_lr, n_epochs, lr,
-                          eps: float = 0.01, std: bool=False, min_obj1: float = 10000, max_obj1: float = 20000,
-                          min_obj2: float = 0, max_obj2: float = 0.9, scale: float = 0):
-
-        params = filter(lambda p: p.requires_grad, self.model.parameters())
-        self.optimizer = torch.optim.Adam(params, lr=pre_lr, eps=eps)
-        self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
-
-        #pretrain vae_MI, here loss is not standardized
-        self.cal_loss = True
-        self.cal_adv_loss = False
-        for pre_n_epoch in range(pre_n_epochs):
-            for tensors_list in self.data_loaders_loop():
-                loss, _, _ = self.two_loss(*tensors_list)
-                loss.backward()
-                self.optimizer.step()
-                self.optimizer.zero_grad()
-
-        # pretrain adv_model, here adv_loss is not standardized
-        self.cal_loss = False
-        self.cal_adv_loss = True
-        for pre_adv_epoch in range(pre_adv_epochs):
-            for adv_tensors_list in self.data_loaders_loop():
-                _, adv_loss, obj2_minibatch = self.two_loss(*adv_tensors_list)
-                adv_loss.backward()
-                self.adv_optimizer.step()
-                self.adv_optimizer.zero_grad()
-                self.optimizer.zero_grad()
-
-        #change the learning rate for vae_MI after pre-training if necessary
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = lr
-
-        loss_minibatch_list, obj2_minibatch_list = [], []
-        for self.epoch in range(n_epochs):
-
-            self.model.train()
-            self.adv_model.train()
-
-            for tensors_list in self.data_loaders_loop():
-
-                # here adv_loss is also not standardized
-                self.cal_loss = False
-                _, adv_loss, obj2_minibatch = self.two_loss(*tensors_list)
-                adv_loss.backward()
-                self.adv_optimizer.step()
-                self.adv_optimizer.zero_grad()
-                self.optimizer.zero_grad()
-                self.cal_loss = True
-
-                loss, adv_loss, obj2_minibatch = self.two_loss(*tensors_list)
-
-                #pay attention, although when train MINE, the adv_loss is the unbiased loss
-                #however, in torch.max(obj1, obj2), the obj2 should be MINE estimator, not negative of unbiased loss
-                #Obj1 is just loss.
-                if std == True:
-                    std_obj1 = (loss - min_obj1)/(max_obj1 - min_obj1)
-                    # pay attention: here adv_min_value, adv_max_value of MINE_estimator_minibatch
-                    std_obj2 = (obj2_minibatch - min_obj2) / (max_obj2 - min_obj2)
-                    combined_loss = torch.max((1 - scale)*std_obj1, scale*std_obj2)
-                    if combined_loss.item() == (1 - scale) * std_obj1.item():
-                        combined_loss = loss
-                    elif combined_loss.item() == scale * std_obj2.item():
-                        combined_loss = obj2_minibatch
-                else: #to get min and max value to standardize obj1 and obj2
-                    combined_loss = torch.max((1 - scale) * loss, scale * obj2_minibatch)
-
-                combined_loss.backward(retain_graph=True)
-                self.optimizer.step()
-                self.adv_optimizer.zero_grad()
-                self.optimizer.zero_grad()
-
-                loss_minibatch_list.append(loss.item())
-                obj2_minibatch_list.append(obj2_minibatch.item())
-
-        return loss_minibatch_list, obj2_minibatch_list
-
-    def pretrain_gradnorm_paretoMTL(self, pre_train: bool=False, pre_epochs: int=250, pre_lr: float=1e-3, eps: float = 0.01,
+    def pretrain_paretoMTL(self, pre_train: bool=False, pre_epochs: int=250, pre_lr: float=1e-3, eps: float = 0.01,
                         pre_adv_epochs: int=100, adv_lr: float=5e-5, path: str='None', lr: float=1e-3, standardize: bool=False,
-                        gradnorm_hypertune: bool=False, alpha: float=3, gradnorm_epochs: int=100, gradnorm_lr: float=1e-3,
                         std_paretoMTL: bool = False, obj1_max: float = 20000, obj1_min: float = 12000, obj2_max: float = 0.6, obj2_min: float = 0,
-                        gradnorm_paretoMTL: bool=False, gradnorm_weight_lowlimit: float=1e-6,
-                        n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0, taskid: int=0):
+                        epochs: int=50, adv_epochs: int=1, n_tasks: int=2, npref: int=10, pref_idx: int=0, taskid: int=0):
 
         if pre_train == True:
             params = filter(lambda p: p.requires_grad, self.model.parameters())
@@ -325,7 +249,7 @@ class Trainer:
             # pretrain vae_MI, here loss is not standardized
             self.cal_loss = True
             self.cal_adv_loss = False
-            for pre_n_epoch in range(pre_epochs):
+            for pre_epoch in range(pre_epochs):
                 for tensors_list in self.data_loaders_loop():
                     loss, _, _ = self.two_loss(*tensors_list)
                     self.optimizer.zero_grad()
@@ -358,187 +282,21 @@ class Trainer:
                 # self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[30], gamma=0.5)
 
             if standardize == True:
-                obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(n_epochs=n_epochs, n_tasks=n_tasks, npref=npref, pref_idx=pref_idx)
-
+                obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(epochs=epochs, adv_epochs=adv_epochs, n_tasks=n_tasks,
+                                                            npref=npref, pref_idx=pref_idx)
                 return obj1_minibatch_list, obj2_minibatch_list
-
-            elif gradnorm_hypertune == True:
-                # Pretrain gradnorm
-                weightloss1 = [1]
-                weightloss2 = [1]
-                gradnorm_weights = [weightloss1, weightloss2]
-
-                gradnorm_weights, weightloss1_list, weightloss2_list, obj1_minibatch_list, obj2_minibatch_list = self.gradnorm(alpha, gradnorm_epochs, gradnorm_lr, gradnorm_weights)
-
-                return gradnorm_weights, weightloss1_list, weightloss2_list, obj1_minibatch_list, obj2_minibatch_list
-
             else:
-                '''
-                gradnorm_weights_path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_hypertune/taskid{}/results.pkl'.format(gradnorm_weights_idx)
-                gradnorm_weights_dict = pickle.load(open(gradnorm_weights_path, "rb"))
-                gradnorm_weights = gradnorm_weights_dict['gradnorm_weights']
-                '''
-                if std_paretoMTL == True:
-                    #standardize + paretoMTL
-                    obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(std_paretoMTL=std_paretoMTL, obj1_max=obj1_max,
-                        obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, n_epochs=n_epochs, n_tasks=n_tasks, npref=npref, pref_idx=pref_idx,
-                        path=path, taskid=taskid)
-
-                elif gradnorm_paretoMTL == True:
-                    # gradnorm + paretoMTL
-                    with torch.no_grad():
-                        self.model.eval()
-                        if self.adv_estimator == 'MINE':
-                            self.adv_model.eval()
-                        self.cal_loss = True
-                        self.cal_adv_loss = True
-                        obj1_train_list, obj2_train_list = [], []
-                        for tensors_list in self.data_loaders_loop():
-                            obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
-                            obj1_train_list.append(obj1_minibatch.data)
-                            obj2_train_list.append(obj2_minibatch.data)
-                        obj1_train = sum(obj1_train_list)/len(obj1_train_list)
-                        obj2_train = sum(obj2_train_list)/len(obj2_train_list)
-
-                    weightloss1 = (obj1_train - obj1_min)/(obj1_train*(obj1_max - obj1_min))
-                    weightloss2 = (obj2_train - obj2_min)/(obj2_train * (obj2_max - obj2_min))
-                    gradnorm_weights = [[2*weightloss1/(weightloss1 + weightloss2)], [2*weightloss2/(weightloss1 + weightloss2)]]
-
-                    obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(gradnorm_weights=gradnorm_weights, gradnorm_paretoMTL=gradnorm_paretoMTL,
-                        gradnorm_lr=gradnorm_lr, alpha=alpha, gradnorm_weight_lowlimit=gradnorm_weight_lowlimit, n_epochs=n_epochs, n_tasks=n_tasks,
-                        npref=npref, pref_idx=pref_idx, path=path, taskid=taskid)
+                #standardize + paretoMTL
+                obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(std_paretoMTL=std_paretoMTL, obj1_max=obj1_max,
+                    obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, epochs=epochs, adv_epochs=adv_epochs,
+                    n_tasks=n_tasks, npref=npref, pref_idx=pref_idx, path=path, taskid=taskid)
 
                 return obj1_minibatch_list, obj2_minibatch_list
-
-    def gradnorm(self, alpha, gradnorm_epochs, gradnorm_lr, params):
-
-        print('begin GradNorm standardization')
-        # weightloss1 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
-        # weightloss2 = torch.tensor(torch.FloatTensor([1]), requires_grad=True)
-        weightloss1 = torch.FloatTensor(params[0]).clone().detach().requires_grad_(True)
-        weightloss2 = torch.FloatTensor(params[1]).clone().detach().requires_grad_(True)
-        params = [weightloss1, weightloss2]
-
-        gradnorm_opt = torch.optim.Adam(params, lr=gradnorm_lr)
-        gradnorm_scheduler = torch.optim.lr_scheduler.MultiStepLR(gradnorm_opt, milestones=[100, 200], gamma=0.5)
-        Gradloss = torch.nn.L1Loss()
-
-        weightloss1_list = [weightloss1.data.tolist()[0]]
-        weightloss2_list = [weightloss2.data.tolist()[0]]
-
-        obj1_minibatch_list, obj2_minibatch_list = [], []
-
-        for epoch in range(gradnorm_epochs):  # loop over the dataset multiple times
-
-            gradnorm_scheduler.step()
-
-            for tensors_list in self.data_loaders_loop():
-
-                if self.adv_estimator == 'MINE':
-                    self.cal_loss = False
-                    self.cal_adv_loss = True
-                    for adv_tensors_list in self.data_loaders_loop():
-                        _, adv_loss, _ = self.two_loss(*adv_tensors_list)
-                        self.adv_optimizer.zero_grad()
-                        self.optimizer.zero_grad()
-                        adv_loss.backward()
-                        self.adv_optimizer.step()
-
-                self.cal_loss = True
-                self.cal_adv_loss = True
-                obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
-
-                obj1_minibatch_list.append(obj1_minibatch.data)
-                obj2_minibatch_list.append(obj2_minibatch.data)
-
-                l1 = params[0] * obj1_minibatch
-                l2 = params[1] * obj2_minibatch
-
-                # for the first epoch with no l0
-                if epoch == 0:
-                    l01 = l1.data
-                    l02 = l2.data
-
-                # compute the weighted loss w_i(t) * L_i(t)
-                weighted_task_loss = torch.div(torch.add(l1, l2), 2)
-                # zero the parameter gradients
-                self.optimizer.zero_grad()
-                if self.adv_estimator == 'MINE':
-                    self.adv_optimizer.zero_grad()
-                weighted_task_loss.backward(retain_graph=True)
-
-                gradnorm_opt.zero_grad()
-                # Calculating the gradient loss according to Eq. 2 in the GradNorm paper
-                G1, G2, C1, C2 = self.gradnorm_loss_param(l1, l2, l01, l02, alpha)
-                Lgrad = torch.add(Gradloss(G1 ** (1 / 2), C1), Gradloss(G2 ** (1 / 2), C2))
-                Lgrad.backward()  # Lgrad is differentiated only with respect to the params
-
-                # Updating loss weights
-                gradnorm_opt.step()
-
-                # Updating the model weights
-                self.optimizer.step()
-
-                # Renormalizing the losses weights
-                coef = 2 / torch.add(weightloss1, weightloss2)
-                params = [coef * weightloss1, coef * weightloss2]
-
-                weightloss1_list.append(params[0].data.tolist()[0])
-                weightloss2_list.append(params[1].data.tolist()[0])
-
-            print("obj1 multiplier: {}, obj2: multiplier {}".format(params[0].data, params[1].data))
-        print('finish GradNorm standardization')
-        return params, weightloss1_list, weightloss2_list, obj1_minibatch_list, obj2_minibatch_list
-
-    def gradnorm_loss_param(self, l1, l2, l01, l02, alpha: float=2):
-
-        # For each task, getting the L2 norm of the gradient of the weighted single-task loss
-        # only the parameters for z_encoder are shared, and only the last layer of shared layers are used.
-        temp = list(self.model.z_encoder.parameters())
-        G1 = 0.0
-        G2 = 0.0
-
-        G1R = torch.autograd.grad(l1, temp[-1], retain_graph=True, create_graph=True)
-        G1 += torch.norm(G1R[0], 2) ** 2
-        G2R = torch.autograd.grad(l2, temp[-1], retain_graph=True, create_graph=True)
-        G2 += torch.norm(G2R[0], 2) ** 2
-
-        G_avg = torch.div(torch.add(G1 ** (1 / 2), G2 ** (1 / 2)), 2)
-
-        # Calculating relative losses
-        lhat1 = torch.div(l1, l01)
-        lhat2 = torch.div(l2, l02)
-        lhat_avg = torch.div(torch.add(lhat1, lhat2), 2)
-
-        # Calculating relative inverse training rates for tasks
-        inv_rate1 = torch.div(lhat1, lhat_avg)
-        inv_rate2 = torch.div(lhat2, lhat_avg)
-
-        # Calculating the constant target for Eq. 2 in the GradNorm paper
-        C1 = G_avg * (inv_rate1) ** alpha
-        C2 = G_avg * (inv_rate2) ** alpha
-        C1 = C1.detach()
-        C2 = C2.detach()
-
-        G1 = torch.reshape(G1,(-1,))
-        G2 = torch.reshape(G2,(-1,))
-
-        return G1, G2, C1, C2
 
     def paretoMTL(self, std_paretoMTL: bool=False, obj1_max: float=20000, obj1_min: float=12000, obj2_max: float=0.6, obj2_min: float=0,
-                  gradnorm_weights: list=[1,1], gradnorm_paretoMTL: bool=False, gradnorm_lr: float=1e-3, alpha: float=3, gradnorm_weight_lowlimit: float=1e-6,
-                  n_epochs: int=50, n_tasks: int=2, npref: int=10, pref_idx: int=0, path: str='.', taskid: int=0):
+                  epochs: int=50, adv_epochs: int=1, n_tasks: int=2, npref: int=10, pref_idx: int=0, path: str='.', taskid: int=0):
 
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
-
-        if gradnorm_paretoMTL==True:
-            print('initial weightloss1: {}'.format(gradnorm_weights[0][0]))
-            weightloss1 = torch.FloatTensor(gradnorm_weights[0]).clone().detach().requires_grad_(True)
-            weightloss2 = torch.FloatTensor(gradnorm_weights[1]).clone().detach().requires_grad_(True)
-            gradnorm_weights = [weightloss1, weightloss2]
-
-            gradnorm_opt = torch.optim.Adam(gradnorm_weights, lr=gradnorm_lr)
-            Gradloss = torch.nn.L1Loss()
 
         obj1_minibatch_list, obj2_minibatch_list, obj1_train_list, obj1_test_list, weightloss1_list, weighted_obj1_list, weighted_obj2_list = [], [], [], [], [], [], []
         # run at most 2 epochs to find the initial solution
@@ -555,7 +313,7 @@ class Trainer:
                 if self.adv_estimator == 'MINE':
                     self.cal_loss = False
                     self.cal_adv_loss = True
-                    for adv_epoch in range(1):
+                    for adv_epoch in range(adv_epochs):
                         for adv_tensors_list in self.data_loaders_loop():
                             _, adv_loss, _ = self.two_loss(*adv_tensors_list)
                             self.adv_optimizer.zero_grad()
@@ -567,11 +325,7 @@ class Trainer:
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                if gradnorm_paretoMTL == True:
-                    #refer to gradnorm, gradnorm_weights are renormalized by number of objectives
-                    obj1 = torch.div(obj1_minibatch * gradnorm_weights[0].data.tolist()[0], 2)
-                    obj2 = torch.div(obj2_minibatch * gradnorm_weights[1].data.tolist()[0], 2)
-                elif std_paretoMTL == True:
+                if std_paretoMTL == True:
                     obj1 = (obj1_minibatch - obj1_min)/(obj1_max - obj1_min)
                     obj2 = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
                 else:
@@ -595,18 +349,7 @@ class Trainer:
                 obj1_minibatch_list.append(obj1_minibatch.data)
                 obj2_minibatch_list.append(obj2_minibatch.data)
 
-                if gradnorm_paretoMTL == True:
-                    l1 = gradnorm_weights[0] * obj1_minibatch
-                    l2 = gradnorm_weights[1] * obj2_minibatch
-
-                    # for the first epoch with no l0
-                    if t == 0:
-                        l01 = l1.data
-                        l02 = l2.data
-
-                    obj1 = torch.div(obj1_minibatch * gradnorm_weights[0], 2)
-                    obj2 = torch.div(obj2_minibatch * gradnorm_weights[1], 2)
-                elif std_paretoMTL == True:
+                if std_paretoMTL == True:
                     obj1 = (obj1_minibatch - obj1_min) / (obj1_max - obj1_min)
                     obj2 = (obj2_minibatch - obj2_min) / (obj2_max - obj2_min)
                 else:
@@ -623,27 +366,8 @@ class Trainer:
                 if self.adv_estimator == 'MINE':
                     self.adv_optimizer.zero_grad()
 
-                if gradnorm_paretoMTL == True:
-                    loss_total.backward(retain_graph=True)
-
-                    gradnorm_opt.zero_grad()
-                    # Calculating the gradient loss according to Eq. 2 in the GradNorm paper
-                    G1, G2, C1, C2 = self.gradnorm_loss_param(l1, l2, l01, l02, alpha)
-                    Lgrad = torch.add(Gradloss(G1 ** (1 / 2), C1), Gradloss(G2 ** (1 / 2), C2))
-                    Lgrad.backward()
-
-                    # Updating loss weights
-                    gradnorm_opt.step()
-
-                    self.optimizer.step()
-
-                    # Renormalizing the losses weights
-                    coef = 2 / torch.add(weightloss1, weightloss2)
-                    gradnorm_weights = [torch.max(torch.FloatTensor([gradnorm_weight_lowlimit]), coef * weightloss1), torch.min(torch.FloatTensor([2-(gradnorm_weight_lowlimit)]), coef * weightloss2)]
-
-                else:
-                    loss_total.backward()
-                    self.optimizer.step()
+                loss_total.backward()
+                self.optimizer.step()
 
             else:
                 # continue if no feasible solution is found
@@ -652,7 +376,7 @@ class Trainer:
             break
 
         # run n_epochs of ParetoMTL
-        for self.epoch in range(n_epochs):
+        for self.epoch in range(epochs):
 
             # self.scheduler.step()
             self.model.train()
@@ -665,7 +389,7 @@ class Trainer:
                 if self.adv_estimator == 'MINE':
                     self.cal_loss = False
                     self.cal_adv_loss = True
-                    for adv_epoch in range(1):
+                    for adv_epoch in range(adv_epochs):
                         for adv_tensors_list in self.data_loaders_loop():
                             _, adv_loss, _ = self.two_loss(*adv_tensors_list)
                             self.adv_optimizer.zero_grad()
@@ -677,10 +401,7 @@ class Trainer:
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                if gradnorm_paretoMTL == True:
-                    obj1 = torch.div(obj1_minibatch * gradnorm_weights[0].data.tolist()[0], 2)
-                    obj2 = torch.div(obj2_minibatch * gradnorm_weights[1].data.tolist()[0], 2)
-                elif std_paretoMTL == True:
+                if std_paretoMTL == True:
                     obj1 = (obj1_minibatch - obj1_min)/(obj1_max - obj1_min)
                     obj2 = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
                 else:
@@ -702,22 +423,7 @@ class Trainer:
                 obj1_minibatch_list.append(obj1_minibatch.data)
                 obj2_minibatch_list.append(obj2_minibatch.data)
 
-                if gradnorm_paretoMTL==True:
-                    l1 = gradnorm_weights[0] * obj1_minibatch
-                    l2 = gradnorm_weights[1] * obj2_minibatch
-
-                    # for the first epoch with no l0
-                    if self.epoch == 0:
-                        l01 = l1.data
-                        l02 = l2.data
-
-                    obj1 = torch.div(obj1_minibatch * gradnorm_weights[0], 2)
-                    obj2 = torch.div(obj2_minibatch * gradnorm_weights[1], 2)
-
-                    weighted_obj1_list.append(obj1.data)
-                    weighted_obj2_list.append(obj2.data)
-                    print('weighted_obj1: {}, weighted_obj2: {}'.format(obj1.data, obj2.data))
-                elif std_paretoMTL == True:
+                if std_paretoMTL == True:
                     obj1 = (obj1_minibatch - obj1_min)/(obj1_max - obj1_min)
                     obj2 = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
                 else:
@@ -734,31 +440,10 @@ class Trainer:
                 if self.adv_estimator == 'MINE':
                     self.adv_optimizer.zero_grad()
 
-                if gradnorm_paretoMTL == True:
-                    loss_total.backward(retain_graph=True)
-
-                    gradnorm_opt.zero_grad()
-                    # Calculating the gradient loss according to Eq. 2 in the GradNorm paper
-                    G1, G2, C1, C2 = self.gradnorm_loss_param(l1, l2, l01, l02, alpha)
-                    Lgrad = torch.add(Gradloss(G1 ** (1 / 2), C1), Gradloss(G2 ** (1 / 2), C2))
-                    Lgrad.backward()
-
-                    # Updating loss weights
-                    gradnorm_opt.step()
-
-                    self.optimizer.step()
-
-                    # Renormalizing the losses weights
-                    coef = 2 / torch.add(weightloss1, weightloss2)
-                    gradnorm_weights = [torch.max(torch.FloatTensor([gradnorm_weight_lowlimit]), coef * weightloss1),
-                        torch.min(torch.FloatTensor([2 - (gradnorm_weight_lowlimit)]), coef * weightloss2)]
-                    print('weightloss1: {}'.format(gradnorm_weights[0].data.tolist()[0]))
-                    weightloss1_list.append(gradnorm_weights[0].data.tolist()[0])
-                else:
-                    loss_total.backward()
-                    self.optimizer.step()
+                loss_total.backward()
+                self.optimizer.step()
             # diagnosis
-            if std_paretoMTL == True or gradnorm_paretoMTL==True:
+            if std_paretoMTL == True:
                 if self.epoch % 10 == 0:
                     with torch.no_grad():
                         self.model.eval()
@@ -774,31 +459,7 @@ class Trainer:
                     obj1_train_list.append(sum(obj1_minibatch_train_eval)/len(obj1_minibatch_train_eval))
                     obj1_test_list.append(sum(obj1_minibatch_test_eval) / len(obj1_minibatch_test_eval))
 
-        if gradnorm_paretoMTL==True:
-            plt.figure()
-            plt.plot(np.arange(0, len(weightloss1_list), 1), weightloss1_list)
-            plt.xticks(np.arange(0, len(weightloss1_list), 1))
-            plt.title('weight for objective 1', fontsize=10)
-            plt.ylabel('weight')
-            path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_MINE/taskid{}'.format(taskid)
-            if not os.path.exists(path):
-                os.makedirs(path)
-            plt.savefig("{}/weightloss1.png".format(path))
-            plt.close()
-
-            plt.figure()
-            plt.plot(np.arange(0, len(weighted_obj1_list), 1), weighted_obj1_list, label='weighted_obj1')
-            plt.plot(np.arange(0, len(weighted_obj2_list), 1), weighted_obj2_list, label='weighted_obj2')
-            plt.legend()
-            plt.xticks(np.arange(0, len(weightloss1_list), 1))
-            plt.title('weighted obj1 and obj2', fontsize=10)
-            path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_MINE/taskid{}'.format(taskid)
-            if not os.path.exists(path):
-                os.makedirs(path)
-            plt.savefig("{}/weighted_objs.png".format(path))
-            plt.close()
-
-        if std_paretoMTL==True or gradnorm_paretoMTL==True:
+        if std_paretoMTL==True:
             plt.figure()
             plt.plot(np.arange(0, len(obj1_train_list), 1), obj1_train_list, label='obj1_train')
             plt.plot(np.arange(0, len(obj1_test_list), 1), obj1_test_list, label='obj1_test')
@@ -806,10 +467,8 @@ class Trainer:
             plt.xticks(np.arange(0, len(obj1_train_list), 1))
             plt.title('train error vs test error', fontsize=10)
             plt.ylabel('error (negative ELBO)')
-            if std_paretoMTL==True:
-                path = os.path.dirname(os.path.dirname(path)) + '/std_{}/taskid{}'.format(self.adv_estimator, taskid)
-            elif gradnorm_paretoMTL==True:
-                path = os.path.dirname(os.path.dirname(path)) + '/gradnorm_{}/taskid{}'.format(self.adv_estimator, taskid)
+
+            path = os.path.dirname(os.path.dirname(path)) + '/std_{}/taskid{}'.format(self.adv_estimator, taskid)
             if not os.path.exists(path):
                 os.makedirs(path)
             plt.savefig("{}/train_test_error.png".format(path))
@@ -854,7 +513,6 @@ class SequentialSubsetSampler(SubsetRandomSampler):
 
     def __iter__(self):
         return iter(self.indices)
-
 
 class EarlyStopping:
     def __init__(self, early_stopping_metric=None, save_best_state_metric=None, on='test_set',

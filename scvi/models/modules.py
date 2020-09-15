@@ -6,10 +6,9 @@ from torch import nn as nn
 from torch.distributions import Normal
 
 from scvi.models.utils import one_hot
-
+import math
 import torch.nn.functional as F
 from torch.autograd import Variable
-from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.categorical import Categorical
 from torch.distributions.multivariate_normal import MultivariateNormal
 
@@ -406,33 +405,43 @@ class MMD_loss(nn.Module):
         loss = torch.mean(XX) + torch.mean(YY) - torch.mean(XY) - torch.mean(YX)
         return loss
 
-def Sample_From_Aggregated_Posterior(qz_m, qz_v, batch_index, batch1_ratio, nsamples_z):
+def EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index, batch_ratio, nsamples):
     # nsamples_z: the number of z taken from the aggregated posterior distribution of z
     # qz_v is the variance or covariance matrix for z
+    # batch_ratio: if there are two batches, and p(batch=0)=0.6, then batch ratio is [0.6, 0.4]
 
-    qz_m_batch0 = qz_m[(batch_index[:, 0] == 0).nonzero().squeeze(1)]
-    qz_m_batch1 = qz_m[(batch_index[:, 0] == 1).nonzero().squeeze(1)]
+    batch_categorical = Categorical(torch.tensor(batch_ratio))
+    log_density_ratio_list = []
+    for i in range(nsamples):
 
-    qz_v_batch0 = qz_v[(batch_index[:, 0] == 0).nonzero().squeeze(1)]
-    qz_v_batch1 = qz_v[(batch_index[:, 0] == 1).nonzero().squeeze(1)]
+        batch = batch_categorical.sample()
+        qz_m_onebatch = qz_m[(batch_index[:, 0] == batch.item()).nonzero().squeeze(1)]
+        qz_v_onebatch = qz_v[(batch_index[:, 0] == batch.item()).nonzero().squeeze(1)]
 
-    bernoulli = Bernoulli(torch.tensor([batch1_ratio]))  # batch1_ratio is the probability to sample batch 1
-    categorical0 = Categorical(torch.tensor([1 / qz_m_batch0.shape[0]] * qz_m_batch0.shape[0]))
-    categorical1 = Categorical(torch.tensor([1 / qz_m_batch1.shape[0]] * qz_m_batch1.shape[0]))
+        z_categorical = Categorical(torch.tensor([1 / qz_m_onebatch.shape[0]] * qz_m_onebatch.shape[0]))
+        z_category_index = z_categorical.sample()
+        z = MultivariateNormal(qz_m_onebatch[z_category_index.item(), :],torch.diag(qz_v_onebatch[z_category_index.item(), :])).sample()
 
-    batch_tensor = torch.empty(0, 1)
-    z_tensor = torch.empty(0, qz_m.shape[1])
-    for i in range(nsamples_z):
-        batch = bernoulli.sample()
-        if batch.item() == 0:
-            category_index = categorical0.sample()
-            z = MultivariateNormal(qz_m_batch0[category_index.item(), :], torch.diag(qz_v_batch0[category_index.item(), :])).sample()
-        else:
-            category_index = categorical1.sample()
-            z = MultivariateNormal(qz_m_batch1[category_index.item(), :], torch.diag(qz_v_batch1[category_index.item(), :])).sample()
+        # use log-sum-exp trick to calculate log_density_ratio
+        componentwise_log_prob = {}
+        component_num = []
+        for j in range(len(batch_ratio)):
+            qz_m_onebatch = qz_m[(batch_index[:, 0] == j).nonzero().squeeze(1)]
+            qz_v_onebatch = qz_v[(batch_index[:, 0] == j).nonzero().squeeze(1)]
+            component_num += [qz_m_onebatch.shape[0]]
+            componentwise_log_prob.update({'batch{}'.format(j):[MultivariateNormal(qz_m_onebatch[k, :],torch.diag(qz_v_onebatch[k, :])).log_prob(z).item() for k in range(qz_m_onebatch.shape[0])]})
 
-        batch_tensor = torch.cat((batch_tensor, batch.reshape(1, 1)), 0)
-        z_tensor = torch.cat((z_tensor, z.reshape(1, qz_m.shape[1])), 0)
+        prob_z = 0
+        for j in range(len(batch_ratio)):
+            componentwise_log_prob_onebatch = componentwise_log_prob['batch{}'.format(j)]
+            max_onebatch = max(componentwise_log_prob_onebatch)
+            prob_z += (1/component_num[j])*batch_ratio[j]*math.exp(max_onebatch)*sum([math.exp(ele - max_onebatch) for ele in componentwise_log_prob_onebatch])
+            if j==batch:
+                log_prob_z_s = -math.log(component_num[j])+ max_onebatch + math.log(sum([math.exp(ele - max_onebatch) for ele in componentwise_log_prob_onebatch]))
 
-    return batch_tensor, z_tensor
+        log_prob_z = math.log(prob_z)
+        log_density_ratio = log_prob_z_s - log_prob_z
+        log_density_ratio_list += [log_density_ratio]
+    empirical_MI = sum(log_density_ratio_list)/len(log_density_ratio_list)
 
+    return empirical_MI
