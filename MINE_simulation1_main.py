@@ -8,7 +8,7 @@ import pandas as pd
 import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from scvi.models.modules import MINE_Net, discrete_continuous_info
+from scvi.models.modules import MINE_Net, discrete_continuous_info, Nearest_Neighbor_Estimate
 from torch.distributions.multivariate_normal import MultivariateNormal
 from torch.distributions.categorical import Categorical
 from torch.utils.data import TensorDataset
@@ -74,8 +74,9 @@ def generate_data_MINE_simulation1(args):
         y_tensor = torch.cat((y_tensor, y.reshape(1, args.gaussian_dim)), 0)
 
     empirical_MI = sum(log_density_ratio_list)/len(log_density_ratio_list)
-    NN_estimator = discrete_continuous_info(torch.transpose(x_tensor[0:1000, :], 0, 1),
-                                            torch.transpose(y_tensor[0:1000, :], 0, 1))
+    #NN_estimator = discrete_continuous_info(torch.transpose(x_tensor[0:1000, :], 0, 1),
+    #                                        torch.transpose(y_tensor[0:1000, :], 0, 1))
+    NN_estimator = Nearest_Neighbor_Estimate(x_tensor[0:2000,:], y_tensor[0:2000,:])
 
     return empirical_MI, NN_estimator, x_tensor, y_tensor
 

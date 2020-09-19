@@ -370,6 +370,28 @@ def discrete_continuous_info(d, c, k:int = 3, base: float = 2):
     f = (scipy.special.digamma(d.shape[1]) - av_psi_Nd + psi_ks - m_tot/(d.shape[1]))/math.log(base)
     return f
 
+def Nearest_Neighbor_Estimate(discrete, continuous, k:int = 3):
+
+    continuous_expand0 = continuous.unsqueeze(0).expand(int(continuous.size(0)), int(continuous.size(0)), int(continuous.size(1)))
+    continuous_expand1 = continuous.unsqueeze(1).expand(int(continuous.size(0)), int(continuous.size(0)), int(continuous.size(1)))
+    L2_distance = ((continuous_expand0-continuous_expand1)**2).sum(2)
+
+    discrete_expand0 = discrete.unsqueeze(0).expand(int(discrete.size(0)), int(discrete.size(0)), int(discrete.size(1)))
+    discrete_expand1 = discrete.unsqueeze(1).expand(int(discrete.size(0)), int(discrete.size(0)), int(discrete.size(1)))
+    match_index = torch.eq(discrete_expand0, discrete_expand1).sum(2)
+    number_same_category = match_index.sum(1) - 1
+
+    match_index_sorted = torch.gather(match_index, 1, torch.argsort(L2_distance, dim=1)) #1 means by row
+    index_cum = torch.cumsum(match_index_sorted,dim=1)
+    cum_index = (index_cum == k+1).type(torch.FloatTensor)
+    reverse_index = torch.arange(cum_index.shape[1], 0, -1).type(torch.FloatTensor)
+    tmp = cum_index * reverse_index
+    number_samecategory_d = torch.argmax(tmp, 1)
+
+    constant = torch.digamma(torch.tensor([continuous.size(0)]).type(torch.FloatTensor)) + torch.digamma(torch.tensor([k]).type(torch.FloatTensor))
+    NN_estimator = constant - torch.mean(torch.digamma(number_same_category.type(torch.FloatTensor))) -  torch.mean(torch.digamma(number_samecategory_d.type(torch.FloatTensor)))
+    return NN_estimator
+
 #code is referred to https://github.com/ZongxianLee/MMD_Loss.Pytorch/blob/master/mmd_loss.py
 import torch.nn as nn
 class MMD_loss(nn.Module):
@@ -402,7 +424,7 @@ class MMD_loss(nn.Module):
         YY = kernels[batch_size:, batch_size:]
         XY = kernels[:batch_size, batch_size:]
         YX = kernels[batch_size:, :batch_size]
-        loss = torch.mean(XX) + torch.mean(YY) - torch.mean(XY) - torch.mean(YX)
+        loss = torch.sqrt(torch.mean(XX) + torch.mean(YY) - torch.mean(XY) - torch.mean(YX))
         return loss
 
 def EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index, batch_ratio, nsamples):

@@ -32,7 +32,7 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index, type):
         sample2 = torch.cat((z[shuffle_index], batch_dummy), 1)
         return sample1, sample2, z, batch_dummy
     else:
-        if type == 'stdzMMD':
+        if type == 'stdz_MMD':
             # standardize each dimension for z
             z_mean = torch.mean(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
             z_std = torch.std(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
@@ -146,7 +146,7 @@ def MMD_NN_train_test(trainer_vae, type, args):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
         z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
-        if type in ['stdzMMD','MMD']:
+        if type in ['stdz_MMD','MMD']:
             estimator_minibatch_train = MMD_loss_fun(z_batch0, z_batch1)
             estimator_train_list.append(estimator_minibatch_train.item())
         elif type == 'NN':
@@ -158,7 +158,7 @@ def MMD_NN_train_test(trainer_vae, type, args):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
         z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
-        if type in ['stdzMMD','MMD']:
+        if type in ['stdz_MMD','MMD']:
             estimator_minibatch_test = MMD_loss_fun(z_batch0, z_batch1)
             estimator_test_list.append(estimator_minibatch_test.item())
         elif type == 'NN':
@@ -298,13 +298,6 @@ def main( ):
     parser.add_argument('--pref_idx', type=int, default=0,
                         help='which subproblem')
 
-    parser.add_argument('--gradnorm_paretoMTL', action='store_true', default=False,
-                        help='whether to use gradnorm during paretoMTL')
-
-    parser.add_argument('--gradnorm_weight_lowlimit', type=float, default=1e-6,
-                        help='the low limit for the smaller weight in gradnorm')
-
-
     parser.add_argument('--std_paretoMTL', action='store_true', default=False,
                         help='whether to standardize the two objectives')
 
@@ -406,7 +399,7 @@ def main( ):
                                           seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
                                           adv_n_hidden=args.adv_n_hidden, adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
                                           unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
-    elif args.adv_estimator in ['MMD','stdzMMD']:
+    elif args.adv_estimator in ['MMD','stdz_MMD']:
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
                                           MMD_kernel_mul=args.MMD_kernel_mul, MMD_kernel_num=args.MMD_kernel_num, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
@@ -442,8 +435,8 @@ def main( ):
             obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae)
         elif trainer_vae.adv_estimator == 'MMD':
             obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
-        elif trainer_vae.adv_estimator == 'stdzMMD':
-            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdzMMD', args)
+        elif trainer_vae.adv_estimator == 'stdz_MMD':
+            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
 
         NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
 
