@@ -5,7 +5,7 @@ from . import Trainer
 import numpy as np
 from torch.autograd import Variable
 import pandas as pd
-from scvi.models.modules import discrete_continuous_info, EmpiricalMI_From_Aggregated_Posterior
+from scvi.models.modules import Nearest_Neighbor_Estimate, EmpiricalMI_From_Aggregated_Posterior
 
 plt.switch_backend('agg')
 
@@ -90,7 +90,7 @@ class UnsupervisedTrainer(Trainer):
             adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
 
             if self.epoch >= 0:
-                NN_estimator = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
+                NN_estimator = Nearest_Neighbor_Estimate(batch_index, z)
                 if len(self.batch_ratio)>0:
                     empirical_MI = EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.batch_ratio, self.nsamples)
                     print('Epoch: {}, neg_ELBO: {}, {}: {}, empirical_MI: {}, NN: {}.'.format(self.epoch, loss, self.adv_estimator, obj2_minibatch, empirical_MI, NN_estimator))

@@ -303,8 +303,11 @@ class Trainer:
         # stop early once a feasible solution is found
         # usually can be found with a few steps
 
-        for t in range(2):
-
+        #for t in range(20):
+        flag = False
+        t = 0
+        while flag==False:
+            t +=1
             self.model.train()
             if self.adv_estimator == 'MINE':
                 self.adv_model.train()
@@ -339,6 +342,7 @@ class Trainer:
                 # early stop once a feasible solution is obtained
                 if flag == True:
                     print("feasible solution is obtained.")
+                    print('t:{}'.format(t))
                     break
 
                 # optimization step
@@ -468,7 +472,7 @@ class Trainer:
             plt.title('train error vs test error', fontsize=10)
             plt.ylabel('error (negative ELBO)')
 
-            path = os.path.dirname(os.path.dirname(path)) + '/std_{}/taskid{}'.format(self.adv_estimator, taskid)
+            path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(self.adv_estimator, taskid)
             if not os.path.exists(path):
                 os.makedirs(path)
             plt.savefig("{}/train_test_error.png".format(path))

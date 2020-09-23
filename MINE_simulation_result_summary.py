@@ -3,6 +3,7 @@ import pandas as pd
 import itertools
 import pickle
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 def read_file(hyperparameter_config, save_path, type):
 
@@ -36,12 +37,12 @@ def MINE_simulation1_summary(hyperparameter_config, save_path):
     results_config_mean_std = results_config_total.groupby('case_idx').agg(
         empirical_MI_mean=('empirical_MI', 'mean'),
         empirical_MI_std=('empirical_MI', 'std'),
-        NN_mean=('NN_estimator', 'mean'),
-        NN_std=('NN_estimator', 'std'),
-        MINE_train_mean=('MI_MINE_train', 'mean'),
-        MINE_train_std=('MI_MINE_train', 'std'),
-        MINE_test_mean=('MI_MINE_test', 'mean'),
-        MINE_test_std=('MI_MINE_test', 'std')
+        NN_MI_mean=('NN_estimator', 'mean'),
+        NN_MI_std=('NN_estimator', 'std'),
+        MINE_MI_train_mean=('MI_MINE_train', 'mean'),
+        MINE_MI_train_std=('MI_MINE_train', 'std'),
+        MINE_MI_test_mean=('MI_MINE_test', 'mean'),
+        MINE_MI_test_std=('MI_MINE_test', 'std')
     ).reset_index()
 
     trueMI = pd.DataFrame.from_dict(pickle.load(open(save_path + '/trueMI.pkl', "rb")))
@@ -50,37 +51,63 @@ def MINE_simulation1_summary(hyperparameter_config, save_path):
 
     case_idx_list = ['case{}'.format(k+1) for k in range(7)]
 
-    for type in ['train','test']:
-        fig = go.Figure(data=[
-            go.Bar(name='true_MI', x=case_idx_list, y=results_config_mean_std.loc[:,'trueMI'].values.tolist()),
-            go.Bar(name='empirical_MI', x=case_idx_list, y=results_config_mean_std.loc[:, 'empirical_MI_mean'].values.tolist(),
-                   error_y=dict(type='data', array=results_config_mean_std.loc[:, 'empirical_MI_std'].values.tolist())),
-            go.Bar(name='NN_MI', x=case_idx_list, y=results_config_mean_std.loc[:, 'NN_mean'].values.tolist(),
-                   error_y=dict(type='data',array=results_config_mean_std.loc[:, 'NN_std'].values.tolist())),
-            go.Bar(name='MINE_MI', x=case_idx_list, y=results_config_mean_std.loc[:,'MINE_{}_mean'.format(type)].values.tolist(),
-                   error_y=dict(type='data', array=results_config_mean_std.loc[:,'MINE_{}_std'.format(type)].values.tolist()))
-        ])
-        # Change the bar mode
-        fig.update_layout(barmode='group')
-        fig.update_layout(
-            width=1000,
-            height=800,
-            margin=dict(
-                l=1,
-                r=1,
-                b=20,
-                t=25,
-                pad=1
-            ),
-            font=dict(size=20, color='black', family='Arial, sans-serif'),
-            title={'text': type,
-                   'y': 1,
-                   'x': 0.47,
-                   'xanchor': 'center',
-                   'yanchor': 'top'}
+    methods_list = ['true','empirical', 'NN','MINE']
+    if len(methods_list)<6:
+        colors_list = ['rgba(0, 0, 255, .9)','rgba(255, 25, 52, .9)', 'rgba(48, 254, 0, .9)', 'rgba(182, 0, 228, .9)', 'rgba(255, 149, 25, .9)']
+    else:
+        print('errors: the number of methods exceeds the number of color')
+
+    fig = make_subplots(rows=1, cols=2, subplot_titles=('train', 'test'))
+    for (i, type) in enumerate(['train', 'test']):
+        if i==0:
+            showlegend=False
+        else:
+            showlegend=True
+        for (j, method) in enumerate(methods_list):
+            if method == 'true':
+                fig.add_trace(
+                    go.Bar(x=case_idx_list, y=results_config_mean_std.loc[:, 'trueMI'].values.tolist(), name='true_MI',
+                           marker_color=colors_list[j], showlegend=showlegend),1,i+1)
+            elif method in ['empirical','NN']:
+                fig.add_trace(
+                    go.Bar(x=case_idx_list, y=results_config_mean_std.loc[:, '{}_MI_mean'.format(method)].values.tolist(),
+                       error_y=dict(type='data',array=results_config_mean_std.loc[:, '{}_MI_std'.format(method)].values.tolist()),
+                       name='{}_MI'.format(method), marker_color=colors_list[j],showlegend=showlegend),1,i+1)
+            else:
+                fig.add_trace(
+                    go.Bar(x=case_idx_list, y=results_config_mean_std.loc[:, '{}_MI_{}_mean'.format(method,type)].values.tolist(),
+                       error_y=dict(type='data',array=results_config_mean_std.loc[:, '{}_MI_{}_std'.format(method,type)].values.tolist()),
+                       name='{}_MI'.format(method), marker_color=colors_list[j],showlegend=showlegend),1,i+1)
+
+
+    # Change the bar mode
+    fig.update_layout(barmode='group')
+    fig.update_layout(
+        width=1400,
+        height=700,
+        margin=dict(
+            l=1,
+            r=1,
+            b=1,
+            t=25,
+            pad=1
+        ),
+        font=dict(size=20, color='black', family='Times New Roman'),
+        legend=dict(
+            font=dict(
+                family='Times New Roman',
+                size=20,
+                color="black"
+            )
         )
-        fig.update_xaxes(title_font=dict(size=15, family='Arial, sans-serif', color='black'))
-        fig.write_image(save_path + '/{}.png'.format(type))
+    )
+
+    # change font size for subplot title
+    for i in fig['layout']['annotations']:
+        i['font'] = dict(size=20)
+
+    fig.update_xaxes(title_font=dict(size=20, family='Times New Roman', color='black'))
+    fig.write_image(save_path + '/MINE_simulation1.png')
 
 def MINE_simulation2_summary(hyperparameter_config, save_path):
 
@@ -89,65 +116,85 @@ def MINE_simulation2_summary(hyperparameter_config, save_path):
     del hyperparameter_config['MC']
 
     results_config_mean_std = results_config_total.groupby(list(hyperparameter_config.keys())).agg(
-        NN_estimator_mean=('NN_estimator', 'mean'),
-        NN_estimator_std=('NN_estimator', 'std'),
+        NN_MI_mean=('NN_estimator', 'mean'),
+        NN_MI_std=('NN_estimator', 'std'),
         empirical_MI_mean = ('empirical_mutual_info', 'mean'),
         empirical_MI_std =('empirical_mutual_info', 'std'),
-        MI_MINE_train_mean=('MI_MINE_train', 'mean'),
-        MI_MINE_train_std=('MI_MINE_train', 'std'),
-        MI_MINE_test_mean=('MI_MINE_test', 'mean'),
-        MI_MINE_test_std=('MI_MINE_test', 'std'),
+        MINE_MI_train_mean=('MI_MINE_train', 'mean'),
+        MINE_MI_train_std=('MI_MINE_train', 'std'),
+        MINE_MI_test_mean=('MI_MINE_test', 'mean'),
+        MINE_MI_test_std=('MI_MINE_test', 'std'),
         empirical_CD_KL_0_1_mean = ('empirical_CD_KL_0_1','mean'),
         empirical_CD_KL_0_1_std =('empirical_CD_KL_0_1', 'std'),
-        CD_KL_0_1_MINE_train_mean=('CD_KL_0_1_MINE_train', 'mean'),
-        CD_KL_0_1_MINE_train_std=('CD_KL_0_1_MINE_train', 'std'),
-        CD_KL_0_1_MINE_test_mean=('CD_KL_0_1_MINE_test', 'mean'),
-        CD_KL_0_1_MINE_test_std=('CD_KL_0_1_MINE_test', 'std'),
+        MINE_CD_KL_0_1_train_mean=('CD_KL_0_1_MINE_train', 'mean'),
+        MINE_CD_KL_0_1_train_std=('CD_KL_0_1_MINE_train', 'std'),
+        MINE_CD_KL_0_1_test_mean=('CD_KL_0_1_MINE_test', 'mean'),
+        MINE_CD_KL_0_1_test_std=('CD_KL_0_1_MINE_test', 'std'),
         empirical_CD_KL_1_0_mean = ('empirical_CD_KL_1_0', 'mean'),
         empirical_CD_KL_1_0_std=('empirical_CD_KL_1_0', 'std'),
-        CD_KL_1_0_MINE_train_mean = ('CD_KL_1_0_MINE_train', 'mean'),
-        CD_KL_1_0_MINE_train_std =('CD_KL_1_0_MINE_train', 'std'),
-        CD_KL_1_0_MINE_test_mean = ('CD_KL_1_0_MINE_test', 'mean'),
-        CD_KL_1_0_MINE_test_std=('CD_KL_1_0_MINE_test', 'std')
+        MINE_CD_KL_1_0_train_mean = ('CD_KL_1_0_MINE_train', 'mean'),
+        MINE_CD_KL_1_0_train_std =('CD_KL_1_0_MINE_train', 'std'),
+        MINE_CD_KL_1_0_test_mean = ('CD_KL_1_0_MINE_test', 'mean'),
+        MINE_CD_KL_1_0_test_std=('CD_KL_1_0_MINE_test', 'std')
     ).reset_index()
 
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
     case_idx_list = ['case{}'.format(k+1) for k in range(len(hyperparameter_experiments))]
 
-    for type in ['train', 'test']:
-        fig = go.Figure(data=[
-            go.Bar(name='empirical_MI', x=case_idx_list, y=results_config_mean_std.loc[:, 'empirical_MI_mean'].values.tolist(),
-                   error_y=dict(type='data', array=results_config_mean_std.loc[:, 'empirical_MI_std'].values.tolist())),
-            go.Bar(name='NN_MI', x=case_idx_list,
-                   y=results_config_mean_std.loc[:, 'NN_estimator_mean'].values.tolist(),
-                   error_y=dict(type='data', array=results_config_mean_std.loc[:, 'NN_estimator_std'].values.tolist())),
-            go.Bar(name='MINE_MI', x=case_idx_list,
-                   y=results_config_mean_std.loc[:, 'MI_MINE_{}_mean'.format(type)].values.tolist(),
-                   error_y=dict(type='data', array=results_config_mean_std.loc[:, 'MI_MINE_{}_std'.format(type)].values.tolist()))
-        ])
-        # Change the bar mode
-        fig.update_layout(barmode='group')
-        fig.update_layout(
-            width=1000,
-            height=800,
-            margin=dict(
-                l=1,
-                r=1,
-                b=20,
-                t=25,
-                pad=1
-            ),
-            font=dict(size=20, color='black', family='Arial, sans-serif'),
-            title={'text': type,
-                   'y': 1,
-                   'x': 0.47,
-                   'xanchor': 'center',
-                   'yanchor': 'top'}
-        )
-        fig.update_xaxes(title_font=dict(size=15, family='Arial, sans-serif', color='black'))
-        fig.write_image(save_path + '/{}.png'.format(type))
+    methods_list = ['empirical', 'NN', 'MINE']
+    if len(methods_list) < 6:
+        colors_list = ['rgba(0, 0, 255, .9)', 'rgba(255, 25, 52, .9)', 'rgba(48, 254, 0, .9)', 'rgba(182, 0, 228, .9)',
+                   'rgba(255, 149, 25, .9)']
+    else:
+        print('errors: the number of methods exceeds the number of color')
 
+    fig = make_subplots(rows=1, cols=2, subplot_titles=('train', 'test'))
+    for (i, type) in enumerate(['train', 'test']):
+        if i == 0:
+            showlegend = False
+        else:
+            showlegend = True
+        for (j, method) in enumerate(methods_list):
+            if method in ['empirical','NN']:
+                fig.add_trace(
+                    go.Bar(x=case_idx_list, y=results_config_mean_std.loc[:, '{}_MI_mean'.format(method)].values.tolist(),
+                           error_y=dict(type='data', array=results_config_mean_std.loc[:, '{}_MI_std'.format(method)].values.tolist()),
+                           name='{}_MI'.format(method), marker_color=colors_list[j], showlegend=showlegend), 1, i+1)
+            else:
+                fig.add_trace(
+                    go.Bar(x=case_idx_list, y=results_config_mean_std.loc[:, '{}_MI_{}_mean'.format(method,type)].values.tolist(),
+                           error_y=dict(type='data',array=results_config_mean_std.loc[:, '{}_MI_{}_std'.format(method,type)].values.tolist()),
+                           name='{}_MI'.format(method), marker_color=colors_list[j], showlegend=showlegend), 1, i+1)
+
+    # Change the bar mode
+    fig.update_layout(barmode='group')
+    fig.update_layout(
+        width=1400,
+        height=700,
+        margin=dict(
+            l=1,
+            r=1,
+            b=1,
+            t=25,
+            pad=1
+        ),
+        font=dict(size=20, color='black', family='Times New Roman'),
+        legend=dict(
+            font=dict(
+                family='Times New Roman',
+                size=20,
+                color="black"
+            )
+        )
+    )
+
+    # change font size for subplot title
+    for i in fig['layout']['annotations']:
+        i['font'] = dict(size=20)
+
+    fig.update_xaxes(title_font=dict(size=20, family='Times New Roman', color='black'))
+    fig.write_image(save_path + '/MINE_simulation2.png')
 
 def MINE_simulation_summary( ):
 

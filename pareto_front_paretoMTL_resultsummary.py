@@ -116,7 +116,7 @@ def draw_pareto_front(obj1_dataframe, obj2_dataframe, pref_idx_list, fig_title, 
 
 def draw_mean_metrics(dataframe_list, methods_list, y_axis_variable, save_path):
 
-    if len(methods_list):
+    if len(methods_list)<6:
         colors_list = ['rgba(0, 0, 255, .9)','rgba(255, 25, 52, .9)', 'rgba(48, 254, 0, .9)', 'rgba(182, 0, 228, .9)', 'rgba(255, 149, 25, .9)']
     else:
         print('errors: the number of methods exceeds the number of color')

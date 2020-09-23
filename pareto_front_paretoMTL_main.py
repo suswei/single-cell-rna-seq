@@ -11,7 +11,7 @@ from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
-from scvi.models.modules import MINE_Net, discrete_continuous_info, MMD_loss
+from scvi.models.modules import MINE_Net, Nearest_Neighbor_Estimate, MMD_loss
 import pickle
 import matplotlib.pyplot as plt
 
@@ -150,7 +150,7 @@ def MMD_NN_train_test(trainer_vae, type, args):
             estimator_minibatch_train = MMD_loss_fun(z_batch0, z_batch1)
             estimator_train_list.append(estimator_minibatch_train.item())
         elif type == 'NN':
-            estimator_minibatch_train = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
+            estimator_minibatch_train = Nearest_Neighbor_Estimate(batch_index, z)
             estimator_train_list.append(estimator_minibatch_train)
     estimator_train = sum(estimator_train_list)/len(estimator_train_list)
 
@@ -162,7 +162,7 @@ def MMD_NN_train_test(trainer_vae, type, args):
             estimator_minibatch_test = MMD_loss_fun(z_batch0, z_batch1)
             estimator_test_list.append(estimator_minibatch_test.item())
         elif type == 'NN':
-            estimator_minibatch_test = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
+            estimator_minibatch_test = Nearest_Neighbor_Estimate(batch_index, z)
             estimator_test_list.append(estimator_minibatch_test)
     estimator_test = sum(estimator_test_list)/len(estimator_test_list)
 
@@ -261,10 +261,10 @@ def main( ):
     parser.add_argument('--pre_train', action='store_true', default=False,
                         help='whether to pre train neural network')
 
-    parser.add_argument('--pre_epochs', type=int, default=250,
+    parser.add_argument('--pre_epochs', type=int, default=200,
                         help='number of epochs to pre-train scVI')
 
-    parser.add_argument('--pre_adv_epochs', type=int, default=100,
+    parser.add_argument('--pre_adv_epochs', type=int, default=200,
                         help='number of epochs to pre-train MINE')
 
     parser.add_argument('--pre_lr', type=float, default=1e-3,
@@ -301,7 +301,7 @@ def main( ):
     parser.add_argument('--std_paretoMTL', action='store_true', default=False,
                         help='whether to standardize the two objectives')
 
-    parser.add_argument('--obj1_max', type=float, default=18000,
+    parser.add_argument('--obj1_max', type=float, default=20000,
                         help='maximum value for objective 1')
 
     parser.add_argument('--obj1_min', type=float, default=12000,
@@ -427,7 +427,6 @@ def main( ):
             std_paretoMTL=args.std_paretoMTL,obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min,
             epochs = args.epochs, adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
 
-        '''
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
@@ -465,9 +464,9 @@ def main( ):
                         'be_test': [be_test]
                         }
 
-        args.save_path = './result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
-        if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
-            os.makedirs('./result/pareto_front_paretoMTL/{}/{}/std_{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
+        args.save_path = './result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
+        if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
+            os.makedirs('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
 
         if args.pref_idx == 0 or args.pref_idx==9:
             trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches', save_name=args.save_path + '/tsne_batch_train')
@@ -482,7 +481,7 @@ def main( ):
         with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
             pickle.dump(results_dict, f)
         print(results_dict)
-        '''
+
 # Run the actual program
 if __name__ == "__main__":
     main()
