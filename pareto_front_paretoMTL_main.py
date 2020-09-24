@@ -415,6 +415,9 @@ def main( ):
             path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs,
             adv_epochs=args.adv_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
         if args.pref_idx == 0:
+            obj1_max = max(obj1_minibatch_list)
+            obj1_min = min(obj1_minibatch_list)
+            print('obj1_max: {}, obj1_min: {}'.format(obj1_max, obj1_min))
             obj2_max = max(obj2_minibatch_list)
             obj2_min = min(obj2_minibatch_list)
             print('obj2_max: {}, obj2_min: {}'.format(obj2_max, obj2_min))

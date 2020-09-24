@@ -2,15 +2,15 @@
 
 # The name of the job:
 #SBATCH --job-name="pareto_front"
-#SBATCH --account=punim0614
-#SBATCH -p mig
+#SBATCH --account=punim0890
+#SBATCH -p physical
 
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem 7200
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=1-12:0:00
+#SBATCH --time=0-12:0:00
 
 # Batch arrays
 #SBATCH --array=0-99
