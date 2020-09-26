@@ -24,8 +24,8 @@ def main(taskid):
         'lr': [1e-3],
         'obj1_max': [20000],
         'obj1_min': [12000],
-        'obj2_max': [1.1],
-        'obj2_min': [0.24],
+        'obj2_max': [0.87],
+        'obj2_min': [0.31],
         'n_tasks': [2],
         'MC': list(range(10)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
