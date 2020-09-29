@@ -264,13 +264,13 @@ def main( ):
     parser.add_argument('--pre_epochs', type=int, default=200,
                         help='number of epochs to pre-train scVI')
 
-    parser.add_argument('--pre_adv_epochs', type=int, default=200,
+    parser.add_argument('--pre_adv_epochs', type=int, default=400,
                         help='number of epochs to pre-train MINE')
 
     parser.add_argument('--pre_lr', type=float, default=1e-3,
                         help='learning rate in scVI pre-training')
 
-    parser.add_argument('--adv_lr', type=float, default=5e-5,
+    parser.add_argument('--pre_adv_lr', type=float, default=5e-5,
                         help='learning rate in MINE pre-training and adversarial training')
 
 
@@ -288,6 +288,9 @@ def main( ):
 
     parser.add_argument('--lr', type=float, default=1e-3,
                         help='learning rate for paretoMTL')
+
+    parser.add_argument('--adv_lr', type=float, default=5e-5,
+                        help='learning rate in MINE pre-training and adversarial training')
 
     parser.add_argument('--n_tasks', type=int, default=2,
                         help='number of objectives for the multiple optimization problem')
@@ -409,7 +412,7 @@ def main( ):
 
     if args.pre_train == True:
         trainer_vae.pretrain_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
-                        pre_adv_epochs=args.pre_adv_epochs, adv_lr=args.adv_lr, path=args.save_path)
+                        pre_adv_epochs=args.pre_adv_epochs, pre_adv_lr=args.pre_adv_lr, path=args.save_path)
     elif args.standardize == True:
         obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_paretoMTL(
             path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs,

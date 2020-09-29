@@ -238,7 +238,7 @@ class Trainer:
                           data_loader_kwargs=self.data_loader_kwargs)
 
     def pretrain_paretoMTL(self, pre_train: bool=False, pre_epochs: int=250, pre_lr: float=1e-3, eps: float = 0.01,
-                        pre_adv_epochs: int=100, adv_lr: float=5e-5, path: str='None', lr: float=1e-3, standardize: bool=False,
+                        pre_adv_epochs: int=100, pre_adv_lr: float=5e-5, path: str='None', lr: float=1e-3, adv_lr: float=5e-5, standardize: bool=False,
                         std_paretoMTL: bool = False, obj1_max: float = 20000, obj1_min: float = 12000, obj2_max: float = 0.6, obj2_min: float = 0,
                         epochs: int=50, adv_epochs: int=1, n_tasks: int=2, npref: int=10, pref_idx: int=0, taskid: int=0):
 
@@ -258,7 +258,7 @@ class Trainer:
             torch.save(self.model.state_dict(), path + '/vae.pkl')
 
             if self.adv_estimator == 'MINE':
-                self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
+                self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=pre_adv_lr)
                 # pretrain adv_model to make MINE works
                 self.cal_loss = False
                 self.cal_adv_loss = True

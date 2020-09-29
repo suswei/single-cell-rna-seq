@@ -160,19 +160,20 @@ def draw_mean_metrics(dataframe_list, methods_list, y_axis_variable, save_path):
     fig.update_yaxes(title_text='{} mean'.format(y_axis_variable), title_font=dict(size=20, family='Times New Roman', color='black'))
     fig.write_image(save_path + '/{}_mean.png'.format(y_axis_variable))
 
-def draw_barplot(data_array, methods_list, y_axis_variable, fig_title, save_path):
-
-    y_list, stdev_list = [], []
-    for i in range(data_array.shape[0]):
-        y_list += [statistics.mean(data_array[i,:].tolist())]
-        stdev_list += [statistics.stdev(data_array[i, :].tolist())]
+def draw_barplot(data_array1, data_array2, methods_list, y_axis_variable, fig_title, save_path):
 
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=methods_list, y=y_list,
-                         error_y=dict(type='data', array=stdev_list)
-                         )
-                  ) #text=[statistics.mean(MINE_list), statistics.mean(HSIC_list)]
-    #fig.update_traces(texttemplate='%{text:.0f}', textposition='inside')
+
+    for (type,data_array) in zip(['train','test'], [data_array1, data_array2]):
+        y_list, stdev_list = [], []
+        for i in range(data_array.shape[0]):
+            y_list += [statistics.mean(data_array[i, :].tolist())]
+            stdev_list += [statistics.stdev(data_array[i, :].tolist())]
+        fig.add_trace(go.Bar(x=methods_list, y=y_list,
+                             error_y=dict(type='data', array=stdev_list), name=type,
+                             )
+                      ) #text=[statistics.mean(MINE_list), statistics.mean(HSIC_list)]
+        #fig.update_traces(texttemplate='%{text:.0f}', textposition='inside')
     fig.update_yaxes()
     fig.update_layout(
         width=700,
@@ -221,22 +222,21 @@ def pareto_front(hyperparameter_config, dataframe, methods_list, dir_path):
                         fig_title = 'obj1: negative_ELBO, obj2: {}'.format(balance_advestimator)
                         obj1_dataframe = dataframe_oneMC.loc[:, ['obj1_train','obj1_test']]
                         obj2_dataframe = dataframe_oneMC.loc[:, ['obj2_train','obj2_test']]
-                        _, _ = draw_pareto_front(obj1_dataframe, obj2_dataframe, pref_idx_list, fig_title, save_path)
+                        percent_train, percent_test = draw_pareto_front(obj1_dataframe, obj2_dataframe, pref_idx_list, fig_title, save_path)
+                        paretoPoints_percent_one_train += [percent_train]
+                        paretoPoints_percent_one_test += [percent_test]
                     elif pareto_front_type in ['NN']:
                         fig_title = 'obj1: negative_ELBO, obj2: NN(for {})'.format(balance_advestimator)
                         obj1_dataframe = dataframe_oneMC.loc[:, ['obj1_train','obj1_test']]
                         obj2_dataframe = dataframe_oneMC.loc[:, ['NN_train','NN_test']]
-                        percent_train, percent_test = draw_pareto_front(obj1_dataframe, obj2_dataframe, pref_idx_list, fig_title, save_path)
-                        paretoPoints_percent_one_train += [percent_train]
-                        paretoPoints_percent_one_test += [percent_test]
-                if pareto_front_type == 'NN':
+                        _, _ = draw_pareto_front(obj1_dataframe, obj2_dataframe, pref_idx_list, fig_title, save_path)
+
+                if pareto_front_type == 'whole':
                     paretoPoints_percent_array_train = np.concatenate((paretoPoints_percent_array_train,np.array([paretoPoints_percent_one_train])),axis=0)
                     paretoPoints_percent_array_test = np.concatenate((paretoPoints_percent_array_test, np.array([paretoPoints_percent_one_test])), axis=0)
 
-        draw_barplot(data_array=paretoPoints_percent_array_train, methods_list=methods_list, y_axis_variable='ParetoPoints percent mean',
-                     fig_title='train', save_path=dir_path + '/ParetoPoints_percent_train.png')
-        draw_barplot(data_array=paretoPoints_percent_array_test, methods_list=methods_list, y_axis_variable='ParetoPoints percent mean',
-                     fig_title='test', save_path=dir_path + '/ParetoPoints_percent_test.png')
+        draw_barplot(data_array1=paretoPoints_percent_array_train, data_array2=paretoPoints_percent_array_test, methods_list=methods_list, y_axis_variable='ParetoPoints percent mean',
+                     fig_title='Average percent of non-dominated points', save_path=dir_path + '/ParetoPoints_percent.png')
 
 def mean_metrics(hyperparameter_config, dataframe, methods_list, dir_path):
 
@@ -330,9 +330,9 @@ def hypervolume_compare(hyperparameter_config, dataframe, methods_list, dir_path
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     for temp in hyperparameter_experiments:
+        hypervolume_array_train = np.empty((0, dataframe.MC.max() + 1))
+        hypervolume_array_test = np.empty((0, dataframe.MC.max() + 1))
         for type in ['train','test']:
-            hypervolume_array = np.empty((0,dataframe.MC.max() + 1))
-
             for balance_advestimator in methods_list:
                 hypervolume_list = []
                 dataframe_adv = dataframe[dataframe.balance_advestimator.eq(balance_advestimator)]
@@ -348,9 +348,13 @@ def hypervolume_compare(hyperparameter_config, dataframe, methods_list, dir_path
                     pp = np.array(list(paretoPoints1))
                     hv = hypervolume([[pp[:,0][k], pp[:,1][k]] for k in range(pp.shape[0])])
                     hypervolume_list += [hv.compute(ref_point)]
-                hypervolume_array = np.concatenate((hypervolume_array, np.array([hypervolume_list])),axis=0)
-            save_path = dir_path + '/hypervolume_compare_{}.png'.format(type)
-            draw_barplot(data_array=hypervolume_array, methods_list=methods_list, y_axis_variable='hypervolume mean', fig_title=type, save_path=save_path)
+                if type == 'train':
+                    hypervolume_array_train = np.concatenate((hypervolume_array_train, np.array([hypervolume_list])),axis=0)
+                else:
+                    hypervolume_array_test = np.concatenate((hypervolume_array_test, np.array([hypervolume_list])),
+                                                             axis=0)
+            save_path = dir_path + '/hypervolume_compare.png'
+            draw_barplot(data_array1=hypervolume_array_train, data_array2=hypervolume_array_test,  methods_list=methods_list, y_axis_variable='hypervolume mean', fig_title='Averaged hypervolume', save_path=save_path)
 
 def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch', methods_list: list=['MINE','MMD']):
 
