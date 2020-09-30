@@ -18,14 +18,14 @@ def main(taskid):
         'n_latent': [10],
         'batch_size': [128],
         'adv_estimator': ['stdz_MMD'],
-        'MMD_kernel_mul': [3],
-        'MMD_kernel_num': [10],
+        'MMD_kernel_mul': [2],
+        'MMD_kernel_num': [5], #15
         'epochs': [150],
         'lr': [1e-3],
         'obj1_max': [20000],
         'obj1_min': [12000],
-        'obj2_max': [0.72],
-        'obj2_min': [0.36],
+        'obj2_max': [0.79], #0.91
+        'obj2_min': [0.18], #0.43
         'n_tasks': [2],
         'MC': list(range(10)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
