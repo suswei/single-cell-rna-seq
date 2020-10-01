@@ -15,7 +15,7 @@ def main(taskid):
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
         'n_hidden': [128],
-        'n_latent': [10],
+        'n_latent': [50], #10,50
         'batch_size': [128],
         'adv_estimator': ['MINE'],
         'adv_n_hidden': [128],
