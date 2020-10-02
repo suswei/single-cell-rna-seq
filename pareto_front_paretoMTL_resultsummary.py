@@ -363,9 +363,9 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch', meth
         'pre_epochs': [200],
         'pre_lr': [1e-3],
         'adv_lr': [5e-5],
-        'n_epochs': [100],
+        'n_epochs': [150],
         'lr': [1e-3],
-        'MC': list(range(10)),
+        'MC': list(range(20)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
     }
     keys, values = zip(*hyperparameter_config.items())
