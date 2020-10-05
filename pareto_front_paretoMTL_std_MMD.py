@@ -15,17 +15,17 @@ def main(taskid):
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
         'n_hidden': [128],
-        'n_latent': [10], #10
+        'n_latent': [50], #50
         'batch_size': [128],
-        'adv_estimator': ['stdz_MMD'], #stdz_MMD, stdz_MMD
-        'MMD_kernel_mul': [1], #1, 2
-        'MMD_kernel_num': [1],#1, 15
-        'epochs': [150],
+        'adv_estimator': ['stdz_MMD'], #stdz_MMD
+        'MMD_kernel_mul': [2], #2
+        'MMD_kernel_num': [15],#15
+        'epochs': [200],#200
         'lr': [1e-3],
-        'obj1_max': [19100], #19100, 20300
-        'obj1_min': [11800], #11800, 11200
-        'obj2_max': [0.35], #0.35, 0.93
-        'obj2_min': [0.07], #0.07, 0.43
+        'obj1_max': [19600], #19600
+        'obj1_min': [11600], #11600
+        'obj2_max': [0.65], #0.65
+        'obj2_min': [0.48], #0.48
         'n_tasks': [2],
         'MC': list(range(20)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
