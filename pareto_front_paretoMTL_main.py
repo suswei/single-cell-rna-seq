@@ -62,7 +62,7 @@ def obj1_train_test(trainer_vae):
     return obj1_train, obj1_test
 
 def MINE_after_trainerVae(trainer_vae):
-    MINE_network = MINE_Net(input_dim=10 + 2, n_hidden=128, n_layers=10,
+    MINE_network = MINE_Net(input_dim=trainer_vae.model.n_latent + trainer_vae.model.n_batch, n_hidden=128, n_layers=10,
                             activation_fun='ELU', unbiased_loss=True, initial='normal')
 
     MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=5e-5)
@@ -95,8 +95,8 @@ def MINE_after_trainerVae(trainer_vae):
 
     with torch.no_grad():
         MINE_network.eval()
-        z_all_train = torch.empty(0, 10)
-        batch_all_train = torch.empty(0, 2)
+        z_all_train = torch.empty(0, trainer_vae.model.n_latent)
+        batch_all_train = torch.empty(0, trainer_vae.model.n_batch)
 
         for tensors_list in trainer_vae.train_set:
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
@@ -112,8 +112,8 @@ def MINE_after_trainerVae(trainer_vae):
         et_all_train = torch.exp(MINE_network(sample2_all_train))
         MINE_estimator_train = torch.mean(t_all_train) - torch.log(torch.mean(et_all_train))
 
-        z_all_test = torch.empty(0, 10)
-        batch_all_test = torch.empty(0, 2)
+        z_all_test = torch.empty(0, trainer_vae.model.n_latent)
+        batch_all_test = torch.empty(0, trainer_vae.model.n_batch)
 
         for tensors_list in trainer_vae.test_set:
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
