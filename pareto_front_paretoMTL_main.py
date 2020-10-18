@@ -15,7 +15,7 @@ from scvi.models.modules import MINE_Net, Nearest_Neighbor_Estimate, MMD_loss
 import pickle
 import matplotlib.pyplot as plt
 
-def sample1_sample2(trainer_vae, sample_batch, batch_index, type):
+def sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference_batch: int=0, compare_batch:int=1):
     x_ = sample_batch
     if trainer_vae.model.log_variational:
         x_ = torch.log(1 + x_)
@@ -26,20 +26,50 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index, type):
     batch_dummy = torch.from_numpy(pd.get_dummies(batch_dataframe['batch']).values).type(torch.FloatTensor)
     batch_dummy = Variable(batch_dummy, requires_grad=True)
 
-    if type == 'MINE':
+    if obj2_type == 'MINE':
         sample1 = torch.cat((z, batch_dummy), 1)  # joint
         shuffle_index = torch.randperm(z.shape[0])
         sample2 = torch.cat((z[shuffle_index], batch_dummy), 1)
         return sample1, sample2, z, batch_dummy
-    else:
-        if type == 'stdz_MMD':
+    elif obj2_type in ['MMD', 'stdz_MMD']:
+        if obj2_type == 'stdz_MMD':
             # standardize each dimension for z
             z_mean = torch.mean(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
             z_std = torch.std(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
             z = (z - z_mean) / z_std  # element by element
-        z_batch0 = z[(batch_index[:, 0] == 0).nonzero().squeeze(1)]
-        z_batch1 = z[(batch_index[:, 0] == 1).nonzero().squeeze(1)]
-        return z_batch0, z_batch1, z, batch_dummy
+        z_reference_batch = z[(batch_index[:, 0] == reference_batch).nonzero().squeeze(1)]
+        z_compare_batch = z[(batch_index[:, 0] == compare_batch).nonzero().squeeze(1)]
+        return z_reference_batch, z_compare_batch, z, batch_dummy
+    elif obj2_type == 'NN':
+        return None, None, z, None
+
+def sample1_sample2_all(trainer_vae, input_data, obj2_type, reference_batch: int=0, compare_batch:int=1):
+    z_all = torch.empty(0, trainer_vae.model.n_latent)
+    batch_dummy_all = torch.empty(0, trainer_vae.model.n_batch)
+    batch_index_all = torch.empty(0, 1).type(torch.LongTensor)
+    z_reference_all = torch.empty(0, trainer_vae.model.n_latent)
+    z_compare_all = torch.empty(0, trainer_vae.model.n_latent)
+
+    for tensors_list in input_data:
+        sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
+
+        sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference_batch, compare_batch)
+        if obj2_type == 'MINE':
+            z_all = torch.cat((z_all, z), 0)
+            batch_dummy_all = torch.cat((batch_dummy_all, batch_dummy), 0)
+        elif obj2_type in ['MMD','stdz_MMD']:
+            z_reference_all = torch.cat((z_reference_all, sample1),0)
+            z_compare_all = torch.cat((z_compare_all, sample2),0)
+        elif obj2_type == 'NN':
+            z_all = torch.cat((z_all, z), 0)
+            batch_index_all = torch.cat((batch_index_all, batch_index), 0)
+
+    if obj2_type == 'MINE':
+        return z_all, batch_dummy_all
+    elif obj2_type in ['MMD','stdz_MMD']:
+        return z_reference_all, z_compare_all
+    elif obj2_type == 'NN':
+        return z_all, batch_index_all
 
 def obj1_train_test(trainer_vae):
 
@@ -60,6 +90,18 @@ def obj1_train_test(trainer_vae):
     obj1_test = sum(obj1_minibatch_list_test) / len(obj1_minibatch_list_test)
 
     return obj1_train, obj1_test
+
+def MINE_eval(trainer_vae, MINE_network, input_data):
+
+    z_all, batch_dummy_all = sample1_sample2_all(trainer_vae, input_data, 'MINE')
+
+    sample1_all = torch.cat((z_all, batch_dummy_all), 1)  # joint
+    shuffle_index = torch.randperm(z_all.shape[0])
+    sample2_all = torch.cat((z_all[shuffle_index], batch_dummy_all), 1)
+    t_all = MINE_network(sample1_all)
+    et_all = torch.exp(MINE_network(sample2_all))
+    MINE_estimator = torch.mean(t_all) - torch.log(torch.mean(et_all))
+    return MINE_estimator.item()
 
 def MINE_after_trainerVae(trainer_vae):
     MINE_network = MINE_Net(input_dim=trainer_vae.model.n_latent + trainer_vae.model.n_batch, n_hidden=128, n_layers=10,
@@ -95,76 +137,63 @@ def MINE_after_trainerVae(trainer_vae):
 
     with torch.no_grad():
         MINE_network.eval()
-        z_all_train = torch.empty(0, trainer_vae.model.n_latent)
-        batch_all_train = torch.empty(0, trainer_vae.model.n_batch)
+        MINE_estimator_train = MINE_eval(trainer_vae, MINE_network, trainer_vae.train_set)
+        MINE_estimator_test = MINE_eval(trainer_vae, MINE_network, trainer_vae.test_set)
 
-        for tensors_list in trainer_vae.train_set:
-            sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
-
-            sample1, sample2, z, batch_dummy= sample1_sample2(trainer_vae, sample_batch, batch_index, 'MINE')
-            z_all_train = torch.cat((z_all_train, z), 0)
-            batch_all_train = torch.cat((batch_all_train, batch_dummy), 0)
-
-        sample1_all_train = torch.cat((z_all_train, batch_all_train), 1)  # joint
-        shuffle_index = torch.randperm(z_all_train.shape[0])
-        sample2_all_train = torch.cat((z_all_train[shuffle_index], batch_all_train), 1)
-        t_all_train = MINE_network(sample1_all_train)
-        et_all_train = torch.exp(MINE_network(sample2_all_train))
-        MINE_estimator_train = torch.mean(t_all_train) - torch.log(torch.mean(et_all_train))
-
-        z_all_test = torch.empty(0, trainer_vae.model.n_latent)
-        batch_all_test = torch.empty(0, trainer_vae.model.n_batch)
-
-        for tensors_list in trainer_vae.test_set:
-            sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
-
-            sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, 'MINE')
-            z_all_test = torch.cat((z_all_test, z), 0)
-            batch_all_test = torch.cat((batch_all_test, batch_dummy), 0)
-
-        sample1_all_test = torch.cat((z_all_test, batch_all_test), 1)  # joint
-        shuffle_index = torch.randperm(z_all_test.shape[0])
-        sample2_all_test = torch.cat((z_all_test[shuffle_index], batch_all_test), 1)
-        t_all_test = MINE_network(sample1_all_test)
-        et_all_test = torch.exp(MINE_network(sample2_all_test))
-        MINE_estimator_test = torch.mean(t_all_test) - torch.log(torch.mean(et_all_test))
-
-    print('MINE MI train: {}, MINE MI test: {}'.format(MINE_estimator_train.detach().item(), MINE_estimator_test.detach().item()))
+    print('MINE MI train: {}, MINE MI test: {}'.format(MINE_estimator_train, MINE_estimator_test))
 
     # At the final epoch, NN_estimator for each minibatch fluctuates between 0.3 and 0.5
     # when without adaptive learning rate, MINE MI train: 0.6393658518791199, MINE MI test: 0.6368539929389954
     # when with adaptive learning rate, MINE MI train: 0.30684590339660645, MINE MI test: 0.3084377646446228
     # however, as there is no validation dataset, to automatically adjust the learning rate is inapplicable.
 
-    return MINE_estimator_train.detach().item(), MINE_estimator_test.detach().item()
+    return MINE_estimator_train, MINE_estimator_test
 
-def MMD_NN_train_test(trainer_vae, type, args):
+def NN_train_test(batch_all, z_all, number: int=3000):
 
-    MMD_loss_fun = MMD_loss(args.MMD_kernel_mul, args.MMD_kernel_num)
-    estimator_train_list, estimator_test_list = [], []
-    for tensors_list in trainer_vae.train_set:
+    if z_all.shape[0] <= number:
+        estimator = Nearest_Neighbor_Estimate(batch_all, z_all)
+    else:
+        estimator = Nearest_Neighbor_Estimate(batch_all[0:number, :], z_all[0:number, :])
+    return estimator
 
-        sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
-        z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
-        if type in ['stdz_MMD','MMD']:
-            estimator_minibatch_train = MMD_loss_fun(z_batch0, z_batch1)
-            estimator_train_list.append(estimator_minibatch_train.item())
-        elif type == 'NN':
-            estimator_minibatch_train = Nearest_Neighbor_Estimate(batch_index, z)
-            estimator_train_list.append(estimator_minibatch_train)
-    estimator_train = sum(estimator_train_list)/len(estimator_train_list)
+def MMD_train_test(z_reference, z_compare, MMD_kernel_mul, MMD_kernel_num, number):
 
-    for tensors_list in trainer_vae.test_set:
+    MMD_loss_fun = MMD_loss(MMD_kernel_mul, MMD_kernel_num)
 
-        sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
-        z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, type)
-        if type in ['stdz_MMD','MMD']:
-            estimator_minibatch_test = MMD_loss_fun(z_batch0, z_batch1)
-            estimator_test_list.append(estimator_minibatch_test.item())
-        elif type == 'NN':
-            estimator_minibatch_test = Nearest_Neighbor_Estimate(batch_index, z)
-            estimator_test_list.append(estimator_minibatch_test)
-    estimator_test = sum(estimator_test_list)/len(estimator_test_list)
+    if z_reference.shape[0]<=number:
+        z_reference_subset = z_reference
+    else:
+        z_reference_subset = z_reference[0:number,:]
+
+    if z_compare.shape[0]<=number:
+        z_compare_subset = z_compare
+    else:
+        z_compare_subset = z_compare[0:number,:]
+
+    estimator = MMD_loss_fun(z_reference_subset, z_compare_subset)
+    return estimator.item()
+
+def MMD_NN_train_test(trainer_vae, obj2_type, args):
+
+    if obj2_type in ['MMD','stdz_MMD']:
+        reference_batch = 0
+        MMD_loss_train, MMD_loss_test = [], []
+        for i in range(trainer_vae.model.n_batch-1):
+            compare_batch = i + 1
+            z_reference_train, z_compare_train = sample1_sample2_all(trainer_vae, trainer_vae.train_set, obj2_type, reference_batch, compare_batch)
+            MMD_loss_train += [MMD_train_test(z_reference_train, z_compare_train, args.MMD_kernel_mul, args.MMD_kernel_num, args.eval_samplesize)]
+
+            z_reference_test, z_compare_test = sample1_sample2_all(trainer_vae, trainer_vae.test_set, obj2_type, reference_batch, compare_batch)
+            MMD_loss_test += [MMD_train_test(z_reference_test, z_compare_test, args.MMD_kernel_mul, args.MMD_kernel_num, args.eval_samplesize)]
+
+        estimator_train = max(MMD_loss_train)
+        estimator_test = max(MMD_loss_test)
+    elif obj2_type == 'NN':
+        z_train, batch_train = sample1_sample2_all(trainer_vae, trainer_vae.train_set, 'NN')
+        estimator_train = NN_train_test(batch_train, z_train, args.eval_samplesize)
+        z_test, batch_test = sample1_sample2_all(trainer_vae, trainer_vae.test_set, 'NN')
+        estimator_test = NN_train_test(batch_test,z_test, args.eval_samplesize)
 
     return estimator_train, estimator_test
 
@@ -273,7 +302,6 @@ def main( ):
     parser.add_argument('--pre_adv_lr', type=float, default=5e-5,
                         help='learning rate in MINE pre-training and adversarial training')
 
-
     #to get min and max for obj1 and obj2 to standardize
     parser.add_argument('--standardize', action='store_true', default=False,
                         help='whether to get min and max value for obj1 and obj2 to standardize')
@@ -324,6 +352,10 @@ def main( ):
 
     parser.add_argument('--MC', type=int, default=0,
                         help='which MC')
+
+    #for evaluation
+    parser.add_argument('--eval_samplesize', type=int, default=3000,
+                        help='sample size to get NN estimator and MMD estimator at evaluation stage')
 
     # general usage
     parser.add_argument('--use_cuda', action='store_true', default=False,

@@ -86,8 +86,19 @@ class UnsupervisedTrainer(Trainer):
             reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch, local_l_mean, local_l_var,batch_index)
             loss = torch.mean(reconst_loss + self.kl_weight * kl_divergence)
 
-            sample1, sample2 = self.adv_load_minibatch(z, batch_index)
-            adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
+            if self.adv_estimator == 'MINE':
+                sample1, sample2 = self.adv_load_minibatch(z, batch_index)
+                adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
+            elif self.adv_estimator in ['MMD','stdz_MMD']:
+                adv_loss_tensor = torch.empty([1,0])
+                reference_batch = 0
+                for i in range(self.gene_dataset.n_batches -1):
+                    compare_batch = i + 1
+                    sample1, sample2 = self.adv_load_minibatch(z, batch_index, reference_batch, compare_batch)
+                    adv_loss_one, obj2_minibatch_one = self.adv_loss(sample1, sample2)
+                    adv_loss_tensor = torch.cat([adv_loss_tensor, adv_loss_one.reshape(1,1)],dim=1)
+                adv_loss = torch.max(adv_loss_tensor)
+                obj2_minibatch = adv_loss
 
             if self.epoch >= 0:
                 NN_estimator = Nearest_Neighbor_Estimate(batch_index, z)
@@ -105,7 +116,7 @@ class UnsupervisedTrainer(Trainer):
         elif self.cal_loss == True and self.cal_adv_loss == True:
             return loss, adv_loss, obj2_minibatch
 
-    def adv_load_minibatch(self, z, batch_index):
+    def adv_load_minibatch(self, z, batch_index, reference_batch:float=0, compare_batch: float=1):
 
         batch_dataframe = pd.DataFrame.from_dict({'batch': np.ndarray.tolist(batch_index.numpy().ravel())})
         batch_dummy = torch.from_numpy(pd.get_dummies(batch_dataframe['batch']).values).type(torch.FloatTensor)
@@ -129,9 +140,9 @@ class UnsupervisedTrainer(Trainer):
                 z_mean = torch.mean(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
                 z_std = torch.std(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
                 z = (z - z_mean)/z_std #element by element
-            z_batch0 = z[(batch_index[:, 0] == 0).nonzero().squeeze(1)]
-            z_batch1 = z[(batch_index[:, 0] == 1).nonzero().squeeze(1)]
-            return z_batch0, z_batch1
+            z_reference_batch = z[(batch_index[:, 0] == reference_batch).nonzero().squeeze(1)]
+            z_compare_batch = z[(batch_index[:, 0] == compare_batch).nonzero().squeeze(1)]
+            return z_reference_batch, z_compare_batch
 
     def adv_loss(self, sample1, sample2):
         if self.adv_estimator == 'MINE':
