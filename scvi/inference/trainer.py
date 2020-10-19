@@ -299,11 +299,9 @@ class Trainer:
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
 
         obj1_minibatch_list, obj2_minibatch_list, obj1_train_list, obj1_test_list, weightloss1_list, weighted_obj1_list, weighted_obj2_list = [], [], [], [], [], [], []
-        # run at most 2 epochs to find the initial solution
-        # stop early once a feasible solution is found
+        # run until the initial solution is found when flag==True
         # usually can be found with a few steps
 
-        #for t in range(20):
         flag = False
         t = 0
         while flag==False:
@@ -339,7 +337,7 @@ class Trainer:
                 grads, losses_vec = self.paretoMTL_param(n_tasks, obj1, obj2)
                 flag, weight_vec = get_d_paretomtl_init(grads, losses_vec, ref_vec, pref_idx)
 
-                # early stop once a feasible solution is obtained
+                # stop once a feasible solution is obtained
                 if flag == True:
                     print("feasible solution is obtained.")
                     print('t:{}'.format(t))

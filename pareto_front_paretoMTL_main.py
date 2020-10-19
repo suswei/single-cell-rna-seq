@@ -125,11 +125,6 @@ def MINE_after_trainerVae(trainer_vae):
 
             loss = -(torch.mean(t) - (1 / MINE_network.ma_et) * torch.mean(et))
 
-            #if epoch % 40 == 0:
-            #    MINE_estimator_minibatch = torch.mean(t) - torch.log(torch.mean(et))
-            #    NN_estimator = discrete_continuous_info(torch.transpose(batch_index, 0, 1), torch.transpose(z, 0, 1))
-            #    print('Epoch: {}, MINE_MI: {}, NN: {}.'.format(epoch, MINE_estimator_minibatch,NN_estimator))
-
             loss.backward()
             MINE_optimizer.step()
             MINE_optimizer.zero_grad()
@@ -142,11 +137,6 @@ def MINE_after_trainerVae(trainer_vae):
 
     print('MINE MI train: {}, MINE MI test: {}'.format(MINE_estimator_train, MINE_estimator_test))
 
-    # At the final epoch, NN_estimator for each minibatch fluctuates between 0.3 and 0.5
-    # when without adaptive learning rate, MINE MI train: 0.6393658518791199, MINE MI test: 0.6368539929389954
-    # when with adaptive learning rate, MINE MI train: 0.30684590339660645, MINE MI test: 0.3084377646446228
-    # however, as there is no validation dataset, to automatically adjust the learning rate is inapplicable.
-
     return MINE_estimator_train, MINE_estimator_test
 
 def NN_train_test(batch_all, z_all, number: int=3000):
@@ -157,19 +147,19 @@ def NN_train_test(batch_all, z_all, number: int=3000):
         estimator = Nearest_Neighbor_Estimate(batch_all[0:number, :], z_all[0:number, :])
     return estimator
 
-def MMD_train_test(z_reference, z_compare, MMD_kernel_mul, MMD_kernel_num, number):
+def MMD_train_test(z_reference, z_compare, MMD_kernel_mul, MMD_kernel_num):
 
     MMD_loss_fun = MMD_loss(MMD_kernel_mul, MMD_kernel_num)
 
-    if z_reference.shape[0]<=number:
+    if z_reference.shape[0]<=2000:
         z_reference_subset = z_reference
     else:
-        z_reference_subset = z_reference[0:number,:]
+        z_reference_subset = z_reference[0:2000,:]
 
-    if z_compare.shape[0]<=number:
+    if z_compare.shape[0]<=2000:
         z_compare_subset = z_compare
     else:
-        z_compare_subset = z_compare[0:number,:]
+        z_compare_subset = z_compare[0:2000,:]
 
     estimator = MMD_loss_fun(z_reference_subset, z_compare_subset)
     return estimator.item()
@@ -182,10 +172,10 @@ def MMD_NN_train_test(trainer_vae, obj2_type, args):
         for i in range(trainer_vae.model.n_batch-1):
             compare_batch = i + 1
             z_reference_train, z_compare_train = sample1_sample2_all(trainer_vae, trainer_vae.train_set, obj2_type, reference_batch, compare_batch)
-            MMD_loss_train += [MMD_train_test(z_reference_train, z_compare_train, args.MMD_kernel_mul, args.MMD_kernel_num, args.eval_samplesize)]
+            MMD_loss_train += [MMD_train_test(z_reference_train, z_compare_train, args.MMD_kernel_mul, args.MMD_kernel_num)]
 
             z_reference_test, z_compare_test = sample1_sample2_all(trainer_vae, trainer_vae.test_set, obj2_type, reference_batch, compare_batch)
-            MMD_loss_test += [MMD_train_test(z_reference_test, z_compare_test, args.MMD_kernel_mul, args.MMD_kernel_num, args.eval_samplesize)]
+            MMD_loss_test += [MMD_train_test(z_reference_test, z_compare_test, args.MMD_kernel_mul, args.MMD_kernel_num)]
 
         estimator_train = max(MMD_loss_train)
         estimator_test = max(MMD_loss_test)
@@ -449,25 +439,23 @@ def main( ):
         obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_paretoMTL(
             path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs,
             adv_epochs=args.adv_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
-        if args.pref_idx == 0:
-            obj1_max = max(obj1_minibatch_list)
-            obj1_min = min(obj1_minibatch_list)
-            print('obj1_max: {}, obj1_min: {}'.format(obj1_max, obj1_min))
-            obj2_max = max(obj2_minibatch_list)
-            obj2_min = min(obj2_minibatch_list)
-            print('obj2_max: {}, obj2_min: {}'.format(obj2_max, obj2_min))
-        if args.pref_idx == 9:
-            obj1_max = max(obj1_minibatch_list)
-            obj1_min = min(obj1_minibatch_list)
-            print('obj1_max: {}, obj1_min: {}'.format(obj1_max, obj1_min))
+
+        obj1_max = max(obj1_minibatch_list)
+        obj1_min = min(obj1_minibatch_list)
+        print('obj1_max: {}, obj1_min: {}'.format(obj1_max, obj1_min))
+        obj2_max = max(obj2_minibatch_list)
+        obj2_min = min(obj2_minibatch_list)
+        print('obj2_max: {}, obj2_min: {}'.format(obj2_max, obj2_min))
+
     elif args.std_paretoMTL == True:
-        obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
-            std_paretoMTL=args.std_paretoMTL,obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min,
-            epochs = args.epochs, adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
+        _, _ = trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, std_paretoMTL=args.std_paretoMTL,
+               obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
+               adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
 
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
+        # obj2 for the whole training and testing set
         if trainer_vae.adv_estimator == 'MINE':
             obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae)
         elif trainer_vae.adv_estimator == 'MMD':
@@ -483,8 +471,7 @@ def main( ):
         asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
         be_test = trainer_vae.test_set.entropy_batch_mixing()
 
-        results_dict = {
-                        'obj1_train': [obj1_train],
+        results_dict = {'obj1_train': [obj1_train],
                         'obj2_train': [obj2_train],
                         'NN_train': [NN_train],
                         'obj1_test': [obj1_test],
@@ -499,8 +486,7 @@ def main( ):
                         'nmi_test': [nmi_test],
                         'ari_test': [ari_test],
                         'uca_test': [uca_test],
-                        'be_test': [be_test]
-                        }
+                        'be_test': [be_test]}
 
         args.save_path = './result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
         if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):

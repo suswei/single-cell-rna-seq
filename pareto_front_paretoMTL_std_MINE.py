@@ -8,7 +8,7 @@ def main(taskid):
 
     # dataset_name could be 'muris_tabula'
     # nuisance_variable is 'batch'
-    # conf_estimator means estimator for confounding effect, it could be 'MINE', 'HSIC', 'NN' (NN stands for nearest neighbor)
+    # adv_estimator means estimator for confounding effect, it could be 'MINE', 'MMD', 'stdz_MMD' (stdz_MMD means standardize the dimension of z, then use MMD)
     hyperparameter_config = {
         'dataset_name': ['muris_tabula'],
         'confounder': ['batch'],

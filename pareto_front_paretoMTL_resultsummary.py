@@ -54,12 +54,20 @@ def dominates(row, candidateRow, return_index, min_max):
 
 def draw_pareto_front(dataframe, MC, methods_list, pareto_front_type, save_path):
 
+    if pareto_front_type == 'NN':
+        xtitle = 'negative ELBO'
+        ytitle = 'NN'
+    else:
+        xtitle = pareto_front_type.upper()
+        ytitle = 'BE'
+
     dataframe_oneMC = dataframe[dataframe.MC.eq(MC)]
     percent_list_train, percent_list_test = [], []
 
     for type in ['train','test']:
         obj1_all, obj2_all = [], []
-        fig = make_subplots(rows=math.ceil(len(methods_list)/2), cols=2, subplot_titles=tuple(methods_list), vertical_spacing=0.1)
+        fig = make_subplots(rows=math.ceil(len(methods_list)/2), cols=2, subplot_titles=tuple(methods_list), horizontal_spacing=0.02, vertical_spacing=0.06,
+                            x_title=xtitle, y_title=ytitle, shared_yaxes=True, shared_xaxes=True)
         for (i, balance_advestimator) in enumerate(methods_list):
             dataframe_adv = dataframe_oneMC[dataframe_oneMC.balance_advestimator.eq(balance_advestimator)]
             pref_idx_list = [k + 1 for k in dataframe_adv.loc[:, 'pref_idx'].values.tolist()]
@@ -94,27 +102,27 @@ def draw_pareto_front(dataframe, MC, methods_list, pareto_front_type, save_path)
                                      mode='markers+text',marker_size=15, marker_color='rgba(0, 0, 255, .9)', showlegend=False), math.ceil((i+1)/2), i - math.floor(i/2)*2 + 1)
             if dp.shape[0]>0:
                 fig.add_trace(go.Scatter(x = dp[:,0].tolist(), y = dp[:,1].tolist(),
-                                     mode='markers',marker_size=15, name='dominated points',marker_color='rgba(0, 0, 255, .9)', showlegend=showlegend), math.ceil((i+1)/2), i - math.floor(i/2)*2 + 1)
+                                     mode='markers',marker_size=15, name='dominated',marker_color='rgba(0, 0, 255, .9)', showlegend=showlegend), math.ceil((i+1)/2), i - math.floor(i/2)*2 + 1)
             if pp.shape[0]>0:
                 fig.add_trace(go.Scatter(x = pp[:,0].tolist(), y = pp[:,1].tolist(),
-                                     mode='markers',marker_size=15, name='non-dominated points', marker_color='rgba(255, 25, 52, .9)',showlegend=showlegend), math.ceil((i+1)/2), i - math.floor(i/2)*2 + 1)
+                                     mode='markers',marker_size=15, name='non-dominated', marker_color='rgba(255, 25, 52, .9)',showlegend=showlegend), math.ceil((i+1)/2), i - math.floor(i/2)*2 + 1)
         fig.update_traces(textposition='top center')
 
         fig.update_layout(
-            width=1600,
-            height=800*math.ceil(len(methods_list)/2),
+            width=900,
+            height=400*math.ceil(len(methods_list)/2),
             margin=dict(
-                l=30,
+                l=80,
                 r=100,
-                b=30,
-                t=30,
+                b=80,
+                t=35,
                 pad=1
             ),
             font=dict(size=25, color='black', family='Times New Roman'),
             legend=dict(
                 font=dict(
                     family='Times New Roman',
-                    size=25,
+                    size=30,
                     color="black"
                 )
             ),
@@ -122,24 +130,17 @@ def draw_pareto_front(dataframe, MC, methods_list, pareto_front_type, save_path)
 
         # change font size for subplot title
         for i in fig['layout']['annotations']:
-            i['font'] = dict(size=25)
+            i['font'] = dict(size=30)
 
         if pareto_front_type in ['obj2','NN']:
-            fig.update_xaxes(title_text='negative ELBO', title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj1_all)-10,max(obj1_all)+10],autorange=False)
+            fig.update_xaxes(title_font=dict(size=30, family='Times New Roman', color='black'),range=[min(obj1_all)-20,max(obj1_all)+20],autorange=False)
         else:
-            fig.update_xaxes(title_text='{}'.format(pareto_front_type.upper()), title_font=dict(size=25, family='Times New Roman', color='black'),
-                             range=[min(obj1_all) - 0.02, max(obj1_all) + 0.02], autorange=False)
+            fig.update_xaxes(title_font=dict(size=30, family='Times New Roman', color='black'),range=[min(obj1_all) - 0.05, max(obj1_all) + 0.05], autorange=False)
 
-        if pareto_front_type == 'obj2':
-            for (i, balance_advestimator) in enumerate(methods_list):
-                if 'MINE' in balance_advestimator:
-                    fig.update_yaxes(title_text='MINE', title_font=dict(size=25, family='Times New Roman', color='black'), row=math.ceil((i+1)/2), col=i - math.floor(i/2)*2 + 1)
-                elif 'MMD' in balance_advestimator:
-                    fig.update_yaxes(title_text='MMD', title_font=dict(size=25, family='Times New Roman', color='black'),row=math.ceil((i+1)/2), col=i - math.floor(i/2)*2 + 1)
-        elif pareto_front_type == 'NN':
-            fig.update_yaxes(title_text='NN', title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj2_all) - 0.02, max(obj2_all) + 0.02], autorange=False)
+        if pareto_front_type == 'NN':
+            fig.update_yaxes(title_font=dict(size=30, family='Times New Roman', color='black'),range=[min(obj2_all) - 0.05, max(obj2_all) + 0.05], autorange=False)
         else:
-            fig.update_yaxes(title_text='BE', title_font=dict(size=25, family='Times New Roman', color='black'), range=[min(obj2_all) - 0.02, max(obj2_all) + 0.02], autorange=False)
+            fig.update_yaxes(title_font=dict(size=30, family='Times New Roman', color='black'), range=[min(obj2_all) - 0.05, max(obj2_all) + 0.05], autorange=False)
 
         fig.write_image(save_path + '/paretofront_{}_{}_MC{}.png'.format(pareto_front_type,type,MC))
 
@@ -194,42 +195,57 @@ def draw_mean_metrics(dataframe_list, methods_list, y_axis_variable, save_path):
 
 def draw_barplot(data_array1, data_array2, methods_list, y_axis_variable, fig_title, save_path):
 
-    fig = go.Figure()
+    if len(methods_list)<6:
+        colors_list = ['rgba(255, 25, 52, .9)', 'rgba(48, 254, 0, .9)', 'rgba(182, 0, 228, .9)','rgb(158,202,225)', 'rgba(255, 149, 25, .9)']
+    else:
+        print('errors: the number of methods exceeds the number of colors')
 
-    for (type,data_array) in zip(['train','test'], [data_array1, data_array2]):
+    fig = make_subplots(rows=1, cols=2, subplot_titles=('train', 'test'), shared_yaxes=True, horizontal_spacing=0.02)
+
+    for (i,data_array_dict) in enumerate([{'train':[data_array1]},{'test':[data_array2]}]):
+        type = ['train','test'][i]
+        data_array = data_array_dict[type][0]
         y_list, stdev_list = [], []
-        for i in range(data_array.shape[0]):
-            y_list += [statistics.mean(data_array[i, :].tolist())]
-            stdev_list += [statistics.stdev(data_array[i, :].tolist())]
+        for j in range(data_array.shape[0]):
+            y_list += [statistics.mean(data_array[j, :].tolist())]
+            stdev_list += [statistics.stdev(data_array[j, :].tolist())]
         fig.add_trace(go.Bar(x=methods_list, y=y_list,
-                             error_y=dict(type='data', array=stdev_list), name=type,
-                             )
-                      ) #text=[statistics.mean(MINE_list), statistics.mean(HSIC_list)]
-        #fig.update_traces(texttemplate='%{text:.0f}', textposition='inside')
-    fig.update_yaxes()
+                             error_y=dict(type='data', array=stdev_list), name=type, width=[1]*len(methods_list),
+                             marker_color=colors_list[0:len(methods_list)],opacity=0.8,showlegend=False,
+                             ),row=1,col=i+1
+                      )
+    '''
+    title = {'text': fig_title,
+             'y': 1,
+             'x': 0.5,
+             'xanchor': 'center',
+             'yanchor': 'top',
+             'font': dict(
+                 family="Times New Roman",
+                 size=30,
+             )
+        }
+    '''
+    fig.update_layout(barmode='group')
     fig.update_layout(
         width=800,
-        height=800,
+        height=400,
         margin=dict(
-            l=30,
+            l=35,
             r=1,
-            b=30,
-            t=30,
+            b=35,
+            t=35,
             pad=1
         ),
-        font=dict(size=25, color='black', family='Times New Roman'),
-        title={'text': fig_title,
-               'y': 1,
-               'x': 0.52,
-               'xanchor': 'center',
-               'yanchor': 'top',
-               'font': dict(
-                   family="Times New Roman",
-                   size=25,
-               )
-        }
+        font=dict(size=22, color='black', family='Times New Roman'),
+        bargap=0
     )
-    fig.update_yaxes(title_text=y_axis_variable, title_font=dict(size=25, family='Times New Roman', color='black'))
+
+    # change font size for subplot title
+    for i in fig['layout']['annotations']:
+        i['font'] = dict(size=30)
+
+    fig.update_yaxes(title_text=y_axis_variable, title_font=dict(size=28, family='Times New Roman', color='black'),row=1,col=1)
     fig.write_image(save_path)
 
 def pareto_front(hyperparameter_config, dataframe, methods_list, dir_path):
@@ -237,7 +253,7 @@ def pareto_front(hyperparameter_config, dataframe, methods_list, dir_path):
     paretoPoints_percent_array_train = np.empty((len(methods_list), 0))
     paretoPoints_percent_array_test = np.empty((len(methods_list), 0))
 
-    for pareto_front_type in ['obj2', 'NN', 'asw', 'nmi', 'ari', 'uca']:
+    for pareto_front_type in ['NN', 'asw', 'nmi', 'ari', 'uca']:
         for MC in range(dataframe.MC.max()+1):
             percent_list_train, percent_list_test = draw_pareto_front(dataframe, MC, methods_list, pareto_front_type, dir_path)
 
@@ -364,10 +380,9 @@ def hypervolume_compare(hyperparameter_config, dataframe, methods_list, dir_path
                 if type == 'train':
                     hypervolume_array_train = np.concatenate((hypervolume_array_train, np.array([hypervolume_list])),axis=0)
                 else:
-                    hypervolume_array_test = np.concatenate((hypervolume_array_test, np.array([hypervolume_list])),
-                                                             axis=0)
+                    hypervolume_array_test = np.concatenate((hypervolume_array_test, np.array([hypervolume_list])),axis=0)
             save_path = dir_path + '/hypervolume_compare_{}.png'.format(pareto_front_type)
-            draw_barplot(data_array1=hypervolume_array_train, data_array2=hypervolume_array_test,  methods_list=methods_list, y_axis_variable='hypervolume mean', fig_title='Averaged hypervolume', save_path=save_path)
+            draw_barplot(data_array1=hypervolume_array_train, data_array2=hypervolume_array_test,  methods_list=methods_list, y_axis_variable='hypervolume', fig_title='Averaged hypervolume', save_path=save_path)
 
 def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch', methods_list: list=['MINE','MMD']):
 
