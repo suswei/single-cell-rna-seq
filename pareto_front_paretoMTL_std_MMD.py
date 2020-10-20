@@ -17,14 +17,14 @@ def main(taskid):
         'n_hidden': [128],
         'n_latent': [10], #
         'batch_size': [128],
-        'adv_estimator': ['MMD'], #
+        'adv_estimator': ['std_MMD'], #
         'MMD_kernel_mul': [1], #
         'MMD_kernel_num': [1],#
         'epochs': [150],#
         'lr': [1e-3],
-        'obj1_max': [20500], #
-        'obj1_min': [11500], #
-        'obj2_max': [0.36], #
+        'obj1_max': [19100], #
+        'obj1_min': [11800], #
+        'obj2_max': [0.35], #
         'obj2_min': [0.07], #
         'n_tasks': [2],
         'eval_samplesize': [3000],
