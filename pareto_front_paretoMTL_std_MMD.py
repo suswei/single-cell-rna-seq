@@ -17,7 +17,7 @@ def main(taskid):
         'n_hidden': [128],
         'n_latent': [10], #
         'batch_size': [128],
-        'adv_estimator': ['std_MMD'], #
+        'adv_estimator': ['stdz_MMD'], #
         'MMD_kernel_mul': [2], #
         'MMD_kernel_num': [15],#
         'epochs': [150],#

@@ -230,10 +230,8 @@ def draw_barplot(percent_dict, hypervolume_dict, methods_list, save_path, pareto
 
         for (i,data_array) in enumerate([value[0] for key, value in data_dict.items() if key in tuple(['train','test'])]):
             type = ['train','test'][i]
-            y_list, stdev_list = [], []
-            for j in range(data_array.shape[0]):
-                y_list += [statistics.mean(data_array[j, :].tolist())]
-                stdev_list += [statistics.stdev(data_array[j, :].tolist())]
+            y_list = data_array.mean(axis=1).tolist()
+            stdev_list = data_array.std(axis=1, ddof=1).tolist()
             fig.add_trace(go.Bar(x=methods_list, y=y_list,
                                  error_y=dict(type='data', array=stdev_list), name=type, width=[1]*len(methods_list),
                                  marker_color=colors_list[0:len(methods_list)],opacity=0.8,showlegend=False
@@ -306,14 +304,8 @@ def hypervolume_calculation(dataframe, methods_list, pareto_front_type):
                     obj1_list = [k*(-1) for k in dataframe_adv.loc[:, '{}_{}'.format(pareto_front_type, type)].values.tolist()]
                     obj2_list = [k * (-1) for k in dataframe_adv.loc[:, 'be_{}'.format(type)].values.tolist()]
 
-                #when calculate the hypervolume, get rid of the dominated points first, then calculate the hypervolume
                 inputPoints1 = [[obj1_list[k], obj2_list[k]] for k in range(len(obj1_list))]
-                if pareto_front_type == 'NN':
-                    paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates, False, 'min')
-                else:
-                    paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates, False, 'min')
-                pp = np.array(list(paretoPoints1))
-                hv = hypervolume([[pp[:,0][k], pp[:,1][k]] for k in range(pp.shape[0])])
+                hv = hypervolume(inputPoints1) #when hypervolume is calculated, the rectangles of dominated points will be covered by those of non-dominated points
                 hypervolume_list += [hv.compute(ref_point)]
 
             if type == 'train':
