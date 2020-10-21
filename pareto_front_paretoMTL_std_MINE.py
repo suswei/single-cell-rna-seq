@@ -15,7 +15,7 @@ def main(taskid):
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
         'n_hidden': [128],
-        'n_latent': [10], #
+        'n_latent': [50], #
         'batch_size': [128],
         'adv_estimator': ['MINE'], #
         'adv_n_hidden': [128],
@@ -23,9 +23,9 @@ def main(taskid):
         'adv_activation_fun': ['ELU'],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'obj1_max': [20500], #
-        'obj1_min': [11500], #
-        'obj2_max': [0.42], #
+        'obj1_max': [19800], #
+        'obj1_min': [11400], #
+        'obj2_max': [0.61], #
         'obj2_min': [-0.1], #
         'epochs': [150], #
         'adv_epochs': [1],
