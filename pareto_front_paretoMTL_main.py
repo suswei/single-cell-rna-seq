@@ -493,10 +493,8 @@ def main( ):
             os.makedirs('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
 
         if args.pref_idx == 0 or args.pref_idx==9:
-            trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches', save_name=args.save_path + '/tsne_batch_train')
-            trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='labels',save_name=args.save_path + '/tsne_labels_train')
-            trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches', save_name=args.save_path + '/tsne_batch_test')
-            trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='labels', save_name=args.save_path + '/tsne_labels_test')
+            trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
+            trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
 
         args_dict = vars(args)
         with open('{}/config.pkl'.format(args.save_path), 'wb') as f:

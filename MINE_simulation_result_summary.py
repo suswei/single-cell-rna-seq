@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import itertools
 import pickle
+import plotly
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -21,6 +22,8 @@ def read_file(hyperparameter_config, save_path, type):
                 results_config = {key: [value] for key, value in config.items() if key in tuple(['case_idx','MC'])}
             else:
                 results_config = {key: [value] for key, value in config.items() if key in hyperparameter_config.keys()}
+
+            results['NN_estimator'] = [results['NN_estimator'][0].item()]
             results_config.update(results)
 
             if i == 0:
@@ -96,17 +99,19 @@ def MINE_simulation1_summary(hyperparameter_config, save_path):
         legend=dict(
             font=dict(
                 family='Times New Roman',
-                size=20,
+                size=25,
                 color="black"
             )
-        )
+        ),
+        plot_bgcolor='rgb(255,255,255)'
     )
 
     # change font size for subplot title
     for i in fig['layout']['annotations']:
-        i['font'] = dict(size=20)
+        i['font'] = dict(size=25)
 
-    fig.update_xaxes(title_font=dict(size=20, family='Times New Roman', color='black'))
+    fig.update_xaxes(title_font=dict(size=20, family='Times New Roman', color='black'), ticks='outside')
+    fig.update_yaxes(title_font=dict(size=20, family='Times New Roman', color='black'), ticks='outside')
     fig.write_image(save_path + '/MINE_simulation1.png')
 
 def MINE_simulation2_summary(hyperparameter_config, save_path):
@@ -183,17 +188,19 @@ def MINE_simulation2_summary(hyperparameter_config, save_path):
         legend=dict(
             font=dict(
                 family='Times New Roman',
-                size=20,
+                size=25,
                 color="black"
             )
-        )
+        ),
+        plot_bgcolor='rgb(255,255,255)'
     )
 
     # change font size for subplot title
     for i in fig['layout']['annotations']:
-        i['font'] = dict(size=20)
+        i['font'] = dict(size=25)
 
-    fig.update_xaxes(title_font=dict(size=20, family='Times New Roman', color='black'))
+    fig.update_xaxes(title_font=dict(size=20, family='Times New Roman', color='black'), ticks='outside')
+    fig.update_yaxes(title_font=dict(size=20, family='Times New Roman', color='black'), ticks='outside')
     fig.write_image(save_path + '/MINE_simulation2.png')
 
 def MINE_simulation_summary( ):

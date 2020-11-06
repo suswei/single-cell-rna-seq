@@ -309,7 +309,13 @@ def Nearest_Neighbor_Estimate(discrete, continuous, k:int = 3):
     index_cum = torch.cumsum(match_index_sorted,dim=1)
     cum_index = (index_cum == k+1).type(torch.FloatTensor)
     reverse_index = torch.arange(cum_index.shape[1], 0, -1).type(torch.FloatTensor)
+    print('cum_index shape:')
+    cum_index.shape
+    print('reverse_index shape:')
+    reverse_index.shape
     tmp = cum_index * reverse_index
+    print('tmp shape:')
+    tmp.shape
     number_samecategory_d = torch.argmax(tmp, 1)
 
     constant = torch.digamma(torch.tensor([continuous.size(0)]).type(torch.FloatTensor)) + torch.digamma(torch.tensor([k]).type(torch.FloatTensor))
