@@ -296,16 +296,28 @@ class MINE_Net(nn.Module):
 #Nearest neighbor method is not applicable for back-propogation.
 def Nearest_Neighbor_Estimate(discrete, continuous, k:int = 3):
 
+    print('z dimension:')
+    print(continuous.shape)
+    print('batch dimension:')
+    print(discrete.shape)
     continuous_expand0 = continuous.unsqueeze(0).expand(int(continuous.size(0)), int(continuous.size(0)), int(continuous.size(1)))
     continuous_expand1 = continuous.unsqueeze(1).expand(int(continuous.size(0)), int(continuous.size(0)), int(continuous.size(1)))
     L2_distance = ((continuous_expand0-continuous_expand1)**2).sum(2)
-
+    print('L2_distance:')
+    print(L2_distance.shape)
     discrete_expand0 = discrete.unsqueeze(0).expand(int(discrete.size(0)), int(discrete.size(0)), int(discrete.size(1)))
     discrete_expand1 = discrete.unsqueeze(1).expand(int(discrete.size(0)), int(discrete.size(0)), int(discrete.size(1)))
     match_index = torch.eq(discrete_expand0, discrete_expand1).sum(2)
     number_same_category = match_index.sum(1) - 1
 
+    print('match_index:')
+    print(match_index.shape)
+
     match_index_sorted = torch.gather(match_index, 1, torch.argsort(L2_distance, dim=1)) #1 means by row
+
+    print('match_index_sorted:')
+    print(match_index_sorted.shape)
+
     index_cum = torch.cumsum(match_index_sorted,dim=1)
     cum_index = (index_cum == k+1).type(torch.FloatTensor)
     reverse_index = torch.arange(cum_index.shape[1], 0, -1).type(torch.FloatTensor)
