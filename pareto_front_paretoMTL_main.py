@@ -146,6 +146,9 @@ def NN_train_test(batch_all, z_all, number: int=3000):
     if z_all.shape[0] <= number:
         estimator = Nearest_Neighbor_Estimate(batch_all, z_all)
     else:
+        print('number: {}'.format(number))
+        print('z_all subset shape')
+        print(z_all[0:number, :].shape)
         estimator = Nearest_Neighbor_Estimate(batch_all[0:number, :], z_all[0:number, :])
     return estimator
 
