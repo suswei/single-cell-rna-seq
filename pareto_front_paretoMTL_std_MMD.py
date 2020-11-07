@@ -18,14 +18,14 @@ def main(taskid):
         'n_latent': [10], #
         'batch_size': [128],
         'adv_estimator': ['stdz_MMD'], #
-        'MMD_kernel_mul': [1], #
-        'MMD_kernel_num': [1],#
-        'epochs': [1],#150
+        'MMD_kernel_mul': [2], #
+        'MMD_kernel_num': [15],#
+        'epochs': [150],#150
         'lr': [1e-3],
-        'obj1_max': [19100], #
-        'obj1_min': [11800], #
-        'obj2_max': [0.35], #
-        'obj2_min': [0.07], #
+        'obj1_max': [20300], #
+        'obj1_min': [11200], #
+        'obj2_max': [0.93], #
+        'obj2_min': [0.43], #
         'n_tasks': [2],
         'eval_samplesize': [3000],
         'MC': list(range(20)),
@@ -45,8 +45,8 @@ def main(taskid):
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['MMD_kernel_mul'],
                  temp['MMD_kernel_num'], temp['epochs'], temp['lr'],
-                 temp['obj1_max'], temp['obj1_min'], temp['obj2_max'], temp['obj2_min'], temp['n_tasks'], temp['MC'],
-                 temp['eval_samplesize'], temp['npref_prefidx']['npref'], temp['npref_prefidx']['pref_idx'])
+                 temp['obj1_max'], temp['obj1_min'], temp['obj2_max'], temp['obj2_min'], temp['n_tasks'],
+                 temp['eval_samplesize'], temp['MC'], temp['npref_prefidx']['npref'], temp['npref_prefidx']['pref_idx'])
               )
 
 if __name__ == "__main__":

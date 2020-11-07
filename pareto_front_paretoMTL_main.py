@@ -69,8 +69,6 @@ def sample1_sample2_all(trainer_vae, input_data, obj2_type, reference_batch: int
     elif obj2_type in ['MMD','stdz_MMD']:
         return z_reference_all, z_compare_all
     elif obj2_type == 'NN':
-        print('z_all shape')
-        print(z_all.shape)
         return z_all, batch_index_all
 
 def obj1_train_test(trainer_vae):
@@ -146,9 +144,6 @@ def NN_train_test(batch_all, z_all, number: int=3000):
     if z_all.shape[0] <= number:
         estimator = Nearest_Neighbor_Estimate(batch_all, z_all)
     else:
-        print('number: {}'.format(number))
-        print('z_all subset shape')
-        print(z_all[0:number, :].shape)
         estimator = Nearest_Neighbor_Estimate(batch_all[0:number, :], z_all[0:number, :])
     return estimator
 
@@ -186,8 +181,6 @@ def MMD_NN_train_test(trainer_vae, obj2_type, args):
         estimator_test = max(MMD_loss_test)
     elif obj2_type == 'NN':
         z_train, batch_train = sample1_sample2_all(trainer_vae, trainer_vae.train_set, 'NN')
-        print('z_train_all shape')
-        print(z_train.shape)
         estimator_train = NN_train_test(batch_train, z_train, args.eval_samplesize)
         z_test, batch_test = sample1_sample2_all(trainer_vae, trainer_vae.test_set, 'NN')
         estimator_test = NN_train_test(batch_test,z_test, args.eval_samplesize)
