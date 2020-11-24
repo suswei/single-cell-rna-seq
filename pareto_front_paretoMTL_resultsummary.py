@@ -2,6 +2,9 @@ import os
 import itertools
 import numpy as np
 import pandas as pd
+from scvi.dataset.dataset import GeneExpressionDataset
+from scvi.dataset.muris_tabula import TabulaMuris
+from scipy import sparse
 import pickle
 from pygmo import hypervolume
 import statistics
@@ -450,6 +453,60 @@ def compare_hypervolume_percent(dataframe, methods_list, dir_path):
 
         #draw_barplot1(percent_dict=percent_dict, hypervolume_dict=hypervolume_dict, methods_list=methods_list, pareto_front_type=pareto_front_type, save_path=dir_path)
         draw_barplot2(percent_dict=percent_dict, hypervolume_dict=hypervolume_dict, methods_list=methods_list, pareto_front_type=pareto_front_type, save_path=dir_path)
+
+def cell_type_composition(dataset_name, change_composition, save_path):
+    if dataset_name == 'muris_tabula':
+        dataset1 = TabulaMuris('facs', save_path=save_path)
+        dataset2 = TabulaMuris('droplet', save_path=save_path)
+        dataset1.subsample_genes(dataset1.nb_genes)
+        dataset2.subsample_genes(dataset2.nb_genes)
+        if change_composition == True:
+            dataset1_labels = dataset1.__dict__['labels']
+            dataset1_labels_df = pd.DataFrame.from_dict({'label': dataset1_labels[:, 0].tolist()})
+            dataset1_celltypes = dataset1.__dict__['cell_types']
+            dataset1_celltypes_df = pd.DataFrame.from_dict({'cell_type': dataset1_celltypes.tolist()})
+            dataset1_celltypes_df['label'] = pd.Series(np.array(list(range(dataset1_celltypes_df.shape[0]))),index=dataset1_celltypes_df.index)
+
+            delete_labels_celltypes = dataset1_celltypes_df[dataset1_celltypes_df.cell_type.isin(['granulocyte', 'nan', 'monocyte', 'hematopoietic precursor cell', 'granulocytopoietic cell'])]
+            dataset1.__dict__['_X'] = sparse.csr_matrix(dataset1.__dict__['_X'].toarray()[~dataset1_labels_df.label.isin(delete_labels_celltypes.loc[:, 'label'].values.tolist())])
+            for key in ['local_means', 'local_vars', 'batch_indices', 'labels']:
+                dataset1.__dict__[key] = dataset1.__dict__[key][~dataset1_labels_df.label.isin(delete_labels_celltypes.loc[:,'label'].values.tolist())]
+            dataset1.__dict__['n_labels'] = 18
+            dataset1.__dict__['cell_types'] = np.delete(dataset1.__dict__['cell_types'], delete_labels_celltypes.loc[:, 'label'].values.tolist())
+
+            dataset1_celltypes_new = dataset1.__dict__['cell_types']
+            dataset1_celltypes_df_new = pd.DataFrame.from_dict({'cell_type': dataset1_celltypes_new.tolist()})
+            dataset1_celltypes_df_new['label'] = pd.Series(np.array(list(range(dataset1_celltypes_df_new.shape[0]))),index=dataset1_celltypes_df_new.index)
+            label_change = dataset1_celltypes_df.merge(dataset1_celltypes_df_new, how='right', left_on='cell_type', right_on='cell_type').iloc[:, 1:]
+            label_change.columns = ['label','new_label']
+
+            dataset1_labels_new = dataset1.__dict__['labels']
+            dataset1_labels_df_new = pd.DataFrame.from_dict({'label': dataset1_labels_new[:, 0].tolist()})
+
+            dataset1.__dict__['labels'] = dataset1_labels_df_new.merge(label_change, how='left', left_on='label', right_on='label').loc[:,'new_label'].values.reshape(dataset1.__dict__['labels'].shape[0],1)
+
+    dataset1_labels = dataset1.__dict__['labels']
+    dataset2_labels = dataset2.__dict__['labels']
+    dataset1_celltypes = dataset1.__dict__['cell_types']
+    dataset2_celltypes = dataset2.__dict__['cell_types']
+
+    dataset1_labels_df = pd.DataFrame.from_dict({'label': dataset1_labels[:, 0].tolist()})
+    dataset1_celltypes_df = pd.DataFrame.from_dict({'cell_type': dataset1_celltypes.tolist()})
+    dataset2_labels_df = pd.DataFrame.from_dict({'label': dataset2_labels[:, 0].tolist()})
+    dataset2_celltypes_df = pd.DataFrame.from_dict({'cell_type': dataset2_celltypes.tolist()})
+
+    dataset1_celltypes_df['label'] = pd.Series(np.array(list(range(dataset1_celltypes_df.shape[0]))),index=dataset1_celltypes_df.index)
+    dataset2_celltypes_df['label'] = pd.Series(np.array(list(range(dataset2_celltypes_df.shape[0]))),index=dataset2_celltypes_df.index)
+
+    dataset1_labels_celltypes = dataset1_labels_df.merge(dataset1_celltypes_df, how='outer', lefton='label',righton='label')
+    dataset2_labels_celltypes = dataset2_labels_df.merge(dataset2_celltypes_df, how='outer', left_on='label',right_on='label')
+
+    dataset1_percentage = (dataset1_labels_celltypes['cell_type'].value_counts(normalize=True) * 100).reset_index()
+    dataset2_percentage = (dataset2_labels_celltypes['cell_type'].value_counts(normalize=True) * 100).reset_index()
+
+    compare_percentage = dataset1_percentage.merge(dataset2_percentage, how='outer', left_on='cell_type', right_on='cell_type')
+    print(compare_percentage.fillna(0))
+
 
 def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch', methods_list: list=['MINE','MMD']):
 

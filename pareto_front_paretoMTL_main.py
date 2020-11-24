@@ -12,6 +12,7 @@ from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
 from scvi.models.modules import MINE_Net, Nearest_Neighbor_Estimate, MMD_loss
+from scipy import sparse
 import pickle
 import matplotlib.pyplot as plt
 
@@ -139,14 +140,6 @@ def MINE_after_trainerVae(trainer_vae):
 
     return MINE_estimator_train, MINE_estimator_test
 
-def NN_train_test(batch_all, z_all, number: int=3000):
-
-    if z_all.shape[0] <= number:
-        estimator = Nearest_Neighbor_Estimate(batch_all, z_all)
-    else:
-        estimator = Nearest_Neighbor_Estimate(batch_all[0:number, :], z_all[0:number, :])
-    return estimator
-
 def MMD_train_test(z_reference, z_compare, MMD_kernel_mul, MMD_kernel_num):
 
     MMD_loss_fun = MMD_loss(MMD_kernel_mul, MMD_kernel_num)
@@ -180,10 +173,19 @@ def MMD_NN_train_test(trainer_vae, obj2_type, args):
         estimator_train = max(MMD_loss_train)
         estimator_test = max(MMD_loss_test)
     elif obj2_type == 'NN':
-        z_train, batch_train = sample1_sample2_all(trainer_vae, trainer_vae.train_set, 'NN')
-        estimator_train = NN_train_test(batch_train, z_train, args.eval_samplesize)
-        z_test, batch_test = sample1_sample2_all(trainer_vae, trainer_vae.test_set, 'NN')
-        estimator_test = NN_train_test(batch_test,z_test, args.eval_samplesize)
+        NN_train_list, NN_test_list = [], []
+        for tensors_list in trainer_vae.train_set:
+            sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
+            z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type)
+            NN_minibatch_train = Nearest_Neighbor_Estimate(batch_index, z)
+            NN_train_list.append(NN_minibatch_train)
+        estimator_train = sum(NN_train_list) / len(NN_train_list)
+        for tensors_list in trainer_vae.test_set:
+            sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
+            z_batch0, z_batch1, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type)
+            NN_minibatch_test = Nearest_Neighbor_Estimate(batch_index, z)
+            NN_test_list.append(NN_minibatch_test)
+        estimator_test = sum(NN_test_list)/len(NN_test_list)
 
     return estimator_train, estimator_test
 
@@ -211,6 +213,9 @@ def main( ):
 
     parser.add_argument('--dataset_name', type=str, default='muris_tabula',
                         help='the name of the dataset')
+
+    parser.add_argument('--change_composition', action='store_true', default=True,
+                        help='whether to change the cell type composition in the original dataset')
 
     parser.add_argument('--confounder', type=str, default='batch',
                         help='the name of the confounder variable')
@@ -370,6 +375,31 @@ def main( ):
         dataset2 = TabulaMuris('droplet', save_path=data_save_path)
         dataset1.subsample_genes(dataset1.nb_genes)
         dataset2.subsample_genes(dataset2.nb_genes)
+        if args.change_composition == True:
+            dataset1_labels = dataset1.__dict__['labels']
+            dataset1_labels_df = pd.DataFrame.from_dict({'label': dataset1_labels[:, 0].tolist()})
+            dataset1_celltypes = dataset1.__dict__['cell_types']
+            dataset1_celltypes_df = pd.DataFrame.from_dict({'cell_type': dataset1_celltypes.tolist()})
+            dataset1_celltypes_df['label'] = pd.Series(np.array(list(range(dataset1_celltypes_df.shape[0]))),index=dataset1_celltypes_df.index)
+
+            delete_labels_celltypes = dataset1_celltypes_df[dataset1_celltypes_df.cell_type.isin(['granulocyte', 'nan', 'monocyte', 'hematopoietic precursor cell', 'granulocytopoietic cell'])]
+            dataset1.__dict__['_X'] = sparse.csr_matrix(dataset1.__dict__['_X'].toarray()[~dataset1_labels_df.label.isin(delete_labels_celltypes.loc[:, 'label'].values.tolist())])
+            for key in ['local_means', 'local_vars', 'batch_indices', 'labels']:
+                dataset1.__dict__[key] = dataset1.__dict__[key][~dataset1_labels_df.label.isin(delete_labels_celltypes.loc[:,'label'].values.tolist())]
+            dataset1.__dict__['n_labels'] = 18
+            dataset1.__dict__['cell_types'] = np.delete(dataset1.__dict__['cell_types'], delete_labels_celltypes.loc[:, 'label'].values.tolist())
+
+            dataset1_celltypes_new = dataset1.__dict__['cell_types']
+            dataset1_celltypes_df_new = pd.DataFrame.from_dict({'cell_type': dataset1_celltypes_new.tolist()})
+            dataset1_celltypes_df_new['label'] = pd.Series(np.array(list(range(dataset1_celltypes_df_new.shape[0]))),index=dataset1_celltypes_df_new.index)
+            label_change = dataset1_celltypes_df.merge(dataset1_celltypes_df_new, how='right', left_on='cell_type', right_on='cell_type').iloc[:, 1:]
+            label_change.columns = ['label','new_label']
+
+            dataset1_labels_new = dataset1.__dict__['labels']
+            dataset1_labels_df_new = pd.DataFrame.from_dict({'label': dataset1_labels_new[:, 0].tolist()})
+
+            dataset1.__dict__['labels'] = dataset1_labels_df_new.merge(label_change, how='left', left_on='label', right_on='label').loc[:,'new_label'].values.reshape(dataset1.__dict__['labels'].shape[0],1)
+
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
 
     #generate a random seed to split training and testing dataset
