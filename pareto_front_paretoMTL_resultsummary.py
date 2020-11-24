@@ -498,11 +498,13 @@ def cell_type_composition(dataset_name, change_composition, save_path):
     dataset1_celltypes_df['label'] = pd.Series(np.array(list(range(dataset1_celltypes_df.shape[0]))),index=dataset1_celltypes_df.index)
     dataset2_celltypes_df['label'] = pd.Series(np.array(list(range(dataset2_celltypes_df.shape[0]))),index=dataset2_celltypes_df.index)
 
-    dataset1_labels_celltypes = dataset1_labels_df.merge(dataset1_celltypes_df, how='outer', lefton='label',righton='label')
-    dataset2_labels_celltypes = dataset2_labels_df.merge(dataset2_celltypes_df, how='outer', left_on='label',right_on='label')
+    dataset1_labels_celltypes = dataset1_labels_df.merge(dataset1_celltypes_df, how='left', left_on='label',right_on='label')
+    dataset2_labels_celltypes = dataset2_labels_df.merge(dataset2_celltypes_df, how='left', left_on='label',right_on='label')
 
     dataset1_percentage = (dataset1_labels_celltypes['cell_type'].value_counts(normalize=True) * 100).reset_index()
     dataset2_percentage = (dataset2_labels_celltypes['cell_type'].value_counts(normalize=True) * 100).reset_index()
+    dataset1_percentage.columns = ['cell_type','percentage']
+    dataset2_percentage.columns = ['cell_type', 'percentage']
 
     compare_percentage = dataset1_percentage.merge(dataset2_percentage, how='outer', left_on='cell_type', right_on='cell_type')
     print(compare_percentage.fillna(0))

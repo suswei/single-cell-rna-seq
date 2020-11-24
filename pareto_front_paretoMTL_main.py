@@ -303,7 +303,7 @@ def main( ):
 
     #for paretoMTL
 
-    parser.add_argument('--epochs', type=int, default=100,
+    parser.add_argument('--epochs', type=int, default=150,
                         help='number of epochs to train scVI and MINE')
 
     parser.add_argument('--adv_epochs', type=int, default=1,
