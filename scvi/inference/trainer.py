@@ -319,7 +319,7 @@ class Trainer:
     def paretoMTL(self, std_paretoMTL: bool=False, obj1_max: float=20000, obj1_min: float=12000, obj2_max: float=0.6, obj2_min: float=0,
                   epochs: int=50, adv_epochs: int=1, n_tasks: int=2, npref: int=10, pref_idx: int=0, path: str='.', taskid: int=0):
 
-        ref_vec = torch.FloatTensor(circle_points([1], [npref])[0])
+        ref_vec = torch.FloatTensor(circle_points([1], [npref])[0]).to(self.device)
 
         obj1_minibatch_list, obj2_minibatch_list, obj1_train_list, obj1_test_list, weightloss1_list, weighted_obj1_list, weighted_obj2_list = [], [], [], [], [], [], []
         # run until the initial solution is found when flag==True
@@ -359,6 +359,8 @@ class Trainer:
                 # calculate the weights
                 grads, losses_vec = self.paretoMTL_param(n_tasks, obj1, obj2)
                 flag, weight_vec = get_d_paretomtl_init(grads, losses_vec, ref_vec, pref_idx)
+
+                weight_vec = weight_vec.to(self.device)
 
                 # stop once a feasible solution is obtained
                 if flag == True:
@@ -439,6 +441,7 @@ class Trainer:
 
                 normalize_coeff = n_tasks / torch.sum(torch.abs(weight_vec))
                 weight_vec = weight_vec * normalize_coeff
+                weight_vec = weight_vec.to(self.device)
 
                 # optimization step
                 self.cal_loss = True
