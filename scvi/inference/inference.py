@@ -76,7 +76,7 @@ class UnsupervisedTrainer(Trainer):
 
         elif self.cal_loss == False and self.cal_adv_loss == True:
             x_ = sample_batch_copy
-            if self.model.log_variational:
+            if self.model.module.log_variational:
                 x_ = torch.log(1 + x_)
             qz_m, qz_v, z = self.model.module.z_encoder(x_, None)
 
