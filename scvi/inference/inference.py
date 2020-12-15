@@ -60,43 +60,46 @@ class UnsupervisedTrainer(Trainer):
         return loss
 
     #If your applications rely on the posterior quality, (i.e.differential expression, batch effect removal), ensure
-    #the number of total epochs( or iterations) exceed the number of epochs( or iterations) used for KL warmup
+    #the number of total epochs(or iterations) exceed the number of epochs( or iterations) used for KL warmup
     def on_epoch_begin(self):
         self.kl_weight = self.kl if self.kl is not None else min(1, self.epoch / self.n_epochs_kl_warmup)  # self.n_epochs)
 
     def two_loss(self, tensors):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
+        sample_batch_copy, local_l_mean_copy, local_l_var_copy, batch_index_copy = sample_batch.to(self.device), local_l_mean.to(self.device), local_l_var.to(self.device), batch_index.to(self.device)
 
         if self.cal_loss == True and self.cal_adv_loss == False:
             #for when model is vae_MI
-            reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
+            reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch_copy, local_l_mean_copy, local_l_var_copy, batch_index_copy)
             loss = torch.mean(reconst_loss + self.kl_weight*kl_divergence)
 
         elif self.cal_loss == False and self.cal_adv_loss == True:
-            x_ = sample_batch
+            x_ = sample_batch_copy
             if self.model.log_variational:
                 x_ = torch.log(1 + x_)
-            qz_m, qz_v, z = self.model.z_encoder(x_, None)
+            qz_m, qz_v, z = self.model.module.z_encoder(x_, None)
 
             sample1, sample2= self.adv_load_minibatch(z, batch_index)
             adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
 
         elif self.cal_loss == True and self.cal_adv_loss == True:
-            reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch, local_l_mean, local_l_var,batch_index)
+            reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch_copy, local_l_mean_copy, local_l_var_copy,batch_index_copy)
             loss = torch.mean(reconst_loss + self.kl_weight * kl_divergence)
 
             if self.adv_estimator == 'MINE':
                 sample1, sample2 = self.adv_load_minibatch(z, batch_index)
                 adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
             elif self.adv_estimator in ['MMD','stdz_MMD']:
-                adv_loss_tensor = torch.empty([1,0])
                 reference_batch = 0
                 for i in range(self.gene_dataset.n_batches -1):
                     compare_batch = i + 1
                     sample1, sample2 = self.adv_load_minibatch(z, batch_index, reference_batch, compare_batch)
                     adv_loss_one, obj2_minibatch_one = self.adv_loss(sample1, sample2)
-                    adv_loss_tensor = torch.cat([adv_loss_tensor, adv_loss_one.reshape(1,1)],dim=1)
+                    if i == 0:
+                        adv_loss_tensor = adv_loss_one.reshape(1,1)
+                    else:
+                        adv_loss_tensor = torch.cat([adv_loss_tensor, adv_loss_one.reshape(1,1)],dim=1)
                 adv_loss = torch.max(adv_loss_tensor)
                 obj2_minibatch = adv_loss
 
@@ -122,26 +125,26 @@ class UnsupervisedTrainer(Trainer):
         batch_dummy = torch.from_numpy(pd.get_dummies(batch_dataframe['batch']).values).type(torch.FloatTensor)
 
         #check if z.requires_grad == True
-        if self.use_cuda == True:
-            batch_dummy = batch_dummy.cuda()
-        batch_dummy = Variable(batch_dummy, requires_grad=True)
+        if torch.cuda.is_available() == True:
+            batch_dummy_copy = batch_dummy.to(self.device)
+        batch_dummy_copy = Variable(batch_dummy_copy, requires_grad=True)
 
         if self.adv_estimator == 'MINE':
-            z_batch = torch.cat((z, batch_dummy), 1)  # joint
+            z_batch = torch.cat((z, batch_dummy_copy), 1)  # joint
             shuffle_index = torch.randperm(z.shape[0])
             shuffle_z_batch = torch.cat((z[shuffle_index], batch_dummy), 1)  # marginal
             return z_batch, shuffle_z_batch
         elif self.adv_estimator in ['MMD','stdz_MMD']:
-            if self.use_cuda == True:
-                batch_index = batch_index.type(torch.FloatTensor).cuda()
-            batch_index = Variable(batch_index.type(torch.FloatTensor), requires_grad=True)
+            if torch.cuda.is_available() == True:
+                batch_index_copy = batch_index.type(torch.FloatTensor).to(self.device)
+            batch_index_copy = Variable(batch_index_copy.type(torch.FloatTensor), requires_grad=True)
             if self.adv_estimator == 'stdz_MMD':
                 #standardize each dimension for z
                 z_mean = torch.mean(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
                 z_std = torch.std(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
                 z = (z - z_mean)/z_std #element by element
-            z_reference_batch = z[(batch_index[:, 0] == reference_batch).nonzero().squeeze(1)]
-            z_compare_batch = z[(batch_index[:, 0] == compare_batch).nonzero().squeeze(1)]
+            z_reference_batch = z[(batch_index_copy[:, 0] == reference_batch).nonzero().squeeze(1)]
+            z_compare_batch = z[(batch_index_copy[:, 0] == compare_batch).nonzero().squeeze(1)]
             return z_reference_batch, z_compare_batch
 
     def adv_loss(self, sample1, sample2):
@@ -149,15 +152,15 @@ class UnsupervisedTrainer(Trainer):
             t = self.adv_model(sample1)
             et = torch.exp(self.adv_model(sample2))
 
-            if self.adv_model.unbiased_loss:
-                if self.adv_model.ma_et is None:
-                    self.adv_model.ma_et = torch.mean(et).detach().item()  # detach means will not calculate gradient for ma_et, ma_et is just a number
-                self.adv_model.ma_et = (1 - self.adv_model.ma_rate) * self.adv_model.ma_et + self.adv_model.ma_rate * torch.mean(et).detach().item()
+            if self.adv_model.module.unbiased_loss:
+                if self.adv_model.module.ma_et is None:
+                    self.adv_model.module.ma_et = torch.mean(et).detach().item()  # detach means will not calculate gradient for ma_et, ma_et is just a number
+                self.adv_model.module.ma_et = (1 - self.adv_model.module.ma_rate) * self.adv_model.module.ma_et + self.adv_model.module.ma_rate * torch.mean(et).detach().item()
 
                 # Pay attention, this unbiased loss is not our MINE estimator,
                 # The MINE estimator is still torch.mean(t) - torch.log(torch.mean(et)) after training
                 # The unbiased_loss is only for getting unbiased gradient.
-                loss = -(torch.mean(t) - (1 / self.adv_model.ma_et) * torch.mean(et))
+                loss = -(torch.mean(t) - (1 / self.adv_model.module.ma_et) * torch.mean(et))
             else:
                 loss = -(torch.mean(t) - torch.log(torch.mean(et)))
 

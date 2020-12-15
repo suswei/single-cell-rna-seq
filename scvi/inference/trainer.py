@@ -39,8 +39,8 @@ class Trainer:
     """
     default_metrics_to_monitor = []
 
-    def __init__(self, model, gene_dataset, use_cuda=True, metrics_to_monitor=None, benchmark=False,
-                 verbose=False, frequency=None, weight_decay=1e-6, early_stopping_kwargs=dict(),
+    def __init__(self, model, gene_dataset, use_cuda=True, metrics_to_monitor=None,
+                 benchmark=False, verbose=False, frequency=None, weight_decay=1e-6, early_stopping_kwargs=dict(),
                  data_loader_kwargs=dict(), save_path='None', batch_size=128, adv_estimator='None',
                  adv_n_hidden=128, adv_n_layers=10, adv_activation_fun='ELU', unbiased_loss=True, adv_w_initial='Normal',
                  MMD_kernel_mul: float=2, MMD_kernel_num: int=5, batch_ratio: list=[], nsamples: int=1e5):
@@ -48,6 +48,9 @@ class Trainer:
         self.model = model
         self.gene_dataset = gene_dataset
         self._posteriors = OrderedDict()
+
+        # use all available GPUs
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.adv_estimator = adv_estimator
         if self.adv_estimator == 'MINE':
@@ -243,6 +246,11 @@ class Trainer:
                         epochs: int=50, adv_epochs: int=1, n_tasks: int=2, npref: int=10, pref_idx: int=0, taskid: int=0):
 
         if pre_train == True:
+
+            if torch.cuda.device_count() > 1:
+                self.model = torch.nn.DataParallel(self.model)
+            self.model.to(self.device)
+
             params = filter(lambda p: p.requires_grad, self.model.parameters())
             self.optimizer = torch.optim.Adam(params, lr=pre_lr, eps=eps)
 
@@ -258,6 +266,11 @@ class Trainer:
             torch.save(self.model.state_dict(), path + '/vae.pkl')
 
             if self.adv_estimator == 'MINE':
+
+                if torch.cuda.device_count() > 1:
+                    self.adv_model = torch.nn.DataParallel(self.adv_model)
+                self.adv_model.to(self.device)
+
                 self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=pre_adv_lr)
                 # pretrain adv_model to make MINE works
                 self.cal_loss = False
@@ -272,12 +285,22 @@ class Trainer:
                 torch.save(self.adv_model.state_dict(), path + '/MINE.pkl')
         else:
             self.model.load_state_dict(torch.load(path + '/vae.pkl'))
+
+            if torch.cuda.device_count() > 1:
+                self.model = torch.nn.DataParallel(self.model)
+            self.model.to(self.device)
+
             params = filter(lambda p: p.requires_grad, self.model.parameters())
             self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps)
             # self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[30], gamma=0.5)
 
             if self.adv_estimator == 'MINE':
                 self.adv_model.load_state_dict(torch.load(path + '/MINE.pkl'))
+
+                if torch.cuda.device_count() > 1:
+                    self.adv_model = torch.nn.DataParallel(self.adv_model)
+                self.adv_model.to(self.device)
+
                 self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
                 # self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[30], gamma=0.5)
 

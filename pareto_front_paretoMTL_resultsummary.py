@@ -451,8 +451,8 @@ def compare_hypervolume_percent(dataframe, methods_list, dir_path):
         hypervolume_dict =  hypervolume_calculation(dataframe, methods_list, pareto_front_type)
         percent_dict = pareto_front(dataframe, methods_list, pareto_front_type, dir_path)
 
-        #draw_barplot1(percent_dict=percent_dict, hypervolume_dict=hypervolume_dict, methods_list=methods_list, pareto_front_type=pareto_front_type, save_path=dir_path)
-        draw_barplot2(percent_dict=percent_dict, hypervolume_dict=hypervolume_dict, methods_list=methods_list, pareto_front_type=pareto_front_type, save_path=dir_path)
+        draw_barplot1(percent_dict=percent_dict, hypervolume_dict=hypervolume_dict, methods_list=methods_list, pareto_front_type=pareto_front_type, save_path=dir_path)
+        #draw_barplot2(percent_dict=percent_dict, hypervolume_dict=hypervolume_dict, methods_list=methods_list, pareto_front_type=pareto_front_type, save_path=dir_path)
 
 def cell_type_composition(dataset_name, change_composition, save_path):
     if dataset_name == 'muris_tabula':

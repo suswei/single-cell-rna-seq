@@ -41,32 +41,62 @@ all_gene_symbols = donor.gene_symbols[
         [np.where(donor.gene_names == x)[0][0] for x in list(all_dataset.gene_names)]
     )]
 
-
 import pandas as pd
-import gzip
-import zipfile
+import pickle
 #get dataset1 from the paper 'An immune-cell signature of bacterial sepsis'
 #data is SCP548 on Single Cell Portal-Broad institute website
 scp548_meta = pd.read_csv('./data/Pbmc_SCP548/scp_meta.txt', sep='\t')
 #subset the 'Control' cohort
 scp548_meta_control = scp548_meta[scp548_meta.Cohort.eq('Control')]
 
+'''
 scp548_genelist=[]
 chunksize = 10 ** 2
 for chunk in pd.read_csv('./data/Pbmc_SCP548/scp_gex_matrix.csv.gz', chunksize=chunksize):
     scp548_genelist += chunk.loc[:,'GENE'].values.tolist()
+with open('./data/Pbmc_SCP548/scp548_genelist.pkl', 'wb') as f:
+        pickle.dump({'gene':scp548_genelist}, f)
+'''
+with open('./data/Pbmc_SCP548/scp548_genelist.pkl', 'rb') as f:
+    scp548_genelist = pickle.load(f)['gene']
 
 scp256_meta = pd.read_csv('./data/Pbmc_SCP256/alexandria_structured_metadata.txt', sep='\t')
 #subset 'Pre-Infection' cells
 scp256_meta_subset = scp256_meta[scp256_meta.TimePoint.eq('Pre-Infection')]
 scp256_subset_cellid = scp256_meta_subset.loc[:,'CellID'].values.tolist()
 
-scp256_raw_count = pd.read_csv('./data/Pbmc_SCP256/raw_counts_matrix_040220.txt.zip',header=0)
-scp256_genelist = []
-#get column index for 'Pre-Infection' cells
+chunksize = 10 ** 2
+scp256_subset_gene_cellid = pd.DataFrame()
+for chunk in pd.read_csv('./data/Pbmc_SCP256/log_normalized_matrix_012020.txt.gz', compression='gzip', header=0, sep='\t', chunksize=chunksize):
+    chunk_subset = chunk[chunk.GENE.isin(scp548_genelist)].loc[:, ['GENE']+ scp256_subset_cellid]
+    scp256_subset_gene_cellid = pd.concat([scp256_subset_gene_cellid, chunk_subset],axis=0)
 
+#change row for a cell, column for a gene for scp256
+scp256_subset_X = np.transpose(scp256_subset_gene_cellid.iloc[:,1:].values)
+#exp(element)-1 because in scVI, x will be transformed into log(1+x)
+scp256_subset_X = np.exp(scp256_subset_X) - 1
+scp256_subset_gene = scp256_subset_gene_cellid.loc[:,'GENE'].values.tolist()
+scp256_subset_cellid = scp256_subset_gene_cellid.columns[1:].to_list()
 
-for record in scp256_raw_count.iloc[:,0].values.tolist():
-    scp256_genelist += [record.split('\t')[0]]
+#subset scp548
+scp548_subset_cellname = scp548_meta_control.loc[:,'NAME'].values.tolist()
 
-#scp256_lognormal_count = pd.read_csv('./data/Pbmc_SCP256/log_normalized_matrix_012020.txt.gz', compression='gzip', header=0, error_bad_lines=False)
+chunksize = 10 ** 2
+for chunk in pd.read_csv('./data/Pbmc_SCP548/scp_gex_matrix.csv.gz', chunksize=chunksize):
+    scp548_cellname = chunk.columns.to_list()
+    break
+#not all cells in scp548_subset_cellname are included in scp548_cellname
+scp548_subset_cellname2 = [k for k in scp548_subset_cellname if k in scp548_cellname]
+
+scp548_subset_gene_cellid = pd.DataFrame()
+for chunk in pd.read_csv('./data/Pbmc_SCP548/scp_gex_matrix.csv.gz', chunksize=chunksize):
+    chunk_subset = chunk[chunk.GENE.isin(scp256_subset_gene)].loc[:, ['GENE']+scp548_subset_cellname2]
+    scp548_subset_gene_cellid = pd.concat([scp548_subset_gene_cellid, chunk_subset],axis=0)
+
+#change row for a cell, column for a gene for scp548
+scp548_subset_X = np.transpose(scp548_subset_gene_cellid.iloc[:,1:].values)
+#exp(element)-1 because in scVI, x will be transformed into log(1+x)
+scp548_subset_X = np.exp(scp548_subset_X) - 1
+scp548_subset_gene = scp548_subset_gene_cellid.loc[:,'GENE'].values.tolist()
+scp548_subset_cellid = scp548_subset_gene_cellid.columns[1:].to_list()
+

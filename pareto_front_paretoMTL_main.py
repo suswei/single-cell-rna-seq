@@ -9,6 +9,7 @@ from torch.autograd import Variable
 import torch.optim as optim
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
+from scvi.dataset.pbmc_scp256_scp548 import Pbmc_SCP256_SCP548
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
 from scvi.models.modules import MINE_Net, Nearest_Neighbor_Estimate, MMD_loss
@@ -401,6 +402,12 @@ def main( ):
             dataset1.__dict__['labels'] = dataset1_labels_df_new.merge(label_change, how='left', left_on='label', right_on='label').loc[:,'new_label'].values.reshape(dataset1.__dict__['labels'].shape[0],1)
 
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
+    elif args.dataset_name == 'pbmc_scp256_scp548':
+        dataset1 = Pbmc_SCP256_SCP548('SCP256', save_path=data_save_path)
+        dataset2 = Pbmc_SCP256_SCP548('SCP548', save_path=data_save_path)
+        dataset1.subsample_genes(dataset1.nb_genes)
+        dataset2.subsample_genes(dataset2.nb_genes)
+        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
 
     #generate a random seed to split training and testing dataset
     np.random.seed(1011)
@@ -427,8 +434,7 @@ def main( ):
 
     # calculate ratio to split the gene_dataset into training and testing dataset
     # to avoid the case when there are very few input data points of the last minibatch in every epoch
-    intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (
-            int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
+    intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
     args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e10) / 1e10
 
     # If train vae alone
@@ -445,10 +451,9 @@ def main( ):
     # during vae training, at early epochs, NN_estimator for a minibatch could be as high as 0.9,
     # at final epochs, NN_estimator for each minibatch fluctuates mainly between 0.3 and 0.5.
 
-    vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * args.use_batches,
-                    n_labels=gene_dataset.n_labels, n_hidden=args.n_hidden, n_latent=args.n_latent,
-                    n_layers_encoder=args.n_layers_encoder, n_layers_decoder=args.n_layers_decoder,
-                    dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss)
+    vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * args.use_batches,n_labels=gene_dataset.n_labels,
+                    n_hidden=args.n_hidden, n_latent=args.n_latent,n_layers_encoder=args.n_layers_encoder,
+                    n_layers_decoder=args.n_layers_decoder,dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss)
     if args.adv_estimator == 'MINE':
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
