@@ -132,7 +132,7 @@ class UnsupervisedTrainer(Trainer):
         if self.adv_estimator == 'MINE':
             z_batch = torch.cat((z, batch_dummy_copy), 1)  # joint
             shuffle_index = torch.randperm(z.shape[0])
-            shuffle_z_batch = torch.cat((z[shuffle_index], batch_dummy), 1)  # marginal
+            shuffle_z_batch = torch.cat((z[shuffle_index], batch_dummy_copy), 1)  # marginal
             return z_batch, shuffle_z_batch
         elif self.adv_estimator in ['MMD','stdz_MMD']:
             if torch.cuda.is_available() == True:
