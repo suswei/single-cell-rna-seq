@@ -104,9 +104,9 @@ class UnsupervisedTrainer(Trainer):
                 obj2_minibatch = adv_loss
 
             if self.epoch >= 0:
-                NN_estimator = Nearest_Neighbor_Estimate(batch_index, z)
+                NN_estimator = Nearest_Neighbor_Estimate(batch_index_copy, z)
                 if len(self.batch_ratio)>0:
-                    empirical_MI = EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.batch_ratio, self.nsamples)
+                    empirical_MI = EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index_copy, self.batch_ratio.to(self.device), self.nsamples)
                     print('Epoch: {}, neg_ELBO: {}, {}: {}, empirical_MI: {}, NN: {}.'.format(self.epoch, loss, self.adv_estimator, obj2_minibatch, empirical_MI, NN_estimator))
                 else:
                     print('Epoch: {}, neg_ELBO: {}, {}: {}, NN: {}.'.format(self.epoch, loss, self.adv_estimator, obj2_minibatch, NN_estimator))
