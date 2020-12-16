@@ -6,12 +6,11 @@
 #SBATCH -p physical
 
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem 7200
+#SBATCH --cpus-per-task=4
 
 #SBATCH --partition=gpgpu
 #SBATCH --qos=gpgpuresplat
-#SBATCH --gres=gpu:p100:2
+#SBATCH --gres=gpu:p100:4
 
 # The maximum running time of the job in days-hours:mins:sec
 #SBATCH --time=0-8:0:00
