@@ -1,45 +1,47 @@
-from scvi.dataset.utils import get_matrix_from_dir,assign_label
-from scvi.dataset.pbmc import PbmcDataset
-
+import os
+import pandas as pd
+from scvi.dataset.dataset10X import Dataset10X
 import numpy as np
 from scvi.dataset.dataset import GeneExpressionDataset
 
-dataset1 = PbmcDataset(filter_out_de_genes=False)
-dataset1.update_cells(dataset1.batch_indices.ravel()==0)
-dataset1.subsample_genes(dataset1.nb_genes)
+cell_types = np.array(["cd4_t_helper", "regulatory_t", "naive_t", "memory_t", "cytotoxic_t", "naive_cytotoxic",
+                       "b_cells", "cd34", "cd56_nk", "cd14_monocytes"])
+cell_type_name = np.array(["CD4 T cells", "CD4 T cells Regulatory", "CD4 T cells Naive", "CD4 Memory T cells", "CD8 T cells", "CD8 T cells Naive",
+                       "B cells", "CD34 cells", "NK cells", "CD14+ Monocytes"])
 
+datasets = []
+for i,cell_type in enumerate(cell_types):
+    dataset = Dataset10X(cell_type, save_path='data/')
+    dataset.cell_types = np.array([cell_type_name[i]])
+    dataset.labels = dataset.labels.astype('int')
+    dataset.subsample_genes(dataset.nb_genes)
+    dataset.gene_names = dataset.gene_symbols
+    datasets += [dataset]
 
-count, geneid, cellid = get_matrix_from_dir('cite')
-count = count.T.tocsr()
-seurat = np.genfromtxt('../cite/cite.seurat.labels', dtype='str', delimiter=',')
-cellid = np.asarray([x.split('-')[0] for x in cellid])
-labels_map = [0, 0, 1, 2, 3, 4, 5, 6]
-labels = seurat[1:, 4]
-cell_type = ['CD4 T cells', 'NK cells', 'CD14+ Monocytes', 'B cells','CD8 T cells', 'FCGR3A+ Monocytes', 'Other']
-dataset2 = assign_label(cellid, geneid, labels_map, count, cell_type, seurat)
-set(dataset2.cell_types).intersection(set(dataset2.cell_types))
-
-dataset1.subsample_genes(dataset1.nb_genes)
-dataset2.subsample_genes(dataset2.nb_genes)
-gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
-
-
-pbmc = PbmcDataset()
-de_data  = pbmc.de_metadata
-pbmc.update_cells(pbmc.batch_indices.ravel()==0)
-# pbmc.labels = pbmc.labels.reshape(len(pbmc),1)
+pure = GeneExpressionDataset.concat_datasets(*datasets, shared_batches=True)
 
 donor = Dataset10X('fresh_68k_pbmc_donor_a')
 donor.gene_names = donor.gene_symbols
-donor.labels = np.repeat(0,len(donor)).reshape(len(donor),1)
-donor.cell_types = ['unlabelled']
-all_dataset = GeneExpressionDataset.concat_datasets(pbmc, donor)
 
-# Now resolve the Gene symbols to properly work with the DE
-all_gene_symbols = donor.gene_symbols[
-    np.array(
-        [np.where(donor.gene_names == x)[0][0] for x in list(all_dataset.gene_names)]
-    )]
+if not os.path.isfile('data/10X/fresh_68k_pbmc_donor_a/68k_pbmc_barcodes_annotation.tsv'):
+    import urllib.request
+    annotation_url = 'https://raw.githubusercontent.com/10XGenomics/single-cell-3prime-paper/master/pbmc68k_analysis/68k_pbmc_barcodes_annotation.tsv'
+    urllib.request.urlretrieve(annotation_url, 'data/10X/fresh_68k_pbmc_donor_a/68k_pbmc_barcodes_annotation.tsv')
+
+annotation = pd.read_csv('data/10X/fresh_68k_pbmc_donor_a/68k_pbmc_barcodes_annotation.tsv',sep='\t')
+cellid1 = donor.barcodes
+temp = cellid1.join(annotation)
+assert all(temp[0]==temp['barcodes'])
+
+donor.cell_types,donor.labels = np.unique(temp['celltype'],return_inverse=True)
+
+donor.labels = donor.labels.reshape(len(donor.labels),1)
+donor.cell_types = np.array([ 'CD14+ Monocytes','B cells','CD34 cells', 'CD4 T cells','CD4 T cells Regulatory',
+                             'CD4 T cells Naive','CD4 Memory T cells','NK cells',
+                            'CD8 T cells',  'CD8 T cells Naive', 'Dendritic'])
+gene_dataset = GeneExpressionDataset.concat_datasets(donor, pure)
+
+
 
 import pandas as pd
 import pickle

@@ -17,6 +17,26 @@ from scipy import sparse
 import pickle
 import matplotlib.pyplot as plt
 
+
+def construct_trainer_vae(gene_dataset, args):
+    vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * args.use_batches,n_labels=gene_dataset.n_labels,
+                    n_hidden=args.n_hidden, n_latent=args.n_latent,n_layers_encoder=args.n_layers_encoder,
+                    n_layers_decoder=args.n_layers_decoder,dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss)
+    if args.adv_estimator == 'MINE':
+        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
+                                          seed=args.desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
+                                          adv_n_hidden=args.adv_n_hidden, adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
+                                          unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+    elif args.adv_estimator in ['MMD','stdz_MMD']:
+        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
+                                          seed=args.desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
+                                          MMD_kernel_mul=args.MMD_kernel_mul, MMD_kernel_num=args.MMD_kernel_num, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+
+    # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
+    trainer_vae.kl_weight = 1
+
+    return trainer_vae
+
 def sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference_batch: int=0, compare_batch:int=1):
     x_ = sample_batch
     if trainer_vae.model.log_variational:
@@ -413,9 +433,9 @@ def main( ):
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
     if args.pre_train == True:
-        desired_seed = int(desired_seeds[0, args.taskid])
+        args.desired_seed = int(desired_seeds[0, args.taskid])
     else:
-        desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
+        args.desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
 
     if args.pre_train == True:
         args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)
@@ -450,22 +470,7 @@ def main( ):
 
     # during vae training, at early epochs, NN_estimator for a minibatch could be as high as 0.9,
     # at final epochs, NN_estimator for each minibatch fluctuates mainly between 0.3 and 0.5.
-
-    vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * args.use_batches,n_labels=gene_dataset.n_labels,
-                    n_hidden=args.n_hidden, n_latent=args.n_latent,n_layers_encoder=args.n_layers_encoder,
-                    n_layers_decoder=args.n_layers_decoder,dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss)
-    if args.adv_estimator == 'MINE':
-        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
-                                          seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
-                                          adv_n_hidden=args.adv_n_hidden, adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
-                                          unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
-    elif args.adv_estimator in ['MMD','stdz_MMD']:
-        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
-                                          seed=desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
-                                          MMD_kernel_mul=args.MMD_kernel_mul, MMD_kernel_num=args.MMD_kernel_num, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
-
-    # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
-    trainer_vae.kl_weight = 1
+    trainer_vae = construct_trainer_vae(gene_dataset, args)
 
     if args.pre_train == True:
         trainer_vae.pretrain_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
@@ -486,6 +491,21 @@ def main( ):
         _, _ = trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, std_paretoMTL=args.std_paretoMTL,
                obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
                adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
+
+        args.save_path = './result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
+        if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
+            os.makedirs('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
+
+        torch.save(trainer_vae.model.module.state_dict(), args.save_path + '/vae.pkl')
+        if args.adv_estimator == 'MINE':
+            torch.save(trainer_vae.adv_model.module.state_dict(), args.save_path + '/MINE.pkl')
+
+        trainer_vae = construct_trainer_vae(gene_dataset, args)
+        trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl'))
+        if args.adv_estimator == 'MINE':
+            trainer_vae.adv_model.load_state_dict(torch.load(args.save_path + '/MINE.pkl'))
+        os.remove(args.save_path + '/vae.pkl')
+        os.remove(args.save_path + '/MINE.pkl')
 
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
@@ -522,10 +542,6 @@ def main( ):
                         'ari_test': [ari_test],
                         'uca_test': [uca_test],
                         'be_test': [be_test]}
-
-        args.save_path = './result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
-        if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
-            os.makedirs('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
 
         if args.pref_idx == 0 or args.pref_idx==9:
             trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')

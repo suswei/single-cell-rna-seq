@@ -263,7 +263,7 @@ class Trainer:
                     self.optimizer.zero_grad()
                     loss.backward()
                     self.optimizer.step()
-            torch.save(self.model.state_dict(), path + '/vae.pkl')
+            torch.save(self.model.module.state_dict(), path + '/vae.pkl')
 
             if self.adv_estimator == 'MINE':
 
@@ -282,7 +282,7 @@ class Trainer:
                         self.optimizer.zero_grad()
                         adv_loss.backward()
                         self.adv_optimizer.step()
-                torch.save(self.adv_model.state_dict(), path + '/MINE.pkl')
+                torch.save(self.adv_model.module.state_dict(), path + '/MINE.pkl')
         else:
             self.model.load_state_dict(torch.load(path + '/vae.pkl'))
 
