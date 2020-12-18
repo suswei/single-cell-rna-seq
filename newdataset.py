@@ -42,6 +42,12 @@ donor.cell_types = np.array([ 'CD14+ Monocytes','B cells','CD34 cells', 'CD4 T c
 gene_dataset = GeneExpressionDataset.concat_datasets(donor, pure)
 
 
+#Cells in Lung tissue from Muris_tabula FACS, and MCA DGE data
+MCA_meta = pd.read_csv('./data/pareto_front_paretoMTL/TM_MCA_Lung/MCA_CellAssignments.csv')
+
+
+
+
 
 import pandas as pd
 import pickle
