@@ -433,7 +433,8 @@ def main( ):
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
     if args.pre_train == True:
-        args.desired_seed = int(desired_seeds[0, args.taskid])
+        #args.desired_seed = int(desired_seeds[0, args.taskid])
+        args.desired_seed = int(desired_seeds[0, 0])
     else:
         args.desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
 
