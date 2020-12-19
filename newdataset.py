@@ -45,9 +45,19 @@ gene_dataset = GeneExpressionDataset.concat_datasets(donor, pure)
 #Cells in Lung tissue from Muris_tabula FACS, and MCA DGE data
 MCA_meta = pd.read_csv('./data/pareto_front_paretoMTL/TM_MCA_Lung/MCA_CellAssignments.csv')
 
-
-
-
+for id in range(3):
+    id += 1
+    MCA_Lung_one = pd.DataFrame()
+    chunksize = 10 ** 2
+    for chunk in pd.read_csv('./data/pareto_front_paretoMTL/TM_MCA_Lung/MCA_500more_dge/Lung{}_dge.txt.gz'.format(id), compression='gzip', sep=' ', header=0, chunksize=chunksize):
+        chunk['GENE'] = chunk.index
+        first_col = chunk.pop('GENE')
+        chunk.insert(0, 'GENE', first_col)
+        MCA_Lung_one = pd.concat([MCA_Lung_one, chunk],axis=0)
+    if id == 1:
+        MCA_Lung = MCA_Lung_one
+    else:
+        MCA_Lung = MCA_Lung.merge(MCA_Lung_one, how='inner', left_on='GENE', right_on='GENE')
 
 import pandas as pd
 import pickle
