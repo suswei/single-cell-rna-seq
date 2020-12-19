@@ -25,8 +25,8 @@ class TabulaMuris(GeneExpressionDataset):
         gene_len = pd.read_csv("./data/scvi_data/mouse_gene_len.txt", sep=" ", low_memory=False, header=None)
         gene_len = np.asarray(gene_len)
         if self.dataname =='facs':
-            data = read_h5ad(self.save_path + '/TM_facs_mat.h5ad')
-            meta = pd.read_csv(self.save_path + "/TM_facs_metadata.csv", sep=",", low_memory=False)
+            data = read_h5ad(self.save_path + 'TM_facs_mat.h5ad')
+            meta = pd.read_csv(self.save_path + "TM_facs_metadata.csv", sep=",", low_memory=False)
             check_meta = [data.obs.index[i] == meta.cell[i] for i in range(len(data.obs.index))]
             print(np.sum(check_meta) == len(data.obs.index))
             data = data[meta.tissue == self.tissue]
@@ -44,11 +44,17 @@ class TabulaMuris(GeneExpressionDataset):
             nonzero_cells = np.asarray(np.sum(count.T, axis=1)).ravel() > 100 #count.T doesn't change the dimension of count permanently
             count = count[:,nonzero_cells]
             genenames = np.asarray(genenames)
-            labels = meta.cell_ontology_class[meta.tissue==self.tissue]
+            if self.tissue == 'Lung':
+                meta_lung = meta[meta.tissue.eq('Lung')]
+                Consensus_celltype = pd.read_excel(self.save_path + 'Consensus_celltype_TM.xlsx',index_col=None, header=0)
+                meta_lung2 = meta_lung.merge(Consensus_celltype, how='left', left_on='cell_ontology_class', right_on='TabulaMuris_Type')
+                labels = meta_lung2.loc[:, 'Consensus_Type']
+            else:
+                labels = meta.cell_ontology_class[meta.tissue==self.tissue]
             cell_type, labels = np.unique(np.asarray(labels[nonzero_cells]).astype('str'), return_inverse=True)
         elif self.dataname == 'droplet':
-            data = read_h5ad(self.save_path + '/TM_droplet_mat.h5ad')
-            meta = pd.read_csv(self.save_path + "/TM_droplet_metadata.csv", sep=",", low_memory=False)
+            data = read_h5ad(self.save_path + 'TM_droplet_mat.h5ad')
+            meta = pd.read_csv(self.save_path + "TM_droplet_metadata.csv", sep=",", low_memory=False)
             data = data[meta.tissue == self.tissue]
             data_dict = dict(zip(np.asarray(data._var.index), data.X.T.toarray()))
             count = []
@@ -63,5 +69,6 @@ class TabulaMuris(GeneExpressionDataset):
             genenames = np.asarray(genenames)
             labels = meta.cell_ontology_class[meta.tissue==self.tissue]
             cell_type, labels = np.unique(np.asarray(labels).astype('str'), return_inverse=True)
+
         return(count.T, labels, cell_type, genenames)
 

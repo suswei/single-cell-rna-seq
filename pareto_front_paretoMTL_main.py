@@ -10,6 +10,7 @@ import torch.optim as optim
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
 from scvi.dataset.pbmc_scp256_scp548 import Pbmc_SCP256_SCP548
+from scvi.dataset.MCA import MCA
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
 from scvi.models.modules import MINE_Net, Nearest_Neighbor_Estimate, MMD_loss
@@ -387,9 +388,9 @@ def main( ):
         args.adv_w_initial = 'normal'
 
     #load dataset
-    data_save_path = './data/pareto_front_paretoMTL/%s' % (args.dataset_name)
-    if not os.path.exists('./data/pareto_front_paretoMTL/%s' % (args.dataset_name)):
-        os.makedirs('./data/pareto_front_paretoMTL/%s' % (args.dataset_name))
+    data_save_path = './data/pareto_front_paretoMTL/%s/' % (args.dataset_name)
+    if not os.path.exists('./data/pareto_front_paretoMTL/%s/' % (args.dataset_name)):
+        os.makedirs('./data/pareto_front_paretoMTL/%s/' % (args.dataset_name))
 
     if args.dataset_name == 'muris_tabula':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
@@ -425,6 +426,12 @@ def main( ):
     elif args.dataset_name == 'pbmc_scp256_scp548':
         dataset1 = Pbmc_SCP256_SCP548('SCP256', save_path=data_save_path)
         dataset2 = Pbmc_SCP256_SCP548('SCP548', save_path=data_save_path)
+        dataset1.subsample_genes(dataset1.nb_genes)
+        dataset2.subsample_genes(dataset2.nb_genes)
+        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
+    elif args.dataset_name == 'TM_MCA_Lung':
+        dataset1 = TabulaMuris('facs', save_path=data_save_path, tissue='Lung')
+        dataset2 = MCA(save_path=data_save_path, tissue='Lung')
         dataset1.subsample_genes(dataset1.nb_genes)
         dataset2.subsample_genes(dataset2.nb_genes)
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
@@ -476,6 +483,7 @@ def main( ):
     if args.pre_train == True:
         trainer_vae.pretrain_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
                         pre_adv_epochs=args.pre_adv_epochs, pre_adv_lr=args.pre_adv_lr, path=args.save_path)
+        trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
     elif args.standardize == True:
         obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_paretoMTL(
             path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs,

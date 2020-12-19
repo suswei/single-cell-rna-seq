@@ -44,6 +44,7 @@ gene_dataset = GeneExpressionDataset.concat_datasets(donor, pure)
 
 #Cells in Lung tissue from Muris_tabula FACS, and MCA DGE data
 MCA_meta = pd.read_csv('./data/pareto_front_paretoMTL/TM_MCA_Lung/MCA_CellAssignments.csv')
+MCA_meta_lung = MCA_meta[MCA_meta.Tissue.eq('Lung')]
 
 for id in range(3):
     id += 1
@@ -58,6 +59,17 @@ for id in range(3):
         MCA_Lung = MCA_Lung_one
     else:
         MCA_Lung = MCA_Lung.merge(MCA_Lung_one, how='inner', left_on='GENE', right_on='GENE')
+
+MCA_Lung_subset = MCA_Lung.loc[:, ['GENE'] + MCA_meta_lung.loc[:,'Cell.name'].values.tolist()]
+MCA_meta_lung_cellannotation = MCA_meta_lung.loc[:, ['Cell.name','Annotation']]
+Consensus_celltype_MCA = pd.read_excel('./data/pareto_front_paretoMTL/TM_MCA_Lung/Consensus_celltype_MCA.xlsx', index_col=None, header=0)
+MCA_meta_lung_cellannotation2 = MCA_meta_lung_cellannotation.merge(Consensus_celltype_MCA, how='left', left_on='Annotation', right_on='MCA_Type')
+count = np.transpose(MCA_Lung_subset.iloc[:,1:].values)
+genenames = np.array(MCA_Lung_subset.loc[:,'GENE'].values.tolist())
+labels = MCA_meta_lung_cellannotation2.loc[:,'Consensus_Type']
+cell_type, labels = np.unique(np.asarray(labels).astype('str'), return_inverse=True)
+
+
 
 import pandas as pd
 import pickle

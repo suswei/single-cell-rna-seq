@@ -249,7 +249,7 @@ class Trainer:
 
             if torch.cuda.device_count() > 1:
                 self.model = torch.nn.DataParallel(self.model)
-            self.model.to(self.device)
+                self.model.to(self.device)
 
             params = filter(lambda p: p.requires_grad, self.model.parameters())
             self.optimizer = torch.optim.Adam(params, lr=pre_lr, eps=eps)
@@ -263,13 +263,16 @@ class Trainer:
                     self.optimizer.zero_grad()
                     loss.backward()
                     self.optimizer.step()
-            torch.save(self.model.module.state_dict(), path + '/vae.pkl')
+            if torch.cuda.device_count() > 1:
+                torch.save(self.model.module.state_dict(), path + '/vae.pkl')
+            else:
+                torch.save(self.model.state_dict(), path + '/vae.pkl')
 
             if self.adv_estimator == 'MINE':
 
                 if torch.cuda.device_count() > 1:
                     self.adv_model = torch.nn.DataParallel(self.adv_model)
-                self.adv_model.to(self.device)
+                    self.adv_model.to(self.device)
 
                 self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=pre_adv_lr)
                 # pretrain adv_model to make MINE works
@@ -282,9 +285,12 @@ class Trainer:
                         self.optimizer.zero_grad()
                         adv_loss.backward()
                         self.adv_optimizer.step()
-                torch.save(self.adv_model.module.state_dict(), path + '/MINE.pkl')
+                if torch.cuda.device_count() > 1:
+                    torch.save(self.adv_model.module.state_dict(), path + '/MINE.pkl')
+                else:
+                    torch.save(self.adv_model.state_dict(), path + '/MINE.pkl')
         else:
-            self.model.load_state_dict(torch.load(path + '/vae.pkl'))
+            self.model.load_state_dict(torch.load(path + '/vae.pkl', map_location='cpu'))
 
             if torch.cuda.device_count() > 1:
                 self.model = torch.nn.DataParallel(self.model)
@@ -295,7 +301,7 @@ class Trainer:
             # self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[30], gamma=0.5)
 
             if self.adv_estimator == 'MINE':
-                self.adv_model.load_state_dict(torch.load(path + '/MINE.pkl'))
+                self.adv_model.load_state_dict(torch.load(path + '/MINE.pkl', map_location='cpu'))
 
                 if torch.cuda.device_count() > 1:
                     self.adv_model = torch.nn.DataParallel(self.adv_model)

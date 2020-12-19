@@ -10,18 +10,18 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # conf_estimator means estimator for confounding effect, it could be 'MINE', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
     hyperparameter_config = {
-        'dataset_name': ['pbmc_scp256_scp548'],
+        'dataset_name': ['TM_MCA_Lung'],
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10], #10,50
-        'batch_size': [512], #4 GPUs
+        'batch_size': [128], #4 GPUs
         'adv_estimator': ['MINE'],
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'pre_epochs': [400,500,600],
+        'pre_epochs': [200,300,400],
         'pre_adv_epochs': [400],
         'pre_lr': [1e-3],
         'pre_adv_lr': [5e-5],
