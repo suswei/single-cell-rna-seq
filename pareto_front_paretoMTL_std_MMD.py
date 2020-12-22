@@ -10,13 +10,13 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # adv_estimator means estimator for confounding effect, it could be 'MINE', 'MMD', 'stdz_MMD' (stdz_MMD means standardize the dimension of z, then use MMD)
     hyperparameter_config = {
-        'dataset_name': ['pbmc_scp256_scp548'],
+        'dataset_name': ['TM_MCA_Lung'],
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10], #
-        'batch_size': [512], #4 GPUs
+        'batch_size': [128], #4 GPUs
         'adv_estimator': ['stdz_MMD'], #
         'MMD_kernel_mul': [2], #
         'MMD_kernel_num': [15],#

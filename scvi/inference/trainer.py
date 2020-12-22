@@ -249,7 +249,7 @@ class Trainer:
 
             if torch.cuda.device_count() > 1:
                 self.model = torch.nn.DataParallel(self.model)
-                self.model.to(self.device)
+            self.model.to(self.device)
 
             params = filter(lambda p: p.requires_grad, self.model.parameters())
             self.optimizer = torch.optim.Adam(params, lr=pre_lr, eps=eps)

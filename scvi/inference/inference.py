@@ -142,8 +142,7 @@ class UnsupervisedTrainer(Trainer):
             shuffle_z_batch = torch.cat((z[shuffle_index], batch_dummy_copy), 1)  # marginal
             return z_batch, shuffle_z_batch
         elif self.adv_estimator in ['MMD','stdz_MMD']:
-            if torch.cuda.is_available() == True:
-                batch_index_copy = batch_index.type(torch.FloatTensor).to(self.device)
+            batch_index_copy = batch_index.type(torch.FloatTensor).to(self.device)
             batch_index_copy = Variable(batch_index_copy.type(torch.FloatTensor), requires_grad=True)
             if self.adv_estimator == 'stdz_MMD':
                 #standardize each dimension for z
