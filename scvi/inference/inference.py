@@ -133,8 +133,7 @@ class UnsupervisedTrainer(Trainer):
         batch_dummy = torch.from_numpy(pd.get_dummies(batch_dataframe['batch']).values).type(torch.FloatTensor)
 
         #check if z.requires_grad == True
-        if torch.cuda.is_available() == True:
-            batch_dummy_copy = batch_dummy.to(self.device)
+        batch_dummy_copy = batch_dummy.to(self.device)
         batch_dummy_copy = Variable(batch_dummy_copy, requires_grad=True)
 
         if self.adv_estimator == 'MINE':
