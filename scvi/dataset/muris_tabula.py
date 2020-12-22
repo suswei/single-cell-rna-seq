@@ -44,6 +44,7 @@ class TabulaMuris(GeneExpressionDataset):
             nonzero_cells = np.asarray(np.sum(count.T, axis=1)).ravel() > 100 #count.T doesn't change the dimension of count permanently
             count = count[:,nonzero_cells]
             genenames = np.asarray(genenames)
+
             if self.tissue == 'Lung':
                 meta_lung = meta[meta.tissue.eq('Lung')]
                 Consensus_celltype = pd.read_excel(self.save_path + 'Consensus_celltype_TM.xlsx',index_col=None, header=0)

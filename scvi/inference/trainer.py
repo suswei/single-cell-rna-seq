@@ -134,7 +134,7 @@ class Trainer:
                 pbar.update(1)
 
                 for tensors_list in self.data_loaders_loop():
-                    loss, ELBO = self.loss(*tensors_list)
+                    loss = self.loss(*tensors_list)
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()

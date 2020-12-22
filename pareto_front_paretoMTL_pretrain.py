@@ -21,18 +21,18 @@ def main(taskid):
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'pre_epochs': [200,300,400],
+        'pre_epochs': [200],
         'pre_adv_epochs': [400],
         'pre_lr': [1e-3],
         'pre_adv_lr': [5e-5],
-        'MC': list(range(1))
+        'MC': list(range(20))
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --change_composition --pre_train --MCs 1 "
+    os.system("python3 pareto_front_paretoMTL_main.py --change_composition --pre_train --MCs 20 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "

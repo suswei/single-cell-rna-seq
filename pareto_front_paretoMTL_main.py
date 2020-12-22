@@ -440,8 +440,8 @@ def main( ):
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
     if args.pre_train == True:
-        #args.desired_seed = int(desired_seeds[0, args.taskid])
-        args.desired_seed = int(desired_seeds[0, 0])
+        args.desired_seed = int(desired_seeds[0, args.taskid])
+        #args.desired_seed = int(desired_seeds[0, 0])
     else:
         args.desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
 
@@ -465,19 +465,27 @@ def main( ):
     intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
     args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e10) / 1e10
 
+    '''
     # If train vae alone
-    # vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
-    #          n_hidden=128, n_latent=10, n_layers_encoder=2, n_layers_decoder=2, dropout_rate=0.1,
-    #          reconstruction_loss='zinb', batch1_ratio=batch1_ratio, nsamples_z=128,
-    #          std=False, save_path='None')
+    vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
+              n_hidden=128, n_latent=10, n_layers_encoder=2, n_layers_decoder=2, dropout_rate=0.1,
+              reconstruction_loss='zinb')
     # frequency controls how often the statistics in trainer_vae.model are evaluated by compute_metrics() function in trainer.py
-    # trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=train_size, seed=desired_seed,
-    #                               use_cuda=False, frequency=10, kl=1)
-    # trainer_vae.train(n_epochs=400, lr=0.001)
-    # torch.save(trainer_vae.model.state_dict(), save_path) #saved into pickle file
+    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=args.train_size, seed=args.desired_seed, use_cuda=False, frequency=10, kl=1)
+    trainer_vae.train(n_epochs=400, lr=0.001)
+    torch.save(trainer_vae.model.state_dict(), args.save_path) #saved into pickle file
+    ll_train_set = trainer_vae.history["ll_train_set"]
+    ll_test_set = trainer_vae.history["ll_test_set"]
+    x = np.linspace(0, 500, (len(ll_train_set)))
 
-    # during vae training, at early epochs, NN_estimator for a minibatch could be as high as 0.9,
-    # at final epochs, NN_estimator for each minibatch fluctuates mainly between 0.3 and 0.5.
+    fig = plt.figure(figsize=(14, 7))
+    plt.plot(x, ll_train_set)
+    plt.plot(x, ll_test_set)
+    plt.title("Blue for training error and orange for testing error")
+    fig.savefig(args.save_path + '/training_testing_error.png')
+    plt.close(fig)
+    '''
+
     trainer_vae = construct_trainer_vae(gene_dataset, args)
 
     if args.pre_train == True:
@@ -505,16 +513,17 @@ def main( ):
         if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
             os.makedirs('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
 
-        torch.save(trainer_vae.model.module.state_dict(), args.save_path + '/vae.pkl')
-        if args.adv_estimator == 'MINE':
-            torch.save(trainer_vae.adv_model.module.state_dict(), args.save_path + '/MINE.pkl')
+        if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
+            torch.save(trainer_vae.model.module.state_dict(), args.save_path + '/vae.pkl')
+            if args.adv_estimator == 'MINE':
+                torch.save(trainer_vae.adv_model.module.state_dict(), args.save_path + '/MINE.pkl')
 
-        trainer_vae = construct_trainer_vae(gene_dataset, args)
-        trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl'))
-        if args.adv_estimator == 'MINE':
-            trainer_vae.adv_model.load_state_dict(torch.load(args.save_path + '/MINE.pkl'))
-        os.remove(args.save_path + '/vae.pkl')
-        os.remove(args.save_path + '/MINE.pkl')
+            trainer_vae = construct_trainer_vae(gene_dataset, args)
+            trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location='cpu'))
+            if args.adv_estimator == 'MINE':
+                trainer_vae.adv_model.load_state_dict(torch.load(args.save_path + '/MINE.pkl', map_location='cpu'))
+            os.remove(args.save_path + '/vae.pkl')
+            os.remove(args.save_path + '/MINE.pkl')
 
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
