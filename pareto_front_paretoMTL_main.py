@@ -9,7 +9,7 @@ from torch.autograd import Variable
 import torch.optim as optim
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
-from scvi.dataset.pbmc_scp256_scp548 import Pbmc_SCP256_SCP548
+from scvi.dataset.dataset10X import Dataset10X
 from scvi.dataset.MCA import MCA
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
@@ -423,12 +423,39 @@ def main( ):
             dataset1.__dict__['labels'] = dataset1_labels_df_new.merge(label_change, how='left', left_on='label', right_on='label').loc[:,'new_label'].values.reshape(dataset1.__dict__['labels'].shape[0],1)
 
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
-    elif args.dataset_name == 'pbmc_scp256_scp548':
-        dataset1 = Pbmc_SCP256_SCP548('SCP256', save_path=data_save_path)
-        dataset2 = Pbmc_SCP256_SCP548('SCP548', save_path=data_save_path)
-        dataset1.subsample_genes(dataset1.nb_genes)
-        dataset2.subsample_genes(dataset2.nb_genes)
-        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
+    elif args.dataset_name == 'pbmc_pure_donor':
+        cell_types = np.array(["cd4_t_helper", "regulatory_t", "naive_t", "memory_t", "cytotoxic_t", "naive_cytotoxic", "b_cells", "cd34", "cd56_nk", "cd14_monocytes"])
+        cell_type_name = np.array(["CD4 T cells", "CD4 T cells Regulatory", "CD4 T cells Naive", "CD4 Memory T cells", "CD8 T cells", "CD8 T cells Naive", "B cells", "CD34 cells", "NK cells", "CD14+ Monocytes"])
+
+        datasets = []
+        for i, cell_type in enumerate(cell_types):
+            dataset = Dataset10X(cell_type, save_path=data_save_path)
+            dataset.cell_types = np.array([cell_type_name[i]])
+            dataset.labels = dataset.labels.astype('int')
+            dataset.subsample_genes(dataset.nb_genes)
+            dataset.gene_names = dataset.gene_symbols
+            datasets += [dataset]
+
+        pure = GeneExpressionDataset.concat_datasets(*datasets, shared_batches=True)
+
+        donor = Dataset10X('fresh_68k_pbmc_donor_a', save_path=data_save_path)
+        donor.gene_names = donor.gene_symbols
+
+        if not os.path.isfile(data_save_path + '10X/fresh_68k_pbmc_donor_a/68k_pbmc_barcodes_annotation.tsv'):
+            import urllib.request
+            annotation_url = 'https://raw.githubusercontent.com/10XGenomics/single-cell-3prime-paper/master/pbmc68k_analysis/68k_pbmc_barcodes_annotation.tsv'
+            urllib.request.urlretrieve(annotation_url,data_save_path + '10X/fresh_68k_pbmc_donor_a/68k_pbmc_barcodes_annotation.tsv')
+
+        annotation = pd.read_csv(data_save_path + '10X/fresh_68k_pbmc_donor_a/68k_pbmc_barcodes_annotation.tsv', sep='\t')
+        cellid1 = donor.barcodes
+        temp = cellid1.join(annotation)
+        assert all(temp[0] == temp['barcodes'])
+
+        donor.cell_types, donor.labels = np.unique(temp['celltype'], return_inverse=True)
+
+        donor.labels = donor.labels.reshape(len(donor.labels), 1)
+        donor.cell_types = np.array(['CD14+ Monocytes', 'B cells', 'CD34 cells', 'CD4 T cells', 'CD4 T cells Regulatory','CD4 T cells Naive', 'CD4 Memory T cells', 'NK cells','CD8 T cells', 'CD8 T cells Naive', 'Dendritic'])
+        gene_dataset = GeneExpressionDataset.concat_datasets(donor, pure)
     elif args.dataset_name == 'TM_MCA_Lung':
         dataset1 = TabulaMuris('facs', save_path=data_save_path, tissue='Lung')
         dataset2 = MCA(save_path=data_save_path, tissue='Lung')
@@ -440,8 +467,8 @@ def main( ):
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
     if args.pre_train == True:
-        args.desired_seed = int(desired_seeds[0, args.taskid])
-        #args.desired_seed = int(desired_seeds[0, 0])
+        #args.desired_seed = int(desired_seeds[0, args.taskid])
+        args.desired_seed = int(desired_seeds[0, 0])
     else:
         args.desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
 
@@ -491,7 +518,13 @@ def main( ):
     if args.pre_train == True:
         trainer_vae.pretrain_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
                         pre_adv_epochs=args.pre_adv_epochs, pre_adv_lr=args.pre_adv_lr, path=args.save_path)
+
+        if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
+            trainer_vae = construct_trainer_vae(gene_dataset, args)
+            trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location='cpu'))
         trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
+        obj1_train, obj1_test = obj1_train_test(trainer_vae)
+        print(obj1_train, obj1_test)
     elif args.standardize == True:
         obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_paretoMTL(
             path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs,
