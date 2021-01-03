@@ -94,9 +94,9 @@ def draw_pareto_front_MINE_MMD(dataframe, method, save_path):
                                          marker_color='rgba(255, 25, 52, .9)', showlegend=True))
 
         if 'MINE' in method:
-            fig_title = r'$\Large V_n(\phi,\psi)=MINE_n(\phi,\psi)$'
+            fig_title = r'$\Large V_n(\phi,\psi)=MINE_{\phi,n}(\phi,\psi)$'
         elif 'MMD' in method:
-            fig_title = r'$\Large V_n(\phi,\psi)=MMD_b(\phi)$'
+            fig_title = r'$\Large V_n(\phi,\psi)=MMD_{\tau,b}(\phi)$'
 
         fig.update_traces(textposition='top center')
         fig.update_layout(
@@ -252,8 +252,9 @@ def draw_barplot1(percent_dict, hypervolume_dict, methods_list, save_path, paret
 
         for (i,data_array) in enumerate([value[0] for key, value in data_dict.items() if key in tuple(['train','test'])]):
             type = ['train','test'][i]
-            y_list = data_array.mean(axis=1).tolist()
-            stdev_list = data_array.std(axis=1, ddof=1).tolist()
+            data_array[~np.isfinite(data_array)] = np.nan
+            y_list = np.nanmean(data_array, axis=1).tolist()
+            stdev_list = np.nanstd(data_array, axis=1, ddof=1).tolist()
 
             print(pareto_front_type)
             if row_num == 0:
@@ -324,8 +325,9 @@ def draw_barplot2(percent_dict, hypervolume_dict, methods_list, save_path, paret
 
         for (i,data_array) in enumerate([value[0] for key, value in data_dict.items() if key in tuple(['train','test'])]):
             type = ['train','test'][i]
-            y_list = data_array.mean(axis=1).tolist()
-            stdev_list = data_array.std(axis=1, ddof=1).tolist()
+            data_array[~np.isfinite(data_array)] = np.nan
+            y_list = np.nanmean(data_array, axis=1).tolist()
+            stdev_list = np.nanstd(data_array, axis=1, ddof=1).tolist()
 
             print(pareto_front_type)
             if row_num == 0:
@@ -543,6 +545,8 @@ def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch', meth
                     results_config_total = pd.DataFrame.from_dict(results_config)
                 else:
                     results_config_total = pd.concat([results_config_total, pd.DataFrame.from_dict(results_config)], axis=0)
+            else:
+                print('taskid{}'.format(i))
 
     for method in methods_list:
         draw_pareto_front_MINE_MMD(dataframe=results_config_total, method=method, save_path=dir_path)
