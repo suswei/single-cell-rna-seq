@@ -16,7 +16,7 @@ def main(taskid):
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10], #10,50
-        'batch_size': [512], #4 GPUs
+        'batch_size': [128], #4 GPUs
         'adv_estimator': ['MINE'],
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
