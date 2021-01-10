@@ -10,7 +10,7 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # conf_estimator means estimator for confounding effect, it could be 'MINE', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
     hyperparameter_config = {
-        'dataset_name': ['pbmc_pure_donor'],
+        'dataset_name': ['macaque_retina'],
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],

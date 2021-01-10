@@ -1,4 +1,6 @@
 import os
+from os import listdir
+from os.path import isfile, join
 import pandas as pd
 from scvi.dataset.dataset10X import Dataset10X
 import numpy as np
@@ -130,3 +132,123 @@ scp548_subset_X = np.exp(scp548_subset_X) - 1
 scp548_subset_gene = scp548_subset_gene_cellid.loc[:,'GENE'].values.tolist()
 scp548_subset_cellid = scp548_subset_gene_cellid.columns[1:].to_list()
 
+
+#download all the expression count file and meta file from the study titled
+#'Study: Molecular specification of retinal cell types underlying central and peripheral vision in primates' on single cell portal website
+#Like in the paper 'Deep learning enables accurate clustering with batch effect removal in single-cell RNA-seq analysis',
+#we only focus on the bipolar cells
+
+
+from os import walk
+import pandas as pd
+
+save_path = './data/pareto_front_paretoMTL/macaque_retina/'
+retina_meta = pd.read_csv(save_path + 'Macaque_NN_RGC_AC_BC_HC_PR_metadata_3.txt', sep=',')
+# bipolar cell types
+cell_types_list = ['BB/GB*', 'DB1', 'DB2', 'DB3a', 'DB3b', 'DB4', 'DB5*', 'DB6', 'FMB', 'IMB', 'OFFx', 'RB']
+retina_meta_fovea = retina_meta[retina_meta.Cluster.isin(cell_types_list) & retina_meta.Subcluster.eq('Fovea')]
+retina_meta_per = retina_meta[retina_meta.Cluster.isin(cell_types_list) & retina_meta.Subcluster.eq('Periphery')]
+
+dirs = []
+for (dirpath, dirnames, filenames) in walk(save_path):
+    dirs.extend(dirnames)
+    break
+
+tissue = 'fovea'
+count_total = pd.DataFrame()
+for dirname in dirs:
+    files = []
+    for (dirpath, dirnames, filenames) in walk(save_path + dirname + '/'):
+        files.extend(filenames)
+        break
+    count_onefile = pd.DataFrame()
+    if tissue == 'fovea':
+        for filename in files:
+            if 'fovea' in filename:
+                chunksize = 10 ** 2
+                for chunk in pd.read_csv(save_path + dirname + '/' + filename, chunksize=chunksize):
+                    chunk_columns = chunk.columns.to_list()
+                    break
+                if any('Fovea4S' in s for s in chunk_columns):
+                    chunk_columns = ['Unnamed: 0'] + [s.replace('Fovea4S', 'M4Fovea') for s in chunk_columns[1:]]
+                subset_index = [s in ['Unnamed: 0'] + retina_meta_fovea.loc[:, 'NAME'].values.tolist() for s in chunk_columns ]
+                for chunk in pd.read_csv(save_path + dirname + '/' + filename, chunksize=chunksize):
+                    chunk_subset = chunk.loc[:, subset_index]
+                    if chunk_subset.shape[1] == 1:
+                        break
+                    else:
+                        count_onefile = pd.concat([count_onefile, chunk_subset], axis=0)
+                if any('Fovea4S' in s for s in count_onefile.columns.to_list()):
+                    count_onefile.columns = ['Unnamed: 0'] + [s.replace('Fovea4S', 'M4Fovea') for s in count_onefile.columns.to_list()[1:]]
+    elif tissue == 'periphery':
+        for filename in files:
+            if 'per' in filename:
+                chunksize = 10 ** 2
+                for chunk in pd.read_csv(save_path + dirname + '/' + filename, chunksize=chunksize):
+                    chunk_columns = chunk.columns.to_list()
+                    break
+                print(chunk_columns[0:3])
+                if 'M4perCD73' in filename:
+                    chunk_columns = ['Unnamed: 0'] + [s.replace('MacaqueCD73DP2', 'M4PerCD73') for s in chunk_columns[1:]]
+                elif 'M5perCD73' in filename:
+                    chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd73', 'M1PerCD73') for s in chunk_columns[1:]]
+                elif 'M5perPNA' in filename:
+                    chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd90PNAS1', 'M1CD90PNA_S1') for s in chunk_columns[1:]]
+                elif 'M6perCD73' in filename:
+                    chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd73S3', 'M2PerCD73S1') for s in chunk_columns[1:]]
+                    chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd73S4', 'M2PerCD73S2') for s in chunk_columns[1:]]
+                elif 'M6perMixed' in filename:
+                    chunk_columns = ['Unnamed: 0'] + [s.replace('PerMixedS1', 'M2PerMixedS1') for s in chunk_columns[1:]]
+                subset_index = [s in ['Unnamed: 0'] + retina_meta_per.loc[:, 'NAME'].values.tolist() for s in chunk_columns]
+                for chunk in pd.read_csv(save_path + dirname + '/' + filename, sep=',', chunksize=chunksize):
+                    chunk_subset = chunk.loc[:, subset_index]
+                    if chunk_subset.shape[1] == 1:
+                        break
+                    else:
+                        count_onefile = pd.concat([count_onefile, chunk_subset], axis=0)
+                if count_onefile.shape[0] > 0:
+                    chunk_columns_subset = [chunk_columns[k] for k in range(len(chunk_columns)) if subset_index[k]==True]
+                    count_onefile.columns = chunk_columns_subset
+
+    if count_total.shape[0] == 0 and count_onefile.shape[0] > 0:
+        count_onefile = count_onefile.rename({'Unnamed: 0': 'GENE'}, axis='columns')
+        count_total = count_onefile
+    elif count_total.shape[0] > 0 and count_onefile.shape[0] > 0:
+        count_onefile = count_onefile.rename({'Unnamed: 0': 'GENE'}, axis='columns')
+        count_total = count_total.merge(count_onefile, how='inner', left_on='GENE', right_on='GENE')
+    #for both fovea and periphery, the total UMI for all cells are larger than 100
+    count_total.to_csv(save_path + "processed_{}_count_celltype_gene.csv.gz".format(tissue), index=False, compression="gzip")
+
+
+from os import walk
+import pandas as pd
+save_path = './data/pareto_front_paretoMTL/macaque_retina/'
+retina_meta = pd.read_csv(save_path + 'Macaque_NN_RGC_AC_BC_HC_PR_metadata_3.txt', sep=',')
+# bipolar cell types
+cell_types_list = ['BB/GB*', 'DB1', 'DB2', 'DB3a', 'DB3b', 'DB4', 'DB5*', 'DB6', 'FMB', 'IMB', 'OFFx', 'RB']
+retina_meta_fovea = retina_meta[retina_meta.Cluster.isin(cell_types_list) & retina_meta.Subcluster.eq('Fovea')]
+retina_meta_per = retina_meta[retina_meta.Cluster.isin(cell_types_list) & retina_meta.Subcluster.eq('Periphery')]
+dirs = []
+for (dirpath, dirnames, filenames) in walk(save_path):
+    dirs.extend(dirnames)
+    break
+tissue = 'periphery'
+count_total = pd.DataFrame()
+for dirname in dirs:
+    print('dir_name: {}'.format(dirname))
+    files = []
+    for (dirpath, dirnames, filenames) in walk(save_path + dirname + '/'):
+        files.extend(filenames)
+        break
+    count_onefile = pd.DataFrame()
+    if tissue == 'periphery':
+        for filename in files:
+            print('filename: {}'.format(filename))
+            if 'per' in filename:
+                chunksize = 10 ** 2
+                for chunk in pd.read_csv(save_path + dirname + '/' + filename, chunksize=chunksize):
+                    print(chunk.iloc[0:2,0:3])
+                    chunk_columns = chunk.columns.to_list()
+                    break
+                chop_column_name = [s.split('_')[0] for s in chunk_columns]
+                print(set(chop_column_name))

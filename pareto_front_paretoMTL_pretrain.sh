@@ -7,10 +7,7 @@
 
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
-
-#SBATCH --partition=gpgpu
-#SBATCH --qos=gpgpuresplat
-#SBATCH --gres=gpu:p100:4
+#SBATCH --m 8000
 
 # The maximum running time of the job in days-hours:mins:sec
 #SBATCH --time=1-0:0:00
@@ -41,7 +38,6 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-module load fosscuda/2019b
 python3 pareto_front_paretoMTL_pretrain.py ${SLURM_ARRAY_TASK_ID}
 
 

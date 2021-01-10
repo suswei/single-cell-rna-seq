@@ -9,6 +9,7 @@ from torch.autograd import Variable
 import torch.optim as optim
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.muris_tabula import TabulaMuris
+from scvi.dataset.macaque_retina import Macaque_Retina
 from scvi.dataset.dataset10X import Dataset10X
 from scvi.dataset.MCA import MCA
 from scvi.models import *
@@ -462,6 +463,12 @@ def main( ):
         dataset1.subsample_genes(dataset1.nb_genes)
         dataset2.subsample_genes(dataset2.nb_genes)
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
+    elif args.dataset_name == 'macaque_retina':
+        dataset1 = Macaque_Retina('macaque_retina', save_path=data_save_path, tissue='fovea')
+        dataset2 = Macaque_Retina('macaque_retina', save_path=data_save_path, tissue='periphery')
+        dataset1.subsample_genes(dataset1.nb_genes)
+        dataset2.subsample_genes(dataset2.nb_genes)
+        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
 
     #generate a random seed to split training and testing dataset
     np.random.seed(1011)
@@ -492,7 +499,7 @@ def main( ):
     intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
     args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e10) / 1e10
 
-    '''
+
     # If train vae alone
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
               n_hidden=128, n_latent=10, n_layers_encoder=2, n_layers_decoder=2, dropout_rate=0.1,
@@ -500,7 +507,8 @@ def main( ):
     # frequency controls how often the statistics in trainer_vae.model are evaluated by compute_metrics() function in trainer.py
     trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=args.train_size, seed=args.desired_seed, use_cuda=False, frequency=10, kl=1)
     trainer_vae.train(n_epochs=400, lr=0.001)
-    torch.save(trainer_vae.model.state_dict(), args.save_path) #saved into pickle file
+    #torch.save(trainer_vae.model.state_dict(), args.save_path) #saved into pickle file
+    trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels',save_name=args.save_path + '/tsne_batch_label_train')
     ll_train_set = trainer_vae.history["ll_train_set"]
     ll_test_set = trainer_vae.history["ll_test_set"]
     x = np.linspace(0, 500, (len(ll_train_set)))
@@ -511,6 +519,7 @@ def main( ):
     plt.title("Blue for training error and orange for testing error")
     fig.savefig(args.save_path + '/training_testing_error.png')
     plt.close(fig)
+
     '''
 
     trainer_vae = construct_trainer_vae(gene_dataset, args)
@@ -606,7 +615,7 @@ def main( ):
         with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
             pickle.dump(results_dict, f)
         print(results_dict)
-
+    '''
 # Run the actual program
 if __name__ == "__main__":
     main()
