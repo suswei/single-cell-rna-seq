@@ -464,8 +464,8 @@ def main( ):
         dataset2.subsample_genes(dataset2.nb_genes)
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
     elif args.dataset_name == 'macaque_retina':
-        dataset1 = Macaque_Retina('macaque_retina', save_path=data_save_path, tissue='fovea')
-        dataset2 = Macaque_Retina('macaque_retina', save_path=data_save_path, tissue='periphery')
+        dataset1 = Macaque_Retina('macaque_retina', save_path=data_save_path, region='fovea')
+        dataset2 = Macaque_Retina('macaque_retina', save_path=data_save_path, region='periphery')
         dataset1.subsample_genes(dataset1.nb_genes)
         dataset2.subsample_genes(dataset2.nb_genes)
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
@@ -498,7 +498,6 @@ def main( ):
     # to avoid the case when there are very few input data points of the last minibatch in every epoch
     intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
     args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e10) / 1e10
-
 
     # If train vae alone
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,

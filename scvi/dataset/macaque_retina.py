@@ -12,8 +12,7 @@ class Macaque_Retina(GeneExpressionDataset):
         count, labels, cell_type, gene_names = self.preprocess()
         count = csr_matrix(count)
         super(Macaque_Retina, self).__init__(
-            *GeneExpressionDataset.get_attributes_from_matrix_muris_tabula(
-                count, labels=labels),
+            *GeneExpressionDataset.get_attributes_from_matrix_muris_tabula(count, labels=labels),
             gene_names=np.char.upper(gene_names), cell_types=cell_type)
     def preprocess(self):
         # As in the paper 'Deep learning enables accurate clustering with batch effect removal in single-cell RNA-seq analysis',
