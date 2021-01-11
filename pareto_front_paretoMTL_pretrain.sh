@@ -6,7 +6,7 @@
 #SBATCH -p physical
 
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
 
 # The maximum running time of the job in days-hours:mins:sec
 #SBATCH --time=1-0:0:00
