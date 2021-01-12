@@ -111,7 +111,7 @@ class Macaque_Retina(GeneExpressionDataset):
                     index = 1
 
                 genenames += chunk.iloc[:, 0].values.tolist()
-                count = sp.hstack(count, sp.csr_matrix(np.transpose(chunk.iloc[:,1:])))
+                count = sp.hstack((count, sp.csr_matrix(np.transpose(chunk.iloc[:,1:]))))
 
         elif self.region == 'periphery':
             index = 0
@@ -123,7 +123,7 @@ class Macaque_Retina(GeneExpressionDataset):
                     index = 1
 
                 genenames += chunk.iloc[:, 0].values.tolist()
-                count = sp.hstack(count, sp.csr_matrix(np.transpose(chunk.iloc[:, 1:])))
+                count = sp.hstack((count, sp.csr_matrix(np.transpose(chunk.iloc[:, 1:]))))
 
         genenames = np.array(genenames)
 
