@@ -2,7 +2,7 @@ from os import walk
 import pandas as pd
 from scvi.dataset.dataset import GeneExpressionDataset
 import numpy as np
-from scipy.sparse import csr_matrix
+import scipy.sparse as sp
 
 class Macaque_Retina(GeneExpressionDataset):
     def __init__(self, dataname, save_path='./data/pareto_front_paretoMTL/macaque_retina/', region='fovea'):
@@ -10,7 +10,7 @@ class Macaque_Retina(GeneExpressionDataset):
         self.dataname = dataname
         self.region = region
         count, labels, cell_type, gene_names = self.preprocess()
-        count = csr_matrix(count)
+
         super(Macaque_Retina, self).__init__(
             *GeneExpressionDataset.get_attributes_from_matrix_muris_tabula(count, labels=labels),
             gene_names=np.char.upper(gene_names), cell_types=cell_type)
@@ -100,19 +100,35 @@ class Macaque_Retina(GeneExpressionDataset):
             '''
 
         chunksize = 10 ** 2
-        count_dataframe = pd.DataFrame()
+        genenames, cell_names = [], []
         if self.region == 'fovea':
+            index = 0
             for chunk in pd.read_csv(self.save_path + 'processed_macaque_fovea_BC_count.csv.gz', compression='gzip', header=0, sep=',', chunksize=chunksize):
-                count_dataframe = pd.concat([count_dataframe, chunk], axis=0)
-        elif self.region == 'periphery':
-            for chunk in pd.read_csv(self.save_path + 'processed_macaque_periphery_BC_count.csv.gz', compression='gzip', header=0, sep=',', chunksize=chunksize):
-                count_dataframe = pd.concat([count_dataframe, chunk], axis=0)
+                if index == 0:
+                    count = sp.csr_matrix(np.transpose(chunk.iloc[:,1:]))
+                    genenames += chunk.iloc[:, 0].values.tolist()
+                    cell_names = pd.DataFrame.from_dict({'NAME': chunk.columns.to_list()[1:]})
+                    index = 1
 
-        genenames = np.array(count_dataframe.loc[:, 0].values.tolist())
-        cell_names = pd.DataFrame.from_dict({'NAME': count_dataframe.columns.to_list()[1:]})
+                genenames += chunk.iloc[:, 0].values.tolist()
+                count = sp.hstack(count, sp.csr_matrix(np.transpose(chunk.iloc[:,1:])))
+
+        elif self.region == 'periphery':
+            index = 0
+            for chunk in pd.read_csv(self.save_path + 'processed_macaque_periphery_BC_count.csv.gz', compression='gzip', header=0, sep=',', chunksize=chunksize):
+                if index == 0:
+                    count = sp.csr_matrix(np.transpose(chunk.iloc[:, 1:]))
+                    genenames += chunk.iloc[:, 0].values.tolist()
+                    cell_names = pd.DataFrame.from_dict({'NAME': chunk.columns.to_list()[1:]})
+                    index = 1
+
+                genenames += chunk.iloc[:, 0].values.tolist()
+                count = sp.hstack(count, sp.csr_matrix(np.transpose(chunk.iloc[:, 1:])))
+
+        genenames = np.array(genenames)
 
         meta = pd.read_csv(self.save_path + 'Macaque_NN_RGC_AC_BC_HC_PR_metadata_3.txt')
         labels = cell_names.merge(meta, how='left', left_on='NAME', right_on='NAME').loc[:, 'Cluster']
         cell_type, labels = np.unique(np.asarray(labels).astype('str'), return_inverse=True)
-        return(count_dataframe.iloc[:, 1:].values, labels, cell_type, genenames)
+        return(count, labels, cell_type, genenames)
 
