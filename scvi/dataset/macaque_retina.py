@@ -103,17 +103,16 @@ class Macaque_Retina(GeneExpressionDataset):
         count_dataframe = pd.DataFrame()
         if self.region == 'fovea':
             for chunk in pd.read_csv(self.save_path + 'processed_macaque_fovea_BC_count.csv.gz', compression='gzip', header=0, sep=',', chunksize=chunksize):
-                count_dataframe = pd.concat([count_dataframe, chunk.transpose()], axis=0)
+                count_dataframe = pd.concat([count_dataframe, chunk], axis=0)
         elif self.region == 'periphery':
             for chunk in pd.read_csv(self.save_path + 'processed_macaque_periphery_BC_count.csv.gz', compression='gzip', header=0, sep=',', chunksize=chunksize):
-                count_dataframe = pd.concat([count_dataframe, chunk.transpose()], axis=0)
+                count_dataframe = pd.concat([count_dataframe, chunk], axis=0)
 
-        count = count_dataframe.iloc[1:, :].values
-        genenames = np.array(count_dataframe.loc[0, :].values.tolist())
+        genenames = np.array(count_dataframe.loc[:, 0].values.tolist())
+        cell_names = pd.DataFrame.from_dict({'NAME': count_dataframe.columns.to_list()[1:]})
 
-        cell_names = pd.DataFrame.from_dict({'NAME': count_dataframe.index.to_list()[1:]})
         meta = pd.read_csv(self.save_path + 'Macaque_NN_RGC_AC_BC_HC_PR_metadata_3.txt')
         labels = cell_names.merge(meta, how='left', left_on='NAME', right_on='NAME').loc[:, 'Cluster']
         cell_type, labels = np.unique(np.asarray(labels).astype('str'), return_inverse=True)
-        return(count, labels, cell_type, genenames)
+        return(count_dataframe.iloc[:, 1:].values, labels, cell_type, genenames)
 
