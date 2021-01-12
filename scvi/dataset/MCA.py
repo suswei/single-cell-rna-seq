@@ -13,7 +13,7 @@ class MCA(GeneExpressionDataset):
         count, labels, cell_type, gene_names = self.preprocess()
         count = csr_matrix(count)
         super(MCA, self).__init__(
-            *GeneExpressionDataset.get_attributes_from_matrix_muris_tabula(
+            *GeneExpressionDataset.get_attributes_from_matrix(
                 count, labels=labels),
             gene_names=np.char.upper(gene_names), cell_types=cell_type)
 

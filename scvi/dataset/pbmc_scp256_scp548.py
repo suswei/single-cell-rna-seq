@@ -20,7 +20,7 @@ class Pbmc_SCP256_SCP548(GeneExpressionDataset):
         count, labels, cell_type, gene_names = self.preprocess()
         count = csr_matrix(count)
         super(Pbmc_SCP256_SCP548, self).__init__(
-            *GeneExpressionDataset.get_attributes_from_matrix_muris_tabula(
+            *GeneExpressionDataset.get_attributes_from_matrix(
                 count, labels=labels), gene_names=np.char.upper(gene_names), cell_types=cell_type)
     def preprocess(self):
         '''
