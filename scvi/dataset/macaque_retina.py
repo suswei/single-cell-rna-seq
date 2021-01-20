@@ -5,9 +5,10 @@ import numpy as np
 import scipy.sparse as sp
 
 class Macaque_Retina(GeneExpressionDataset):
-    def __init__(self, dataname, save_path='./data/pareto_front_paretoMTL/macaque_retina/', region='fovea'):
+    def __init__(self, dataname, macaque, region, save_path='./data/pareto_front_paretoMTL/macaque_retina/'):
         self.save_path = save_path
         self.dataname = dataname
+        self.macaque = macaque
         self.region = region
         count, labels, cell_type, gene_names = self.preprocess()
 
@@ -31,99 +32,94 @@ class Macaque_Retina(GeneExpressionDataset):
         for (dirpath, dirnames, filenames) in walk(self.save_path):
             dirs.extend(dirnames)
             break
-
         tissue = 'fovea'
-        count_total = pd.DataFrame()
-        for dirname in dirs:
-            files = []
-            for (dirpath, dirnames, filenames) in walk(self.save_path + dirname + '/'):
-                files.extend(filenames)
-                break
-            count_onefile = pd.DataFrame()
-            if tissue == 'fovea':
+
+        for macaque in ['M1', 'M2','M3','M4']:
+            count_total = pd.DataFrame()
+            for dirname in dirs:
+                files = []
+                for (dirpath, dirnames, filenames) in walk(self.save_path + dirname + '/'):
+                    files.extend(filenames)
+                    break
                 for filename in files:
-                    if 'fovea' in filename:
-                        chunksize = 10 ** 2
-                        for chunk in pd.read_csv(self.save_path + dirname + '/' + filename, chunksize=chunksize):
-                            chunk_columns = chunk.columns.to_list()
-                            break
-                        if any('Fovea4S' in s for s in chunk_columns):
-                            chunk_columns = ['Unnamed: 0'] + [s.replace('Fovea4S', 'M4Fovea') for s in chunk_columns[1:]]
-                        subset_index = [s in ['Unnamed: 0'] + retina_meta_fovea.loc[:, 'NAME'].values.tolist() for s in chunk_columns]
-                        for chunk in pd.read_csv(self.save_path + dirname + '/' + filename, chunksize=chunksize):
-                            chunk_subset = chunk.loc[:, subset_index]
-                            if chunk_subset.shape[1] == 1:
+                    count_onefile = pd.DataFrame()
+                    if tissue == 'fovea':
+                        if 'fovea' in filename:
+                            chunksize = 10 ** 2
+                            for chunk in pd.read_csv(self.save_path + dirname + '/' + filename, chunksize=chunksize):
+                                chunk_columns = chunk.columns.to_list()
                                 break
-                            else:
-                                count_onefile = pd.concat([count_onefile, chunk_subset], axis=0)
+                            if any('Fovea4S' in s for s in chunk_columns):
+                                chunk_columns = ['Unnamed: 0'] + [s.replace('Fovea4S', 'M4Fovea') for s in chunk_columns[1:]]
+                            string = macaque + 'Fovea'
+                            retina_meta_fovea_subset = [k for k in retina_meta_fovea.loc[:, 'NAME'].values.tolist() if string in k]
+                            subset_index = [s in ['Unnamed: 0'] + retina_meta_fovea_subset for s in chunk_columns]
+                            for chunk in pd.read_csv(self.save_path + dirname + '/' + filename, chunksize=chunksize):
+                                chunk_subset = chunk.loc[:, subset_index]
+                                if chunk_subset.shape[1] == 1:
+                                    break
+                                else:
+                                    count_onefile = pd.concat([count_onefile, chunk_subset], axis=0)
                         if any('Fovea4S' in s for s in count_onefile.columns.to_list()):
                             count_onefile.columns = ['Unnamed: 0'] + [s.replace('Fovea4S', 'M4Fovea') for s in count_onefile.columns.to_list()[1:]]
-            elif tissue == 'periphery':
-                for filename in files:
-                    if 'per' in filename:
-                        chunksize = 10 ** 2
-                        for chunk in pd.read_csv(self.save_path + dirname + '/' + filename, chunksize=chunksize):
-                            chunk_columns = chunk.columns.to_list()
-                            break
-                        print(chunk_columns[0:3])
-                        if 'M4perCD73' in filename:
-                            chunk_columns = ['Unnamed: 0'] + [s.replace('MacaqueCD73DP2', 'M4PerCD73') for s in chunk_columns[1:]]
-                        elif 'M5perCD73' in filename:
-                            chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd73', 'M1PerCD73') for s in chunk_columns[1:]]
-                        elif 'M5perPNA' in filename:
-                            chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd90PNAS1', 'M1CD90PNA_S1') for s in chunk_columns[1:]]
-                        elif 'M6perCD73' in filename:
-                            chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd73S3', 'M2PerCD73S1') for s in chunk_columns[1:]]
-                            chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd73S4', 'M2PerCD73S2') for s in chunk_columns[1:]]
-                        elif 'M6perMixed' in filename:
-                            chunk_columns = ['Unnamed: 0'] + [s.replace('PerMixedS1', 'M2PerMixedS1') for s in chunk_columns[1:]]
-                        subset_index = [s in ['Unnamed: 0'] + retina_meta_per.loc[:, 'NAME'].values.tolist() for s in chunk_columns]
-                        for chunk in pd.read_csv(self.save_path + dirname + '/' + filename, sep=',', chunksize=chunksize):
-                            chunk_subset = chunk.loc[:, subset_index]
-                            if chunk_subset.shape[1] == 1:
+                    elif tissue == 'periphery':
+                        if 'per' in filename:
+                            chunksize = 10 ** 2
+                            for chunk in pd.read_csv(self.save_path + dirname + '/' + filename, chunksize=chunksize):
+                                chunk_columns = chunk.columns.to_list()
                                 break
+                            print(chunk_columns[0:3])
+                            if 'M4perCD73' in filename:
+                                chunk_columns = ['Unnamed: 0'] + [s.replace('MacaqueCD73DP2', 'M4PerCD73') for s in chunk_columns[1:]]
+                            elif 'M5perCD73' in filename:
+                                chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd73', 'M1PerCD73') for s in chunk_columns[1:]]
+                            elif 'M5perPNA' in filename:
+                                chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd90PNAS1', 'M1CD90PNA_S1') for s in chunk_columns[1:]]
+                            elif 'M6perCD73' in filename:
+                                chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd73S3', 'M2PerCD73S1') for s in chunk_columns[1:]]
+                                chunk_columns = ['Unnamed: 0'] + [s.replace('PerCd73S4', 'M2PerCD73S2') for s in chunk_columns[1:]]
+                            elif 'M6perMixed' in filename:
+                                chunk_columns = ['Unnamed: 0'] + [s.replace('PerMixedS1', 'M2PerMixedS1') for s in chunk_columns[1:]]
+                            if macaque == 'M1':
+                                string = ['M1Per', 'M1CD90PNA']
+                                retina_meta_per_subset = [k for k in retina_meta_per.loc[:, 'NAME'].values.tolist() if  any(x in k for x in string)]
                             else:
-                                count_onefile = pd.concat([count_onefile, chunk_subset], axis=0)
-                        if count_onefile.shape[0] > 0:
-                            chunk_columns_subset = [chunk_columns[k] for k in range(len(chunk_columns)) if subset_index[k] == True]
-                            count_onefile.columns = chunk_columns_subset
+                                string = macaque + 'Per'
+                                retina_meta_per_subset = [k for k in retina_meta_per.loc[:, 'NAME'].values.tolist() if string in k]
+                            subset_index = [s in ['Unnamed: 0'] + retina_meta_per_subset for s in chunk_columns]
+                            for chunk in pd.read_csv(self.save_path + dirname + '/' + filename, sep=',', chunksize=chunksize):
+                                chunk_subset = chunk.loc[:, subset_index]
+                                if chunk_subset.shape[1] == 1:
+                                    break
+                                else:
+                                    count_onefile = pd.concat([count_onefile, chunk_subset], axis=0)
+                            if count_onefile.shape[0] > 0:
+                                chunk_columns_subset = [chunk_columns[k] for k in range(len(chunk_columns)) if subset_index[k] == True]
+                                count_onefile.columns = chunk_columns_subset
 
-            if count_total.shape[0] == 0 and count_onefile.shape[0] > 0:
-                count_onefile = count_onefile.rename({'Unnamed: 0': 'GENE'}, axis='columns')
-                count_total = count_onefile
-            elif count_total.shape[0] > 0 and count_onefile.shape[0] > 0:
-                count_onefile = count_onefile.rename({'Unnamed: 0': 'GENE'}, axis='columns')
-                count_total = count_total.merge(count_onefile, how='inner', left_on='GENE', right_on='GENE')
-            # for both fovea and periphery, the total UMI for all cells are larger than 100
-            count_total.to_csv(self.save_path + "processed_macaque_{}_BC_count.csv.gz".format(tissue), index=False,
-                               compression="gzip")
+                    if count_total.shape[0] == 0 and count_onefile.shape[0] > 0:
+                        count_onefile = count_onefile.rename({'Unnamed: 0': 'GENE'}, axis='columns')
+                        count_total = count_onefile
+                    elif count_total.shape[0] > 0 and count_onefile.shape[0] > 0:
+                        count_onefile = count_onefile.rename({'Unnamed: 0': 'GENE'}, axis='columns')
+                        count_total = count_total.merge(count_onefile, how='inner', left_on='GENE', right_on='GENE')
+            if count_total.shape[0] > 0:
+                count_total.to_csv(self.save_path + "processed_macaque_{}{}_BC_count.csv.gz".format(macaque, tissue),index=False, compression="gzip")
             '''
 
         chunksize = 10 ** 2
         genenames, cell_names = [], []
-        if self.region == 'fovea':
-            index = 0
-            for chunk in pd.read_csv(self.save_path + 'processed_macaque_fovea_BC_count.csv.gz', compression='gzip', header=0, sep=',', chunksize=chunksize):
-                if index == 0:
-                    count = sp.csr_matrix(np.transpose(chunk.iloc[:,1:]))
-                    genenames += chunk.iloc[:, 0].values.tolist()
-                    cell_names = pd.DataFrame.from_dict({'NAME': chunk.columns.to_list()[1:]})
-                    index = 1
 
+        index = 0
+        for chunk in pd.read_csv(self.save_path + 'processed_macaque_{}{}_BC_count.csv.gz'.format(self.macaque, self.region), compression='gzip', header=0, sep=',', chunksize=chunksize):
+            if index == 0:
+                count = sp.csr_matrix(np.transpose(chunk.iloc[:,1:]))
                 genenames += chunk.iloc[:, 0].values.tolist()
-                count = sp.hstack((count, sp.csr_matrix(np.transpose(chunk.iloc[:,1:]))))
+                cell_names = pd.DataFrame.from_dict({'NAME': chunk.columns.to_list()[1:]})
+                index = 1
 
-        elif self.region == 'periphery':
-            index = 0
-            for chunk in pd.read_csv(self.save_path + 'processed_macaque_periphery_BC_count.csv.gz', compression='gzip', header=0, sep=',', chunksize=chunksize):
-                if index == 0:
-                    count = sp.csr_matrix(np.transpose(chunk.iloc[:, 1:]))
-                    genenames += chunk.iloc[:, 0].values.tolist()
-                    cell_names = pd.DataFrame.from_dict({'NAME': chunk.columns.to_list()[1:]})
-                    index = 1
-
-                genenames += chunk.iloc[:, 0].values.tolist()
-                count = sp.hstack((count, sp.csr_matrix(np.transpose(chunk.iloc[:, 1:]))))
+            genenames += chunk.iloc[:, 0].values.tolist()
+            count = sp.hstack((count, sp.csr_matrix(np.transpose(chunk.iloc[:,1:]))))
 
         genenames = np.array(genenames)
 

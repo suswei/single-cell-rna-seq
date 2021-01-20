@@ -7,12 +7,13 @@
 
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
+#SBATCH --mem 10000
 
 # The maximum running time of the job in days-hours:mins:sec
 #SBATCH --time=1-0:0:00
 
 # Batch arrays
-#SBATCH --array=0
+#SBATCH --array=0-19
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)

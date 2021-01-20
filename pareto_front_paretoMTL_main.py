@@ -19,7 +19,6 @@ from scipy import sparse
 import pickle
 import matplotlib.pyplot as plt
 
-
 def construct_trainer_vae(gene_dataset, args):
     vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * args.use_batches,n_labels=gene_dataset.n_labels,
                     n_hidden=args.n_hidden, n_latent=args.n_latent,n_layers_encoder=args.n_layers_encoder,
@@ -464,18 +463,29 @@ def main( ):
         dataset2.subsample_genes(dataset2.nb_genes)
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
     elif args.dataset_name == 'macaque_retina':
+        dataset_list = []
+        for macaque in ['M1', 'M2', 'M3', 'M4']:
+            for region in ['fovea', 'periphery']:
+                path = data_save_path + 'processed_macaque_{}{}_BC_count.csv.gz'.format(macaque, region)
+                if os.path.isfile(path):
+                    dataset = Macaque_Retina('macaque_retina',macaque, region, save_path=data_save_path)
+                    dataset_list += [dataset]
+        gene_dataset = GeneExpressionDataset.concat_datasets(dataset_list[0], dataset_list[1], dataset_list[2], dataset_list[3], dataset_list[4], dataset_list[5], dataset_list[6])
+    '''
+    elif args.dataset_name == 'macaque_retina':
         dataset1 = Macaque_Retina('macaque_retina', save_path=data_save_path, region='fovea')
         dataset2 = Macaque_Retina('macaque_retina', save_path=data_save_path, region='periphery')
         dataset1.subsample_genes(dataset1.nb_genes)
         dataset2.subsample_genes(dataset2.nb_genes)
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
+    '''
 
     #generate a random seed to split training and testing dataset
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
     if args.pre_train == True:
-        #args.desired_seed = int(desired_seeds[0, args.taskid])
-        args.desired_seed = int(desired_seeds[0, 0])
+        args.desired_seed = int(desired_seeds[0, args.taskid])
+        #args.desired_seed = int(desired_seeds[0, 0])
     else:
         args.desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
 
@@ -498,7 +508,7 @@ def main( ):
     # to avoid the case when there are very few input data points of the last minibatch in every epoch
     intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
     args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e10) / 1e10
-
+    '''
     # If train vae alone
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
               n_hidden=128, n_latent=10, n_layers_encoder=2, n_layers_decoder=2, dropout_rate=0.1, reconstruction_loss='zinb')
@@ -613,7 +623,7 @@ def main( ):
         with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
             pickle.dump(results_dict, f)
         print(results_dict)
-    '''
+
 # Run the actual program
 if __name__ == "__main__":
     main()
