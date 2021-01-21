@@ -10,15 +10,15 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # adv_estimator means estimator for confounding effect, it could be 'MINE', 'MMD', 'stdz_MMD' (stdz_MMD means standardize the dimension of z, then use MMD)
     hyperparameter_config = {
-        'dataset_name': ['TM_MCA_Lung'],
+        'dataset_name': ['macaque_retina'],
         'confounder': ['batch'],
-        'n_layers_encoder': [2],
-        'n_layers_decoder': [2],
-        'n_hidden': [128],
+        'n_layers_encoder': [4], #2
+        'n_layers_decoder': [4], #2
+        'n_hidden': [512], #128
         'n_latent': [10], #
-        'batch_size': [128], #4 GPUs
+        'batch_size': [512], #4 GPUs
         'adv_estimator': ['MINE'], #
-        'adv_n_hidden': [128],
+        'adv_n_hidden': [512], #128
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
         'lr': [1e-3],
@@ -27,7 +27,7 @@ def main(taskid):
         'obj1_min': [3000], #
         'obj2_max': [0.8], #
         'obj2_min': [-0.1], #
-        'epochs': [150], #
+        'epochs': [200], #
         'adv_epochs': [1],
         'n_tasks': [2],
         'MC': list(range(20)),
@@ -38,7 +38,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --change_composition --std_paretoMTL --use_batches --MCs 20 "
+    os.system("python3 pareto_front_paretoMTL_main.py --change_composition --standardize --use_batches --MCs 20 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
