@@ -463,6 +463,13 @@ def main( ):
         dataset2.subsample_genes(dataset2.nb_genes)
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
     elif args.dataset_name == 'macaque_retina':
+        dataset1 = Macaque_Retina('macaque_retina', '', 'fovea', save_path=data_save_path)
+        dataset2 = Macaque_Retina('macaque_retina', '', 'periphery', save_path=data_save_path)
+        dataset1.subsample_genes(dataset1.nb_genes)
+        dataset2.subsample_genes(dataset2.nb_genes)
+        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
+    '''
+    elif args.dataset_name == 'macaque_retina':
         dataset_list = []
         for macaque in ['M1', 'M2', 'M3', 'M4']:
             for region in ['fovea', 'periphery']:
@@ -471,13 +478,6 @@ def main( ):
                     dataset = Macaque_Retina('macaque_retina',macaque, region, save_path=data_save_path)
                     dataset_list += [dataset]
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset_list[0], dataset_list[1], dataset_list[2], dataset_list[3], dataset_list[4], dataset_list[5], dataset_list[6])
-    '''
-    elif args.dataset_name == 'macaque_retina':
-        dataset1 = Macaque_Retina('macaque_retina', save_path=data_save_path, region='fovea')
-        dataset2 = Macaque_Retina('macaque_retina', save_path=data_save_path, region='periphery')
-        dataset1.subsample_genes(dataset1.nb_genes)
-        dataset2.subsample_genes(dataset2.nb_genes)
-        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
     '''
 
     #generate a random seed to split training and testing dataset
@@ -529,7 +529,6 @@ def main( ):
     plt.close(fig)
 
     '''
-
     trainer_vae = construct_trainer_vae(gene_dataset, args)
 
     if args.pre_train == True:
