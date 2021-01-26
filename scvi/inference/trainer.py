@@ -39,7 +39,7 @@ class Trainer:
     """
     default_metrics_to_monitor = []
 
-    def __init__(self, model, gene_dataset, use_cuda=True, metrics_to_monitor=None,
+    def __init__(self, model, gene_dataset, num_workers=1, metrics_to_monitor=None,
                  benchmark=False, verbose=False, frequency=None, weight_decay=1e-6, early_stopping_kwargs=dict(),
                  data_loader_kwargs=dict(), save_path='None', batch_size=128, adv_estimator='None',
                  adv_n_hidden=128, adv_n_layers=10, adv_activation_fun='ELU', unbiased_loss=True, adv_w_initial='Normal',
@@ -51,6 +51,10 @@ class Trainer:
 
         # use all available GPUs
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device == 'cuda':
+            use_cuda = True
+        else:
+            use_cuda = False
 
         self.adv_estimator = adv_estimator
         if self.adv_estimator == 'MINE':
@@ -65,6 +69,7 @@ class Trainer:
 
         self.data_loader_kwargs = {
             "batch_size": batch_size,
+            "num_workers": num_workers,
             "pin_memory": use_cuda
         }
         self.save_path = save_path
@@ -81,10 +86,6 @@ class Trainer:
             self.metrics_to_monitor = self.default_metrics_to_monitor
 
         self.early_stopping = EarlyStopping(**early_stopping_kwargs)
-
-        self.use_cuda = use_cuda and torch.cuda.is_available()
-        if self.use_cuda:
-            self.model.cuda()
 
         self.frequency = frequency if not benchmark else None
         self.verbose = verbose

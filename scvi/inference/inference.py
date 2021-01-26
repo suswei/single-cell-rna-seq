@@ -67,15 +67,15 @@ class UnsupervisedTrainer(Trainer):
     def two_loss(self, tensors):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
-        sample_batch_copy, local_l_mean_copy, local_l_var_copy, batch_index_copy = sample_batch.to(self.device), local_l_mean.to(self.device), local_l_var.to(self.device), batch_index.to(self.device)
+        #sample_batch_copy, local_l_mean_copy, local_l_var_copy, batch_index_copy = sample_batch.to(self.device), local_l_mean.to(self.device), local_l_var.to(self.device), batch_index.to(self.device)
 
         if self.cal_loss == True and self.cal_adv_loss == False:
             #for when model is vae_MI
-            reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch_copy, local_l_mean_copy, local_l_var_copy, batch_index_copy)
+            reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
             loss = torch.mean(reconst_loss + self.kl_weight*kl_divergence)
 
         elif self.cal_loss == False and self.cal_adv_loss == True:
-            x_ = sample_batch_copy
+            x_ = sample_batch
             if torch.cuda.device_count() > 1:
                 log_variational = self.model.module.log_variational
             else:
@@ -92,7 +92,7 @@ class UnsupervisedTrainer(Trainer):
             adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
 
         elif self.cal_loss == True and self.cal_adv_loss == True:
-            reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch_copy, local_l_mean_copy, local_l_var_copy,batch_index_copy)
+            reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
             loss = torch.mean(reconst_loss + self.kl_weight * kl_divergence)
 
             if self.adv_estimator == 'MINE':
@@ -112,9 +112,9 @@ class UnsupervisedTrainer(Trainer):
                 obj2_minibatch = adv_loss
 
             if self.epoch >= 0:
-                NN_estimator = Nearest_Neighbor_Estimate(batch_index_copy, z)
+                NN_estimator = Nearest_Neighbor_Estimate(batch_index, z)
                 if len(self.batch_ratio)>0:
-                    empirical_MI = EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index_copy, self.batch_ratio.to(self.device), self.nsamples)
+                    empirical_MI = EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.batch_ratio.to(self.device), self.nsamples)
                     print('Epoch: {}, neg_ELBO: {}, {}: {}, empirical_MI: {}, NN: {}.'.format(self.epoch, loss, self.adv_estimator, obj2_minibatch, empirical_MI, NN_estimator))
                 else:
                     print('Epoch: {}, neg_ELBO: {}, {}: {}, NN: {}.'.format(self.epoch, loss, self.adv_estimator, obj2_minibatch, NN_estimator))

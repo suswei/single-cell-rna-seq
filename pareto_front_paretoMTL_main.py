@@ -24,7 +24,7 @@ def construct_trainer_vae(gene_dataset, args):
                     n_hidden=args.n_hidden, n_latent=args.n_latent,n_layers_encoder=args.n_layers_encoder,
                     n_layers_decoder=args.n_layers_decoder,dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss)
     if args.adv_estimator == 'MINE':
-        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
+        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=args.desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
                                           adv_n_hidden=args.adv_n_hidden, adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
                                           unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
@@ -375,8 +375,8 @@ def main( ):
                         help='sample size to get NN estimator and MMD estimator at evaluation stage')
 
     # general usage
-    parser.add_argument('--use_cuda', action='store_true', default=False,
-                        help='disables CUDA training')
+    parser.add_argument('--num_workers', type=int, default=1,
+                        help='number of workers to load data')
 
     parser.add_argument("--mode", default='client')
 
@@ -527,7 +527,6 @@ def main( ):
     plt.title("Blue for training error and orange for testing error")
     fig.savefig(args.save_path + '/training_testing_error.png')
     plt.close(fig)
-
     '''
     trainer_vae = construct_trainer_vae(gene_dataset, args)
 
