@@ -70,7 +70,7 @@ class Trainer:
         self.data_loader_kwargs = {
             "batch_size": batch_size,
             "num_workers": num_workers,
-            "pin_memory": use_cuda
+            "pin_memory": self.use_cuda
         }
         self.save_path = save_path
         self.data_loader_kwargs.update(data_loader_kwargs)
