@@ -52,9 +52,9 @@ class Trainer:
         # use all available GPUs
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if self.device == 'cuda':
-            use_cuda = True
+            self.use_cuda = True
         else:
-            use_cuda = False
+            self.use_cuda = False
 
         self.adv_estimator = adv_estimator
         if self.adv_estimator == 'MINE':
