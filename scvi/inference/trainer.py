@@ -51,7 +51,7 @@ class Trainer:
 
         # use all available GPUs
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if self.device == 'cuda':
+        if torch.cuda.is_available():
             self.use_cuda = True
         else:
             self.use_cuda = False
