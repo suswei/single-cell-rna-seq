@@ -129,17 +129,19 @@ class UnsupervisedTrainer(Trainer):
 
     def adv_load_minibatch(self, z, batch_index, reference_batch:float=0, compare_batch: float=1):
 
-        batch_dataframe = pd.DataFrame.from_dict({'batch': np.ndarray.tolist(batch_index.numpy().ravel())})
+        if torch.cuda.is_available():
+            batch_dataframe = pd.DataFrame.from_dict({'batch': np.ndarray.tolist(batch_index.cpu().numpy().ravel())})
+        else:
+            batch_dataframe = pd.DataFrame.from_dict({'batch': np.ndarray.tolist(batch_index.numpy().ravel())})
         batch_dummy = torch.from_numpy(pd.get_dummies(batch_dataframe['batch']).values).type(torch.FloatTensor)
 
         #check if z.requires_grad == True
-        batch_dummy_copy = batch_dummy.to(self.device)
-        batch_dummy_copy = Variable(batch_dummy_copy, requires_grad=True)
+        batch_dummy = Variable(batch_dummy.to(self.device), requires_grad=True)
 
         if self.adv_estimator == 'MINE':
-            z_batch = torch.cat((z, batch_dummy_copy), 1)  # joint
+            z_batch = torch.cat((z, batch_dummy), 1)  # joint
             shuffle_index = torch.randperm(z.shape[0])
-            shuffle_z_batch = torch.cat((z[shuffle_index], batch_dummy_copy), 1)  # marginal
+            shuffle_z_batch = torch.cat((z[shuffle_index], batch_dummy), 1)  # marginal
             return z_batch, shuffle_z_batch
         elif self.adv_estimator in ['MMD','stdz_MMD']:
             batch_index_copy = batch_index.type(torch.FloatTensor).to(self.device)
