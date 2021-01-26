@@ -29,7 +29,7 @@ def construct_trainer_vae(gene_dataset, args):
                                           adv_n_hidden=args.adv_n_hidden, adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
                                           unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
     elif args.adv_estimator in ['MMD','stdz_MMD']:
-        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
+        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator,
                                           MMD_kernel_mul=args.MMD_kernel_mul, MMD_kernel_num=args.MMD_kernel_num, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
