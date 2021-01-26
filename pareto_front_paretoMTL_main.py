@@ -25,12 +25,12 @@ def construct_trainer_vae(gene_dataset, args):
                     n_layers_decoder=args.n_layers_decoder,dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss)
     if args.adv_estimator == 'MINE':
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
-                                          seed=args.desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
+                                          seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator,
                                           adv_n_hidden=args.adv_n_hidden, adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
                                           unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
     elif args.adv_estimator in ['MMD','stdz_MMD']:
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, batch_size=args.batch_size, train_size=args.train_size,
-                                          seed=args.desired_seed, use_cuda=args.use_cuda, frequency=10, kl=1, adv_estimator=args.adv_estimator,
+                                          seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator,
                                           MMD_kernel_mul=args.MMD_kernel_mul, MMD_kernel_num=args.MMD_kernel_num, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
@@ -513,7 +513,7 @@ def main( ):
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
               n_hidden=128, n_latent=10, n_layers_encoder=2, n_layers_decoder=2, dropout_rate=0.1, reconstruction_loss='zinb')
     # frequency controls how often the statistics in trainer_vae.model are evaluated by compute_metrics() function in trainer.py
-    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=args.train_size, seed=args.desired_seed, use_cuda=False, frequency=10, kl=1)
+    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=args.train_size, seed=args.desired_seed, frequency=10, kl=1)
     trainer_vae.train(n_epochs=400, lr=0.001)
     #torch.save(trainer_vae.model.state_dict(), args.save_path) #saved into pickle file
     trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels',save_name=args.save_path + '/tsne_batch_label_train')
