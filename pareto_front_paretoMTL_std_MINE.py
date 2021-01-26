@@ -27,7 +27,7 @@ def main(taskid):
         'obj1_min': [3000], #
         'obj2_max': [0.8], #
         'obj2_min': [-0.1], #
-        'epochs': [200], #
+        'epochs': [2], #
         'adv_epochs': [1],
         'n_tasks': [2],
         'MC': list(range(20)),
