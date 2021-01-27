@@ -67,7 +67,6 @@ class UnsupervisedTrainer(Trainer):
     def two_loss(self, tensors):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
-        #sample_batch_copy, local_l_mean_copy, local_l_var_copy, batch_index_copy = sample_batch.to(self.device), local_l_mean.to(self.device), local_l_var.to(self.device), batch_index.to(self.device)
 
         if self.cal_loss == True and self.cal_adv_loss == False:
             #for when model is vae_MI

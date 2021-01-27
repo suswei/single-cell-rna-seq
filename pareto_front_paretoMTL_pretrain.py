@@ -12,13 +12,13 @@ def main(taskid):
     hyperparameter_config = {
         'dataset_name': ['macaque_retina'],
         'confounder': ['batch'],
-        'n_layers_encoder': [2], #2
-        'n_layers_decoder': [2], #2
-        'n_hidden': [128], #128
+        'n_layers_encoder': [4], #2
+        'n_layers_decoder': [4], #2
+        'n_hidden': [512], #128
         'n_latent': [10], #10,50
-        'batch_size': [128], #4 GPUs
+        'batch_size': [512], #4 GPUs
         'adv_estimator': ['MINE'],
-        'adv_n_hidden': [128], #128
+        'adv_n_hidden': [512], #128
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
         'pre_epochs': [150], #300, 350, 400
@@ -26,7 +26,7 @@ def main(taskid):
         'pre_lr': [1e-3],
         'pre_adv_lr': [5e-5],
         'MC': list(range(20)),
-        'num_workers': [1]
+        'num_workers': [4]
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
