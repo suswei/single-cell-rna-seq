@@ -23,11 +23,11 @@ def main(taskid):
         'adv_activation_fun': ['ELU'],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'obj1_max': [4100], #
-        'obj1_min': [3000], #
+        'obj1_max': [18000], #
+        'obj1_min': [12000], #
         'obj2_max': [0.2], #
         'obj2_min': [-0.1], #
-        'epochs': [2], #
+        'epochs': [200], #
         'adv_epochs': [1],
         'n_tasks': [2],
         'MC': list(range(10)),
