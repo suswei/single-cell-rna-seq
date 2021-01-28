@@ -582,6 +582,8 @@ def main( ):
 
         if torch.cuda.is_available():
             trainer_vae.model.to(trainer_vae.device)
+        params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
+        trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
