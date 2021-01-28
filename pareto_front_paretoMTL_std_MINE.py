@@ -12,22 +12,22 @@ def main(taskid):
     hyperparameter_config = {
         'dataset_name': ['macaque_retina'],
         'confounder': ['batch'],
-        'n_layers_encoder': [4], #2
-        'n_layers_decoder': [4], #2
-        'n_hidden': [512], #128
+        'n_layers_encoder': [2], #2
+        'n_layers_decoder': [2], #2
+        'n_hidden': [128], #128
         'n_latent': [10], #
         'batch_size': [512], #4 GPUs
         'adv_estimator': ['MINE'], #
-        'adv_n_hidden': [512], #128
+        'adv_n_hidden': [128], #128
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'obj1_max': [8100], #
+        'obj1_max': [4100], #
         'obj1_min': [3000], #
-        'obj2_max': [0.8], #
+        'obj2_max': [0.2], #
         'obj2_min': [-0.1], #
-        'epochs': [200], #
+        'epochs': [2], #
         'adv_epochs': [1],
         'n_tasks': [2],
         'MC': list(range(10)),
@@ -39,7 +39,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --change_composition --standardize --use_batches --MCs 10 "
+    os.system("python3 pareto_front_paretoMTL_main.py --change_composition --std_paretoMTL --use_batches --MCs 10 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "

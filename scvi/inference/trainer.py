@@ -273,7 +273,7 @@ class Trainer:
 
                 if torch.cuda.device_count() > 1:
                     self.adv_model = torch.nn.DataParallel(self.adv_model)
-                    self.adv_model.to(self.device)
+                self.adv_model.to(self.device)
 
                 self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=pre_adv_lr)
                 # pretrain adv_model to make MINE works

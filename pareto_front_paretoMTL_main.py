@@ -45,7 +45,10 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference
     # Sampling
     qz_m, qz_v, z = trainer_vae.model.z_encoder(x_, None)
 
-    batch_dataframe = pd.DataFrame.from_dict({'batch': np.ndarray.tolist(batch_index.numpy().ravel())})
+    if torch.cuda.is_available():
+        batch_dataframe = pd.DataFrame.from_dict({'batch': np.ndarray.tolist(batch_index.cpu().numpy().ravel())})
+    else:
+        batch_dataframe = pd.DataFrame.from_dict({'batch': np.ndarray.tolist(batch_index.numpy().ravel())})
     batch_dummy = torch.from_numpy(pd.get_dummies(batch_dataframe['batch']).values).type(torch.FloatTensor)
     batch_dummy = Variable(batch_dummy, requires_grad=True)
 
@@ -126,11 +129,13 @@ def MINE_eval(trainer_vae, MINE_network, input_data):
     MINE_estimator = torch.mean(t_all) - torch.log(torch.mean(et_all))
     return MINE_estimator.item()
 
-def MINE_after_trainerVae(trainer_vae):
-    MINE_network = MINE_Net(input_dim=trainer_vae.model.n_latent + trainer_vae.model.n_batch, n_hidden=128, n_layers=10,
-                            activation_fun='ELU', unbiased_loss=True, initial='normal')
+def MINE_after_trainerVae(trainer_vae, args):
+    MINE_network = MINE_Net(input_dim=trainer_vae.model.n_latent + trainer_vae.model.n_batch, n_hidden=args.adv_n_hidden, n_layers=args.adv_n_layers,
+                            activation_fun=args.adv_activation_fun, unbiased_loss=args.unbiased_loss, initial=args.adv_w_initial)
 
-    MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=5e-5)
+    if torch.cuda.is_available():
+        MINE_network.to(trainer_vae.device)
+    MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=args.adv_lr)
 
     for epoch in range(400):
         MINE_network.train()
@@ -463,6 +468,13 @@ def main( ):
         dataset2.subsample_genes(dataset2.nb_genes)
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
     elif args.dataset_name == 'macaque_retina':
+        dataset1 = Macaque_Retina('macaque_retina', '', 'fovea', save_path=data_save_path)
+        dataset2 = Macaque_Retina('macaque_retina', '', 'periphery', save_path=data_save_path)
+        dataset1.subsample_genes(dataset1.nb_genes)
+        dataset2.subsample_genes(dataset2.nb_genes)
+        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
+    '''
+    elif args.dataset_name == 'macaque_retina':
         dataset_list = []
         for macaque in ['M1', 'M2', 'M3', 'M4']:
             for region in ['fovea', 'periphery']:
@@ -473,13 +485,6 @@ def main( ):
                     dataset_list += [dataset]
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset_list[0], dataset_list[1], dataset_list[2], dataset_list[3], dataset_list[4], dataset_list[5], dataset_list[6])
         print('Dataset reading done!')
-    '''
-    elif args.dataset_name == 'macaque_retina':
-        dataset1 = Macaque_Retina('macaque_retina', '', 'fovea', save_path=data_save_path)
-        dataset2 = Macaque_Retina('macaque_retina', '', 'periphery', save_path=data_save_path)
-        dataset1.subsample_genes(dataset1.nb_genes)
-        dataset2.subsample_genes(dataset2.nb_genes)
-        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
     '''
     #generate a random seed to split training and testing dataset
     np.random.seed(1011)
@@ -575,12 +580,14 @@ def main( ):
             os.remove(args.save_path + '/vae.pkl')
             os.remove(args.save_path + '/MINE.pkl')
 
+        if torch.cuda.is_available():
+            trainer_vae.model.to(trainer_vae.device)
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
         # obj2 for the whole training and testing set
         if trainer_vae.adv_estimator == 'MINE':
-            obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae)
+            obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
         elif trainer_vae.adv_estimator == 'MMD':
             obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
         elif trainer_vae.adv_estimator == 'stdz_MMD':
@@ -611,9 +618,8 @@ def main( ):
                         'uca_test': [uca_test],
                         'be_test': [be_test]}
 
-        if args.pref_idx == 0 or args.pref_idx==9:
-            trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
-            trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
+        trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
+        trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
 
         args_dict = vars(args)
         with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
