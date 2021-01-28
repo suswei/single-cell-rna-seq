@@ -23,14 +23,14 @@ def main(taskid):
         'adv_activation_fun': ['ELU'],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'obj1_max': [18000], #
-        'obj1_min': [12000], #
+        'obj1_max': [4100], #
+        'obj1_min': [3000], #
         'obj2_max': [0.2], #
         'obj2_min': [-0.1], #
         'epochs': [200], #
         'adv_epochs': [1],
         'n_tasks': [2],
-        'MC': list(range(10)),
+        'MC': list(range(2)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))],
         'num_workers': [4]
     }
@@ -39,7 +39,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --change_composition --std_paretoMTL --use_batches --MCs 10 "
+    os.system("python3 pareto_front_paretoMTL_main.py --change_composition --std_paretoMTL --use_batches --MCs 2 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
