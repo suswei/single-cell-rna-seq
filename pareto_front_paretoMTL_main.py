@@ -50,7 +50,7 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference
     else:
         batch_dataframe = pd.DataFrame.from_dict({'batch': np.ndarray.tolist(batch_index.numpy().ravel())})
     batch_dummy = torch.from_numpy(pd.get_dummies(batch_dataframe['batch']).values).type(torch.FloatTensor)
-    batch_dummy = Variable(batch_dummy, requires_grad=True)
+    batch_dummy = Variable(batch_dummy.to(trainer_vae.device), requires_grad=True)
 
     if obj2_type == 'MINE':
         sample1 = torch.cat((z, batch_dummy), 1)  # joint
