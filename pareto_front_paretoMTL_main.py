@@ -70,11 +70,11 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference
         return None, None, z, None
 
 def sample1_sample2_all(trainer_vae, input_data, obj2_type, reference_batch: int=0, compare_batch:int=1):
-    z_all = torch.empty(0, trainer_vae.model.n_latent)
-    batch_dummy_all = torch.empty(0, trainer_vae.model.n_batch)
-    batch_index_all = torch.empty(0, 1).type(torch.LongTensor)
-    z_reference_all = torch.empty(0, trainer_vae.model.n_latent)
-    z_compare_all = torch.empty(0, trainer_vae.model.n_latent)
+    z_all = torch.empty(0, trainer_vae.model.n_latent).to(trainer_vae.device)
+    batch_dummy_all = torch.empty(0, trainer_vae.model.n_batch).to(trainer_vae.device)
+    batch_index_all = torch.empty(0, 1).type(torch.LongTensor).to(trainer_vae.device)
+    z_reference_all = torch.empty(0, trainer_vae.model.n_latent).to(trainer_vae.device)
+    z_compare_all = torch.empty(0, trainer_vae.model.n_latent).to(trainer_vae.device)
 
     for tensors_list in input_data:
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
