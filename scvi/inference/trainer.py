@@ -341,7 +341,7 @@ class Trainer:
                         adv_loss.backward()
                         self.adv_optimizer.step()
                     if pre_adv_epoch % 10 == 0:
-                        train_eval, test_eval = self.obj1_obj2_eval(type='obj1')
+                        train_eval, test_eval = self.obj1_obj2_eval(type='obj2')
                         obj2_train_list.append(train_eval)
                         obj2_test_list.append(test_eval)
 
