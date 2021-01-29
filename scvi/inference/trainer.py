@@ -304,6 +304,7 @@ class Trainer:
             self.cal_loss = True
             self.cal_adv_loss = False
             for pre_epoch in range(pre_epochs):
+                self.model.train()
                 for tensors_list in self.data_loaders_loop():
                     loss, _, _ = self.two_loss(*tensors_list)
                     self.optimizer.zero_grad()
@@ -332,6 +333,7 @@ class Trainer:
                 self.cal_loss = False
                 self.cal_adv_loss = True
                 for pre_adv_epoch in range(pre_adv_epochs):
+                    self.adv_model.train()
                     for adv_tensors_list in self.data_loaders_loop():
                         _, adv_loss, _ = self.two_loss(*adv_tensors_list)
                         self.adv_optimizer.zero_grad()
