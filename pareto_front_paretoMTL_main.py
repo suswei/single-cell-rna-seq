@@ -543,8 +543,8 @@ def main( ):
         if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
             trainer_vae = construct_trainer_vae(gene_dataset, args)
             trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location='cpu'))
+            trainer_vae.model.to(trainer_vae.device)
             trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels',save_name=args.save_path + '/tsne_batch_label_train')
-            trainer_vae.model.to(torch.device('cuda'))
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
         print(obj1_train, obj1_test)
     elif args.standardize == True:

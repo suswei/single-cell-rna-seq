@@ -13,7 +13,7 @@
 #SBATCH --gres=gpu:p100:4
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=0-4:30:00
+#SBATCH --time=0-6:30:00
 
 # Batch arrays
 #SBATCH --array=0
