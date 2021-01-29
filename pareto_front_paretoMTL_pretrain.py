@@ -12,20 +12,20 @@ def main(taskid):
     hyperparameter_config = {
         'dataset_name': ['macaque_retina'],
         'confounder': ['batch'],
-        'n_layers_encoder': [4], #2
-        'n_layers_decoder': [4], #2
-        'n_hidden': [512], #128
+        'n_layers_encoder': [2], #2
+        'n_layers_decoder': [2], #2
+        'n_hidden': [128], #128
         'n_latent': [10], #10,50
         'batch_size': [512], #4 GPUs
         'adv_estimator': ['MINE'],
-        'adv_n_hidden': [512], #128
+        'adv_n_hidden': [128], #128
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'pre_epochs': [150], #300, 350, 400
+        'pre_epochs': [50], #300, 350, 400
         'pre_adv_epochs': [400],
         'pre_lr': [1e-3],
         'pre_adv_lr': [5e-5],
-        'MC': list(range(20)),
+        'MC': list(range(10)),
         'num_workers': [4]
     }
     keys, values = zip(*hyperparameter_config.items())
@@ -33,7 +33,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --change_composition --pre_train --MCs 20 "
+    os.system("python3 pareto_front_paretoMTL_main.py --change_composition --pre_train --MCs 10 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
