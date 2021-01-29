@@ -519,8 +519,8 @@ def main( ):
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
               n_hidden=128, n_latent=10, n_layers_encoder=2, n_layers_decoder=2, dropout_rate=0.1, reconstruction_loss='zinb')
     # frequency controls how often the statistics in trainer_vae.model are evaluated by compute_metrics() function in trainer.py
-    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=args.train_size, seed=args.desired_seed, frequency=10, kl=1)
-    trainer_vae.train(n_epochs=400, lr=0.001)
+    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=512, train_size=args.train_size, seed=args.desired_seed, frequency=10, kl=1)
+    trainer_vae.train(n_epochs=200, lr=0.001)
     #torch.save(trainer_vae.model.state_dict(), args.save_path) #saved into pickle file
     trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels',save_name=args.save_path + '/tsne_batch_label_train')
     ll_train_set = trainer_vae.history["ll_train_set"]

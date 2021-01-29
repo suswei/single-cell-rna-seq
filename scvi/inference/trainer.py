@@ -241,12 +241,57 @@ class Trainer:
         return type_class(model, gene_dataset, shuffle=shuffle, indices=indices, use_cuda=self.use_cuda,
                           data_loader_kwargs=self.data_loader_kwargs)
 
+    def obj1_obj2_eval(self, type='obj1'):
+        with torch.no_grad():
+            self.model.eval()
+            if type == 'obj1':
+                self.cal_loss = True
+                self.cal_adv_loss = False
+            elif type == 'obj2':
+                self.cal_loss = False
+                self.cal_adv_loss = True
+
+            minibatch_train_eval, minibatch_test_eval = [], []
+            for tensors_list in self.train_set:
+                if type == 'obj1':
+                    minibatch, _, _ = self.two_loss(tensors_list)
+                elif type == 'obj2':
+                    _, _, minibatch = self.two_loss(tensors_list)
+                minibatch_train_eval.append(minibatch.data)
+            for tensors_list in self.test_set:
+                if type == 'obj1':
+                    minibatch, _, _ = self.two_loss(tensors_list)
+                elif type == 'obj2':
+                    _, _, minibatch = self.two_loss(tensors_list)
+                minibatch_test_eval.append(minibatch.data)
+        train_eval = sum(minibatch_train_eval) / len(minibatch_train_eval)
+        test_eval = sum(minibatch_test_eval) / len(minibatch_test_eval)
+        return train_eval, test_eval
+
+    def diagnosis_plot(self, list1, list2, type, path):
+        plt.figure()
+        plt.plot(np.arange(0, len(list1), 1), list1, label='obj1_train')
+        plt.plot(np.arange(0, len(list2), 1), list2, label='obj1_test')
+        plt.legend()
+        plt.xticks(np.arange(0, len(list1), 1))
+        plt.title('train error vs test error', fontsize=10)
+        if type == 'obj1':
+            plt.ylabel('error (negative ELBO)')
+        elif type == 'obj2':
+            plt.ylabel('MINE or MMD or stdMMD')
+        if not os.path.exists(path):
+            os.makedirs(path)
+        plt.savefig("{}/{}_train_test_error.png".format(path,type))
+        plt.close()
+
     def pretrain_paretoMTL(self, pre_train: bool=False, pre_epochs: int=250, pre_lr: float=1e-3, eps: float = 0.01,
                         pre_adv_epochs: int=100, pre_adv_lr: float=5e-5, path: str='None', lr: float=1e-3, adv_lr: float=5e-5, standardize: bool=False,
                         std_paretoMTL: bool = False, obj1_max: float = 20000, obj1_min: float = 12000, obj2_max: float = 0.6, obj2_min: float = 0,
                         epochs: int=50, adv_epochs: int=1, n_tasks: int=2, npref: int=10, pref_idx: int=0, taskid: int=0):
 
         if pre_train == True:
+
+            obj1_train_list, obj1_test_list, obj2_train_list, obj2_test_list = [], [], [], []
 
             if torch.cuda.device_count() > 1:
                 self.model = torch.nn.DataParallel(self.model)
@@ -264,6 +309,13 @@ class Trainer:
                     self.optimizer.zero_grad()
                     loss.backward()
                     self.optimizer.step()
+                if pre_epoch % 10 == 0:
+                    train_eval, test_eval = self.obj1_obj2_eval(type='obj1')
+                    obj1_train_list.append(train_eval)
+                    obj1_test_list.append(test_eval)
+
+            self.diagnosis_plot(obj1_train_list[1:], obj1_test_list[1:], 'obj1', path)
+
             if torch.cuda.device_count() > 1:
                 torch.save(self.model.module.state_dict(), path + '/vae.pkl')
             else:
@@ -286,6 +338,12 @@ class Trainer:
                         self.optimizer.zero_grad()
                         adv_loss.backward()
                         self.adv_optimizer.step()
+                    if pre_adv_epoch % 10 == 0:
+                        train_eval, test_eval = self.obj1_obj2_eval(type='obj1')
+                        obj2_train_list.append(train_eval)
+                        obj2_test_list.append(test_eval)
+
+                self.diagnosis_plot(obj2_train_list[1:], obj2_test_list[1:], 'obj2', path)
                 if torch.cuda.device_count() > 1:
                     torch.save(self.adv_model.module.state_dict(), path + '/MINE.pkl')
                 else:
@@ -480,34 +538,14 @@ class Trainer:
             # diagnosis
             if std_paretoMTL == True:
                 if self.epoch % 10 == 0:
-                    with torch.no_grad():
-                        self.model.eval()
-                        self.cal_loss = True
-                        self.cal_adv_loss = False
-                        obj1_minibatch_train_eval, obj1_minibatch_test_eval = [],[]
-                        for tensors_list in self.train_set:
-                            obj1_minibatch, _, _ = self.two_loss(tensors_list)
-                            obj1_minibatch_train_eval.append(obj1_minibatch.data)
-                        for tensors_list in self.test_set:
-                            obj1_minibatch, _, _ = self.two_loss(tensors_list)
-                            obj1_minibatch_test_eval.append(obj1_minibatch.data)
-                    obj1_train_list.append(sum(obj1_minibatch_train_eval)/len(obj1_minibatch_train_eval))
-                    obj1_test_list.append(sum(obj1_minibatch_test_eval) / len(obj1_minibatch_test_eval))
+                    train_eval, test_eval = self.obj1_obj2_eval(type='obj1')
+                    obj1_train_list.append(train_eval)
+                    obj1_test_list.append(test_eval)
 
         if std_paretoMTL==True:
-            plt.figure()
-            plt.plot(np.arange(0, len(obj1_train_list), 1), obj1_train_list, label='obj1_train')
-            plt.plot(np.arange(0, len(obj1_test_list), 1), obj1_test_list, label='obj1_test')
-            plt.legend()
-            plt.xticks(np.arange(0, len(obj1_train_list), 1))
-            plt.title('train error vs test error', fontsize=10)
-            plt.ylabel('error (negative ELBO)')
-
             path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(self.adv_estimator, taskid)
-            if not os.path.exists(path):
-                os.makedirs(path)
-            plt.savefig("{}/train_test_error.png".format(path))
-            plt.close()
+            self.diagnosis_plot(obj1_train_list, obj1_test_list, 'obj1', path)
+
         return obj1_minibatch_list, obj2_minibatch_list
 
     def paretoMTL_param(self, n_tasks, obj1, obj2):
