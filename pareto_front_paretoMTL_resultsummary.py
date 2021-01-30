@@ -138,6 +138,9 @@ def draw_pareto_front(dataframe, MC_idx, methods_list, pareto_front_type, save_p
     if pareto_front_type == 'NN':
         xtitle = r'$\large \text{Loss }U_n(\phi, \theta)$'
         ytitle = r'$\large \text{Batch effect }NN_n(\phi)$'
+    elif pareto_front_type == 'obj2':
+        xtitle = r'$\large \text{Loss }U_n(\phi, \theta)$'
+        ytitle = r'$\large \text{Batch effect }MINE_{n,\psi}(\phi)$'
     else:
         xtitle = '-{}'.format(pareto_front_type.upper())
         ytitle = '-BE'
