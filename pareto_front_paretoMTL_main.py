@@ -8,7 +8,7 @@ import torch.utils.data
 from torch.autograd import Variable
 import torch.optim as optim
 from scvi.dataset.dataset import GeneExpressionDataset
-from scvi.dataset.muris_tabula import TabulaMuris
+from scvi.dataset.tabula_muris import TabulaMuris
 from scvi.dataset.macaque_retina import Macaque_Retina
 from scvi.dataset.dataset10X import Dataset10X
 from scvi.dataset.MCA import MCA
@@ -238,7 +238,7 @@ def main( ):
     parser.add_argument('--taskid', type=int, default=1000 + randint(0, 1000),
                         help='taskid from sbatch')
 
-    parser.add_argument('--dataset_name', type=str, default='muris_tabula',
+    parser.add_argument('--dataset_name', type=str, default='tabula_muris',
                         help='the name of the dataset')
 
     parser.add_argument('--change_composition', action='store_true', default=True,
@@ -397,7 +397,7 @@ def main( ):
     if not os.path.exists('./data/pareto_front_paretoMTL/%s/' % (args.dataset_name)):
         os.makedirs('./data/pareto_front_paretoMTL/%s/' % (args.dataset_name))
 
-    if args.dataset_name == 'muris_tabula':
+    if args.dataset_name == 'tabula_muris':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
         dataset2 = TabulaMuris('droplet', save_path=data_save_path)
         dataset1.subsample_genes(dataset1.nb_genes)
@@ -575,10 +575,10 @@ def main( ):
 
             trainer_vae = construct_trainer_vae(gene_dataset, args)
             trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location='cpu'))
+            os.remove(args.save_path + '/vae.pkl')
             if args.adv_estimator == 'MINE':
                 trainer_vae.adv_model.load_state_dict(torch.load(args.save_path + '/MINE.pkl', map_location='cpu'))
-            os.remove(args.save_path + '/vae.pkl')
-            os.remove(args.save_path + '/MINE.pkl')
+                os.remove(args.save_path + '/MINE.pkl')
 
         if torch.cuda.is_available():
             trainer_vae.model.to(trainer_vae.device)

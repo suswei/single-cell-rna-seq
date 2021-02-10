@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 import pandas as pd
 from scvi.dataset.dataset import GeneExpressionDataset
-from scvi.dataset.muris_tabula import TabulaMuris
+from scvi.dataset.tabula_muris import TabulaMuris
 from scipy import sparse
 import pickle
 from pygmo import hypervolume

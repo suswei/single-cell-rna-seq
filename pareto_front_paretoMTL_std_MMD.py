@@ -6,7 +6,7 @@ def main(taskid):
 
     taskid = int(taskid[0])
 
-    # dataset_name could be 'muris_tabula'
+    # dataset_name could be 'tabula_muris'
     # nuisance_variable is 'batch'
     # adv_estimator means estimator for confounding effect, it could be 'MINE', 'MMD', 'stdz_MMD' (stdz_MMD means standardize the dimension of z, then use MMD)
     hyperparameter_config = {
