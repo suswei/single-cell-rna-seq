@@ -10,6 +10,7 @@ import torch.optim as optim
 from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.tabula_muris import TabulaMuris
 from scvi.dataset.macaque_retina import Macaque_Retina
+from scvi.dataset.pbmc import PbmcDataset
 from scvi.dataset.dataset10X import Dataset10X
 from scvi.dataset.MCA import MCA
 from scvi.models import *
@@ -428,39 +429,6 @@ def main( ):
             dataset1.__dict__['labels'] = dataset1_labels_df_new.merge(label_change, how='left', left_on='label', right_on='label').loc[:,'new_label'].values.reshape(dataset1.__dict__['labels'].shape[0],1)
 
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
-    elif args.dataset_name == 'pbmc_pure_donor':
-        cell_types = np.array(["cd4_t_helper", "regulatory_t", "naive_t", "memory_t", "cytotoxic_t", "naive_cytotoxic", "b_cells", "cd34", "cd56_nk", "cd14_monocytes"])
-        cell_type_name = np.array(["CD4 T cells", "CD4 T cells Regulatory", "CD4 T cells Naive", "CD4 Memory T cells", "CD8 T cells", "CD8 T cells Naive", "B cells", "CD34 cells", "NK cells", "CD14+ Monocytes"])
-
-        datasets = []
-        for i, cell_type in enumerate(cell_types):
-            dataset = Dataset10X(cell_type, save_path=data_save_path)
-            dataset.cell_types = np.array([cell_type_name[i]])
-            dataset.labels = dataset.labels.astype('int')
-            dataset.subsample_genes(dataset.nb_genes)
-            dataset.gene_names = dataset.gene_symbols
-            datasets += [dataset]
-
-        pure = GeneExpressionDataset.concat_datasets(*datasets, shared_batches=True)
-
-        donor = Dataset10X('fresh_68k_pbmc_donor_a', save_path=data_save_path)
-        donor.gene_names = donor.gene_symbols
-
-        if not os.path.isfile(data_save_path + '10X/fresh_68k_pbmc_donor_a/68k_pbmc_barcodes_annotation.tsv'):
-            import urllib.request
-            annotation_url = 'https://raw.githubusercontent.com/10XGenomics/single-cell-3prime-paper/master/pbmc68k_analysis/68k_pbmc_barcodes_annotation.tsv'
-            urllib.request.urlretrieve(annotation_url,data_save_path + '10X/fresh_68k_pbmc_donor_a/68k_pbmc_barcodes_annotation.tsv')
-
-        annotation = pd.read_csv(data_save_path + '10X/fresh_68k_pbmc_donor_a/68k_pbmc_barcodes_annotation.tsv', sep='\t')
-        cellid1 = donor.barcodes
-        temp = cellid1.join(annotation)
-        assert all(temp[0] == temp['barcodes'])
-
-        donor.cell_types, donor.labels = np.unique(temp['celltype'], return_inverse=True)
-
-        donor.labels = donor.labels.reshape(len(donor.labels), 1)
-        donor.cell_types = np.array(['CD14+ Monocytes', 'B cells', 'CD34 cells', 'CD4 T cells', 'CD4 T cells Regulatory','CD4 T cells Naive', 'CD4 Memory T cells', 'NK cells','CD8 T cells', 'CD8 T cells Naive', 'Dendritic'])
-        gene_dataset = GeneExpressionDataset.concat_datasets(donor, pure)
     elif args.dataset_name == 'TM_MCA_Lung':
         dataset1 = TabulaMuris('facs', save_path=data_save_path, tissue='Lung')
         dataset2 = MCA(save_path=data_save_path, tissue='Lung')
@@ -473,19 +441,9 @@ def main( ):
         dataset1.subsample_genes(dataset1.nb_genes)
         dataset2.subsample_genes(dataset2.nb_genes)
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
-    '''
-    elif args.dataset_name == 'macaque_retina':
-        dataset_list = []
-        for macaque in ['M1', 'M2', 'M3', 'M4']:
-            for region in ['fovea', 'periphery']:
-                path = data_save_path + 'processed_macaque_{}{}_BC_count.csv.gz'.format(macaque, region)
-                if os.path.isfile(path):
-                    dataset = Macaque_Retina('macaque_retina',macaque, region, save_path=data_save_path)
-                    dataset.subsample_genes(dataset.nb_genes)
-                    dataset_list += [dataset]
-        gene_dataset = GeneExpressionDataset.concat_datasets(dataset_list[0], dataset_list[1], dataset_list[2], dataset_list[3], dataset_list[4], dataset_list[5], dataset_list[6])
-        print('Dataset reading done!')
-    '''
+    elif args.dataset_name == 'pbmc':
+        gene_dataset = PbmcDataset(save_path=data_save_path)
+
     #generate a random seed to split training and testing dataset
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
@@ -514,13 +472,14 @@ def main( ):
     # to avoid the case when there are very few input data points of the last minibatch in every epoch
     intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
     args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e10) / 1e10
+
     '''
     # If train vae alone
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
-              n_hidden=128, n_latent=10, n_layers_encoder=2, n_layers_decoder=2, dropout_rate=0.1, reconstruction_loss='zinb')
+              n_hidden=128, n_latent=10, n_layers_encoder=1, n_layers_decoder=1, dropout_rate=0.1, reconstruction_loss='zinb')
     # frequency controls how often the statistics in trainer_vae.model are evaluated by compute_metrics() function in trainer.py
-    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=512, train_size=args.train_size, seed=args.desired_seed, frequency=10, kl=1)
-    trainer_vae.train(n_epochs=200, lr=0.001)
+    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=args.train_size, seed=args.desired_seed, frequency=10, kl=1)
+    trainer_vae.train(n_epochs=150, lr=0.001)
     #torch.save(trainer_vae.model.state_dict(), args.save_path) #saved into pickle file
     trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels',save_name=args.save_path + '/tsne_batch_label_train')
     ll_train_set = trainer_vae.history["ll_train_set"]

@@ -3,7 +3,6 @@ from scvi.dataset.dataset import GeneExpressionDataset
 import numpy as np
 from scipy.sparse import csr_matrix
 
-
 class MCA(GeneExpressionDataset):
     def __init__(self, save_path='./data/pareto_front_scVI_MINE/MCA/', tissue='Lung'):
         self.save_path = save_path
