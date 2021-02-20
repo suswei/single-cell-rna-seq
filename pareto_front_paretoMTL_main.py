@@ -138,7 +138,7 @@ def MINE_after_trainerVae(trainer_vae, args):
         MINE_network.to(trainer_vae.device)
     MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=args.adv_lr)
 
-    for epoch in range(400):
+    for epoch in range(1):
         MINE_network.train()
         for tensors_list in trainer_vae.data_loaders_loop():
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list[0]
