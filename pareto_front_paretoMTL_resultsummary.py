@@ -514,7 +514,6 @@ def cell_type_composition(dataset_name, change_composition, save_path):
     compare_percentage = dataset1_percentage.merge(dataset2_percentage, how='outer', left_on='cell_type', right_on='cell_type')
     print(compare_percentage.fillna(0))
 
-
 def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch', methods_list: list=['MINE','MMD']):
 
     dir_path = './result/pareto_front_paretoMTL/{}/{}'.format(dataset, confounder)
