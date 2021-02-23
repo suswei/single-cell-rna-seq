@@ -247,6 +247,17 @@ def draw_barplot1(percent_dict, hypervolume_dict, methods_list, save_path, paret
     fig = make_subplots(rows=2, cols=2, subplot_titles=('train','test','train','test'), shared_xaxes=True, shared_yaxes=True,
                         horizontal_spacing=0.03, vertical_spacing=0.06)
 
+    if pareto_front_type == 'NN':
+        fig_title = r'$\Large U_n(\phi,\theta) \text{ versus } NN_n(\phi)$'
+    elif pareto_front_type == 'asw':
+        fig_title = r'$\Large -\text{ASW}\text{ versus }-\text{BE}$'
+    elif pareto_front_type == 'ari':
+        fig_title = r'$\Large -\text{ARI}\text{ versus }-\text{BE}$'
+    elif pareto_front_type == 'nmi':
+        fig_title = r'$\Large -\text{NMI}\text{ versus }-\text{BE}$'
+    elif pareto_front_type == 'uca':
+        fig_title = r'$\Large -\text{UCA}\text{ versus }-\text{BE}$'
+
     for row_num in range(2):
         if row_num == 0:
             data_dict = percent_dict
@@ -283,17 +294,26 @@ def draw_barplot1(percent_dict, hypervolume_dict, methods_list, save_path, paret
             l=80,
             r=1,
             b=60,
-            t=30,
+            t=80,
             pad=1
         ),
         font=dict(size=23, color='black', family='Times New Roman'),
+        title={
+            'text': fig_title,
+            'font': {
+                'size': 25
+            },
+            'y': 0.96,
+            'x': 0.55,
+            'xanchor': 'center',
+            'yanchor': 'top'},
         bargap=0,
         plot_bgcolor='rgb(255,255,255)'
     )
 
     # change font size for subplot title
     for i in fig['layout']['annotations']:
-        i['font'] = dict(size=30)
+        i['font'] = dict(size=25)
 
     fig.update_yaxes(title_text='percent of non-dominated points', title_font=dict(size=25, family='Times New Roman', color='black'), ticks='outside', row=1, col=1)
     fig.update_yaxes(title_text='hypervolume', title_font=dict(size=25, family='Times New Roman', color='black'), ticks='outside', row=2,col=1)
@@ -514,7 +534,7 @@ def cell_type_composition(dataset_name, change_composition, save_path):
     compare_percentage = dataset1_percentage.merge(dataset2_percentage, how='outer', left_on='cell_type', right_on='cell_type')
     print(compare_percentage.fillna(0))
 
-def paretoMTL_summary(dataset: str='muris_tabula', confounder: str='batch', methods_list: list=['MINE','MMD']):
+def paretoMTL_summary(dataset: str='tabula_muris', confounder: str='batch', methods_list: list=['MINE','MMD']):
 
     dir_path = './result/pareto_front_paretoMTL/{}/{}'.format(dataset, confounder)
     hyperparameter_config = {
