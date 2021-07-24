@@ -710,7 +710,6 @@ def get_bayes_factors(px_scale, all_labels, cell_idx, other_cell_idx=None, genes
     res = np.log(res + 1e-8) - np.log(1 - res + 1e-8)
     return res
 
-
 def plot_imputation(original, imputed, show_plot=True, title="Imputation"):
     y = imputed
     x = original

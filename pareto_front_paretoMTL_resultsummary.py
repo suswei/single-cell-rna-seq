@@ -77,28 +77,29 @@ def draw_pareto_front_MINE_MMD(dataframe, method, save_path):
             dp = np.array(list(dominatedPoints1))
 
             if i == 0:
-                marker_symbol = 'circle'
-            else:
                 marker_symbol = 'cross'
+                opacity = 1
+            else:
+                marker_symbol = 'circle'
+                opacity = 0.5
 
-            fig.add_trace(go.Scatter(x=obj1, y=obj2, text=['{}'.format(i) for i in pref_idx_list],
-                                     mode='markers+text', marker_size=10, marker_symbol=marker_symbol,
-                                     marker_color='rgba(0, 0, 255, .9)', showlegend=False))
+            fig.add_trace(go.Scatter(x=obj1, y=obj2, opacity=opacity, text=['{}'.format(i) for i in pref_idx_list],
+                                     mode='markers+text', textfont_size=12, textposition='top center', marker_size=10, marker_symbol=marker_symbol,
+                                     marker_color='rgba(0, 0, 0, 0)', marker_opacity=opacity, showlegend=False))
             if dp.shape[0] > 0:
                 fig.add_trace(go.Scatter(x=dp[:, 0].tolist(), y=dp[:, 1].tolist(),
                                          mode='markers', marker_size=10, marker_symbol=marker_symbol, name='{}, yes'.format(type),
-                                         marker_color='rgba(0, 0, 255, .9)', showlegend=True))
+                                         marker_color='rgba(0, 0, 255, .9)',marker_opacity=opacity, showlegend=True))
             if pp.shape[0] > 0:
                 fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
                                          mode='markers', marker_size=10, marker_symbol=marker_symbol, name='{}, no'.format(type),
-                                         marker_color='rgba(255, 25, 52, .9)', showlegend=True))
+                                         marker_color='rgba(255, 25, 52, .9)',marker_opacity=opacity, showlegend=True))
 
         if 'MINE' in method:
-            fig_title = r'$\Large V_n(\phi,\psi)=MINE_{\phi,n}(\phi,\psi)$'
+            fig_title = r'$\Large V_n(\phi)=MINE_{\psi,n}(\phi)$'
         elif 'MMD' in method:
-            fig_title = r'$\Large V_n(\phi,\psi)=MMD_{\tau,b}(\phi)$'
+            fig_title = r'$\Large V_n(\phi)=MMD_{n}(\phi)$'
 
-        fig.update_traces(textposition='top center')
         fig.update_layout(
             width=600,
             height=400,
@@ -109,7 +110,7 @@ def draw_pareto_front_MINE_MMD(dataframe, method, save_path):
                 t=40,
                 pad=1
             ),
-            font=dict(size=20, color='black', family='Times New Roman'),
+            font=dict(color='black', family='Times New Roman'),
             title={
                 'text': fig_title,
                 'font': {
@@ -119,17 +120,18 @@ def draw_pareto_front_MINE_MMD(dataframe, method, save_path):
                 'x': 0.42,
                 'xanchor': 'center',
                 'yanchor': 'top'},
-            legend_title="train/test, dominated",
+            legend_title=dict(font=dict(family='Times New Roman', size=20, color="black"),text='train/test, dominated'),
             legend=dict(
                 font=dict(
                     family='Times New Roman',
                     size=20,
-                    color="black"
+                    color='black'
                 )
-            )
+            ),
+            xaxis_tickformat='s'
         )
-        fig.update_xaxes(title_text=r'$\large \text{Loss }U_n(\phi, \theta)$' , title_font=dict(size=25, family='Times New Roman', color='black'),tick0=15200,dtick=100)
-        fig.update_yaxes(title_text=r'$\large \text{Batch confounding }V_n(\phi,\psi)$' ,title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj2_all) - 0.08, max(obj2_all) + 0.08], autorange=False)
+        fig.update_xaxes(tickfont=dict(size=20),title_text=r'$\large \text{Loss }U_n(\phi, \theta)$' , title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj1_all) - 50, max(obj1_all) + 50], autorange=False) #tick0=15200,dtick=100
+        fig.update_yaxes(tickfont=dict(size=20),title_text=r'$\large \text{Batch effect }V_n(\phi)$' ,title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj2_all) - 0.01, max(obj2_all) + 0.01], autorange=False)
 
         fig.write_image(save_path + '/{}/paretofront_{}_MC{}.png'.format(method, method, MC_idx))
 
@@ -138,9 +140,6 @@ def draw_pareto_front(dataframe, MC_idx, methods_list, pareto_front_type, save_p
     if pareto_front_type == 'NN':
         xtitle = r'$\large \text{Loss }U_n(\phi, \theta)$'
         ytitle = r'$\large \text{Batch effect }NN_n(\phi)$'
-    elif pareto_front_type == 'obj2':
-        xtitle = r'$\large \text{Loss }U_n(\phi, \theta)$'
-        ytitle = r'$\large \text{Batch effect }MINE_{n,\psi}(\phi)$'
     else:
         xtitle = '-{}'.format(pareto_front_type.upper())
         ytitle = '-BE'
@@ -180,23 +179,24 @@ def draw_pareto_front(dataframe, MC_idx, methods_list, pareto_front_type, save_p
                 percent_list_test += [pp.shape[0] / len(obj1)]
 
             if i == 0:
-                marker_symbol = 'circle'
-            else:
                 marker_symbol = 'cross'
+                opacity = 1
+            else:
+                marker_symbol = 'circle'
+                opacity = 0.5
 
             if j < len(methods_list)-1:
                 showlegend=False
             else:
                 showlegend=True
-            fig.add_trace(go.Scatter(x=obj1, y=obj2, text=['{}'.format(i) for i in pref_idx_list], marker_symbol=marker_symbol,
-                                     mode='markers+text',marker_size=10, marker_color='rgba(0, 0, 255, .9)', showlegend=False), math.ceil((j+1)/2), j - math.floor(j/2)*2 + 1)
+            fig.add_trace(go.Scatter(x=obj1, y=obj2, opacity=opacity, text=['{}'.format(i) for i in pref_idx_list], marker_symbol=marker_symbol,
+                                     mode='markers+text',textfont_size=12, textposition='top center',marker_size=10, marker_color='rgba(0, 0, 0, 0)', showlegend=False), math.ceil((j+1)/2), j - math.floor(j/2)*2 + 1)
             if dp.shape[0]>0:
                 fig.add_trace(go.Scatter(x = dp[:,0].tolist(), y = dp[:,1].tolist(), marker_symbol=marker_symbol,
-                                     mode='markers',marker_size=10, name='{}, yes'.format(type),marker_color='rgba(0, 0, 255, .9)', showlegend=showlegend), math.ceil((j+1)/2), j - math.floor(j/2)*2 + 1)
+                                     mode='markers',marker_size=10, name='{}, yes'.format(type),marker_color='rgba(0, 0, 255, .9)', marker_opacity=opacity, showlegend=showlegend), math.ceil((j+1)/2), j - math.floor(j/2)*2 + 1)
             if pp.shape[0]>0:
                 fig.add_trace(go.Scatter(x = pp[:,0].tolist(), y = pp[:,1].tolist(), marker_symbol=marker_symbol,
-                                     mode='markers',marker_size=10, name='{}, no'.format(type), marker_color='rgba(255, 25, 52, .9)',showlegend=showlegend), math.ceil((j+1)/2), j - math.floor(j/2)*2 + 1)
-    fig.update_traces(textposition='top center')
+                                     mode='markers',marker_size=10, name='{}, no'.format(type), marker_color='rgba(255, 25, 52, .9)',marker_opacity=opacity, showlegend=showlegend), math.ceil((j+1)/2), j - math.floor(j/2)*2 + 1)
 
     fig.update_layout(
             width=800,
@@ -208,7 +208,7 @@ def draw_pareto_front(dataframe, MC_idx, methods_list, pareto_front_type, save_p
                 t=30,
                 pad=1
             ),
-            font=dict(size=20, color='black', family='Times New Roman'),
+            font=dict(color='black', family='Times New Roman'),
             legend_title=dict(font=dict(family='Times New Roman', size=25, color="black"), text='train/test, dominated'),
             legend=dict(
                 font=dict(
@@ -224,14 +224,14 @@ def draw_pareto_front(dataframe, MC_idx, methods_list, pareto_front_type, save_p
         i['font'] = dict(size=25)
 
     if pareto_front_type in ['obj2','NN']:
-        fig.update_xaxes(title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj1_all)-20,max(obj1_all)+20],autorange=False)
+        fig.update_xaxes(tickfont=dict(size=20), title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj1_all)-20,max(obj1_all)+20],autorange=False)
     else:
-        fig.update_xaxes(title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj1_all) - 0.05, max(obj1_all) + 0.05], autorange=False)
+        fig.update_xaxes(tickfont=dict(size=20), title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj1_all) - 0.05, max(obj1_all) + 0.05], autorange=False)
 
     if pareto_front_type == 'NN':
-        fig.update_yaxes(title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj2_all) - 0.08, max(obj2_all) + 0.08], autorange=False)
+        fig.update_yaxes(tickfont=dict(size=20), title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj2_all) - 0.08, max(obj2_all) + 0.08], autorange=False)
     else:
-        fig.update_yaxes(title_font=dict(size=25, family='Times New Roman', color='black'), range=[min(obj2_all) - 0.08, max(obj2_all) + 0.08], autorange=False)
+        fig.update_yaxes(tickfont=dict(size=20), title_font=dict(size=25, family='Times New Roman', color='black'), range=[min(obj2_all) - 0.08, max(obj2_all) + 0.08], autorange=False)
 
     fig.write_image(save_path + '/paretofront_{}_MC{}.png'.format(pareto_front_type,MC_idx))
 
@@ -480,7 +480,7 @@ def compare_hypervolume_percent(dataframe, methods_list, dir_path):
         #draw_barplot2(percent_dict=percent_dict, hypervolume_dict=hypervolume_dict, methods_list=methods_list, pareto_front_type=pareto_front_type, save_path=dir_path)
 
 def cell_type_composition(dataset_name, change_composition, save_path):
-    if dataset_name == 'muris_tabula':
+    if dataset_name == 'tabula_muris':
         dataset1 = TabulaMuris('facs', save_path=save_path)
         dataset2 = TabulaMuris('droplet', save_path=save_path)
         dataset1.subsample_genes(dataset1.nb_genes)

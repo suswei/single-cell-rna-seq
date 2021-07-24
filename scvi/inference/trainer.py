@@ -43,7 +43,8 @@ class Trainer:
                  benchmark=False, verbose=False, frequency=None, weight_decay=1e-6, early_stopping_kwargs=dict(),
                  data_loader_kwargs=dict(), save_path='None', batch_size=128, adv_estimator='None',
                  adv_n_hidden=128, adv_n_layers=10, adv_activation_fun='ELU', unbiased_loss=True, adv_w_initial='Normal',
-                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5, batch_ratio: list=[], nsamples: int=1e5):
+                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5, cross_validation: bool=False, nfolds: int=8,
+                 n_fold: int=0, regularize_weight: float=10000, batch_ratio: list=[], nsamples: int=1e5):
 
         self.model = model
         self.gene_dataset = gene_dataset
@@ -64,6 +65,10 @@ class Trainer:
         elif self.adv_estimator in ['MMD','stdz_MMD']:
             self.MMD_loss = MMD_loss(kernel_mul = MMD_kernel_mul, kernel_num = MMD_kernel_num)
 
+        self.cross_validation = cross_validation
+        self.regularize_weight = regularize_weight
+        self.nfolds = nfolds
+        self.n_fold = n_fold
         self.batch_ratio = batch_ratio
         self.nsamples = nsamples
 
@@ -123,9 +128,9 @@ class Trainer:
         # else:
         optimizer = self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps)  # weight_decay=self.weight_decay,
 
-        self.compute_metrics_time = 0
+        #self.compute_metrics_time = 0
         self.n_epochs = n_epochs
-        self.compute_metrics() #the model will be evaluated one epoch before training.
+        #self.compute_metrics() #the model will be evaluated one epoch before training.
 
         with trange(n_epochs, desc="training", file=sys.stdout, disable=self.verbose) as pbar:
             # We have to use tqdm this way so it works in Jupyter notebook.
@@ -135,14 +140,19 @@ class Trainer:
                 pbar.update(1)
 
                 for tensors_list in self.data_loaders_loop():
-                    loss = self.loss(*tensors_list)
+                    if self.cross_validation == True:
+                        self.cal_loss = True
+                        self.cal_adv_loss = True
+                        loss = self.two_loss(*tensors_list)
+                    else:
+                        loss = self.loss(*tensors_list)
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
 
-                if not self.on_epoch_end():
-                    break
-
+                #if not self.on_epoch_end():
+                #    break
+        '''
         if self.early_stopping.save_best_state_metric is not None:
             self.model.load_state_dict(self.best_state_dict)
             self.compute_metrics()
@@ -151,7 +161,7 @@ class Trainer:
         self.training_time += (time.time() - begin) - self.compute_metrics_time
         if self.verbose and self.frequency:
             print("\nTraining time:  %i s. / %i epochs" % (int(self.training_time), self.n_epochs))
-
+        '''
     def on_epoch_begin(self):
         pass
 
@@ -223,11 +233,16 @@ class Trainer:
         model = self.model if model is None and hasattr(self, "model") else model
         gene_dataset = self.gene_dataset if gene_dataset is None and hasattr(self, "model") else gene_dataset
         n = len(gene_dataset)
-        n_train, n_test = _validate_shuffle_split(n, test_size, train_size)
-        np.random.seed(seed=seed)
-        permutation = np.random.permutation(n)
-        indices_test = permutation[:n_test]
-        indices_train = permutation[n_test:(n_test + n_train)]
+        if self.cross_validation==False:
+            n_train, n_test = _validate_shuffle_split(n, test_size, train_size)
+            np.random.seed(seed=seed)
+            permutation = np.random.permutation(n)
+            indices_test = permutation[:n_test]
+            indices_train = permutation[n_test:(n_test + n_train)]
+        else:
+            number_per_fold = int(n/self.nfolds)
+            indices_test = list(range((self.n_fold-1)*number_per_fold, self.n_fold*number_per_fold, 1))
+            indices_train = [k for k in list(range(n)) if k not in indices_test]
 
         return (
             self.create_posterior(model, gene_dataset, indices=indices_train, type_class=type_class),

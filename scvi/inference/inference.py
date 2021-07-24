@@ -115,16 +115,20 @@ class UnsupervisedTrainer(Trainer):
                 if len(self.batch_ratio)>0:
                     empirical_MI = EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.batch_ratio.to(self.device), self.nsamples)
                     print('Epoch: {}, neg_ELBO: {}, {}: {}, empirical_MI: {}, NN: {}.'.format(self.epoch, loss, self.adv_estimator, obj2_minibatch, empirical_MI, NN_estimator))
-                else:
+                elif self.cross_validation==False:
                     print('Epoch: {}, neg_ELBO: {}, {}: {}, NN: {}.'.format(self.epoch, loss, self.adv_estimator, obj2_minibatch, NN_estimator))
-
+                else:
+                    print('Epoch: {}, neg_ELBO: {}, {}: {}, regularized_loss: {}.'.format(self.epoch, loss, self.adv_estimator,
+                                                                            obj2_minibatch, loss + self.regularize_weight*adv_loss))
         #objective 1 equals loss
         if self.cal_loss == True and self.cal_adv_loss == False:
             return loss, None, None
         elif self.cal_loss == False and self.cal_adv_loss == True:
             return None, adv_loss, obj2_minibatch
-        elif self.cal_loss == True and self.cal_adv_loss == True:
+        elif self.cal_loss == True and self.cal_adv_loss == True and self.cross_validation==False:
             return loss, adv_loss, obj2_minibatch
+        elif self.cal_loss == True and self.cal_adv_loss == True and self.cross_validation==True:
+            return loss + self.regularize_weight*adv_loss
 
     def adv_load_minibatch(self, z, batch_index, reference_batch:float=0, compare_batch: float=1):
 
@@ -162,8 +166,7 @@ class UnsupervisedTrainer(Trainer):
             if torch.cuda.device_count() > 1:
                 if self.adv_model.module.unbiased_loss:
                     if self.adv_model.module.ma_et is None:
-                        self.adv_model.module.ma_et = torch.mean(
-                            et).detach().item()  # detach means will not calculate gradient for ma_et, ma_et is just a number
+                        self.adv_model.module.ma_et = torch.mean(et).detach().item()  # detach means will not calculate gradient for ma_et, ma_et is just a number
                     self.adv_model.module.ma_et = (1 - self.adv_model.module.ma_rate) * self.adv_model.module.ma_et + self.adv_model.module.ma_rate * torch.mean(et).detach().item()
 
                     # Pay attention, this unbiased loss is not our MINE estimator,

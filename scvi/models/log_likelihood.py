@@ -6,7 +6,6 @@ import torch.nn.functional as F
 from torch import logsumexp
 from torch.distributions import Normal
 
-
 def compute_log_likelihood(vae, posterior, **kwargs):
     """ Computes log p(x/z), which is the reconstruction error .
         Differs from the marginal log likelihood, but still gives good
@@ -21,7 +20,6 @@ def compute_log_likelihood(vae, posterior, **kwargs):
         log_lkl += torch.sum(reconst_loss).item()
     n_samples = len(posterior.indices)
     return log_lkl / n_samples
-
 
 def compute_marginal_log_likelihood(vae, posterior, n_samples_mc=100):
     """ Computes a biased estimator for log p(x), which is the marginal log likelihood.
@@ -52,7 +50,6 @@ def compute_marginal_log_likelihood(vae, posterior, n_samples_mc=100):
     n_samples = len(posterior.indices)
     # The minus sign is there because we actually look at the negative log likelihood
     return - log_lkl / n_samples
-
 
 def log_zinb_positive(x, mu, theta, pi, eps=1e-8):
     """
