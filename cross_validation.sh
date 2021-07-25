@@ -7,7 +7,7 @@
 
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem 7200
+#SBATCH --mem 4200
 
 # The maximum running time of the job in days-hours:mins:sec
 #SBATCH --time=0-4:00:00
