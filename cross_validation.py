@@ -20,7 +20,7 @@ def main(taskid):
         'adv_estimator': ['stdz_MMD'],
         'MMD_kernel_mul': [2],
         'MMD_kernel_num': [15],
-        'epochs': [250],
+        'epochs': [2],
         'lr': [1e-3],
         'MCs': [10],
         'MC': list(range(20)),
