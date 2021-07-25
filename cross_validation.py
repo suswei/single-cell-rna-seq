@@ -23,7 +23,7 @@ def main(taskid):
         'epochs': [2],
         'lr': [1e-3],
         'MCs': [10],
-        'MC': list(range(20)),
+        'MC': list(range(10)),
         'n_weights': [11],
         'regularize_weight': [10000, 9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 100],
         'nfolds': [8],
