@@ -240,9 +240,11 @@ class Trainer:
             indices_test = permutation[:n_test]
             indices_train = permutation[n_test:(n_test + n_train)]
         else:
+            np.random.seed(seed=seed)
+            permutation = np.random.permutation(n)
             number_per_fold = int(n/self.nfolds)
-            indices_test = list(range((self.n_fold-1)*number_per_fold, self.n_fold*number_per_fold, 1))
-            indices_train = [k for k in list(range(n)) if k not in indices_test]
+            indices_test = permutation[(self.n_fold-1)*number_per_fold:self.n_fold*number_per_fold]
+            indices_train = [k for k in permutation if k not in indices_test]
 
         return (
             self.create_posterior(model, gene_dataset, indices=indices_train, type_class=type_class),

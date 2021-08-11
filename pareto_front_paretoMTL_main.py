@@ -11,7 +11,6 @@ from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.tabula_muris import TabulaMuris
 from scvi.dataset.macaque_retina import Macaque_Retina
 from scvi.dataset.pbmc import PbmcDataset
-from scvi.dataset.dataset10X import Dataset10X
 from scvi.dataset.MCA import MCA
 from scvi.models import *
 from scvi.inference import UnsupervisedTrainer
@@ -22,7 +21,7 @@ import matplotlib.pyplot as plt
 
 def construct_trainer_vae(gene_dataset, args):
     vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * args.use_batches,n_labels=gene_dataset.n_labels,
-                    n_hidden=args.n_hidden, n_latent=args.n_latent,n_layers_encoder=args.n_layers_encoder,
+                    n_hidden=args.n_hidden, n_latent=args.n_latent, n_layers_encoder=args.n_layers_encoder,
                     n_layers_decoder=args.n_layers_decoder,dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss)
     if args.adv_estimator == 'MINE':
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
@@ -376,7 +375,7 @@ def main( ):
     parser.add_argument('--n_samples_tsne', type=int, default=1500,
                         help='the number of samples for tsne plot')
 
-    parser.add_argument('--MCs', type=int, default=100,
+    parser.add_argument('--MCs', type=int, default=10,
                         help='the number to repeat pareto MTL')
 
     parser.add_argument('--MC', type=int, default=0,
@@ -482,7 +481,7 @@ def main( ):
         gene_dataset = trainer_vae.train_set.gene_dataset
         args.cross_validation = True
         trainer_vae = construct_trainer_vae(gene_dataset, args)
-        trainer_vae.train(n_epochs=args.epochs, lr=0.001)
+        trainer_vae.train(n_epochs=args.epochs, lr=args.lr)
     else:
         if args.pre_train == True:
             args.desired_seed = int(desired_seeds[0, args.taskid])
