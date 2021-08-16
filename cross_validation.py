@@ -32,7 +32,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --cross_validation "
+    os.system("python3 pareto_front_paretoMTL_main.py --regularize "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
               "--adv_estimator %s --MMD_kernel_mul %s --MMD_kernel_num %s "
