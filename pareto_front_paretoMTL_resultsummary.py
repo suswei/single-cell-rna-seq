@@ -2,12 +2,10 @@ import os
 import itertools
 import numpy as np
 import pandas as pd
-from scvi.dataset.dataset import GeneExpressionDataset
 from scvi.dataset.tabula_muris import TabulaMuris
 from scipy import sparse
 import pickle
 from pygmo import hypervolume
-import statistics
 import math
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots

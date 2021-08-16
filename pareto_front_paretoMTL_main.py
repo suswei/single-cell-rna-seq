@@ -29,15 +29,15 @@ def construct_trainer_vae(gene_dataset, args):
                                           adv_n_hidden=args.adv_n_hidden, adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
                                           unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
     elif args.adv_estimator in ['MMD','stdz_MMD']:
-        if args.cross_validation == False:
+        if args.regularize == False:
             trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, MMD_kernel_mul=args.MMD_kernel_mul,
                                           MMD_kernel_num=args.MMD_kernel_num, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
         else:
             trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator,MMD_kernel_mul=args.MMD_kernel_mul,
-                                          MMD_kernel_num=args.MMD_kernel_num, cross_validation=args.cross_validation, nfolds=args.nfolds,
-                                          n_fold=args.n_fold, regularize_weight=args.regularize_weight, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+                                          MMD_kernel_num=args.MMD_kernel_num, regularize=args.regularize, regularize_weight=args.regularize_weight,
+                                          batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
     trainer_vae.kl_weight = 1
@@ -385,14 +385,10 @@ def main( ):
     parser.add_argument('--eval_samplesize', type=int, default=3000,
                         help='sample size to get NN estimator and MMD estimator at evaluation stage')
 
-    #for cross validation
-    parser.add_argument('--cross_validation', action='store_true', default=False,
-                        help='whether to do cross validation for regularization')
-    parser.add_argument('--nfolds', type=int, default=8,
-                        help='number of folds')
-    parser.add_argument('--n_fold', type=int, default=8,
-                        help='n_fold cross validation')
-    parser.add_argument('--n_weights', type=int, default=11,
+    #for regularization
+    parser.add_argument('--regularize', action='store_true', default=False,
+                        help='whether to regularize or not')
+    parser.add_argument('--n_weights', type=int, default=10,
                         help='number of weights')
     parser.add_argument('--regularize_weight', type=float, default=10000,
                         help='weight for MMD regularization')
@@ -466,20 +462,16 @@ def main( ):
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
 
-    if args.cross_validation == True:
-        args.save_path = './result/cross_validation/{}/{}/MC{}/weight{}/nfold{}'.format(args.dataset_name, args.confounder, args.MC, int(args.regularize_weight),args.n_fold)
-        if not os.path.exists('./result/cross_validation/{}/{}/MC{}/weight{}/nfold{}'.format(args.dataset_name, args.confounder, args.MC, int(args.regularize_weight),args.n_fold)):
-            os.makedirs('./result/cross_validation/{}/{}/MC{}/weight{}/nfold{}'.format(args.dataset_name, args.confounder, args.MC, int(args.regularize_weight),args.n_fold))
+    if args.regularize == True:
+        args.save_path = './result/regularize/{}/{}/MC{}/weight{}'.format(args.dataset_name, args.confounder, args.MC, int(args.regularize_weight))
+        if not os.path.exists('./result/regularize/{}/{}/MC{}/weight{}'.format(args.dataset_name, args.confounder, args.MC, int(args.regularize_weight))):
+            os.makedirs('./result/regularize/{}/{}/MC{}/weight{}'.format(args.dataset_name, args.confounder, args.MC, int(args.regularize_weight)))
 
-        args.desired_seed = int(desired_seeds[0, args.taskid//(args.n_weights*args.nfolds)])
+        args.desired_seed = int(desired_seeds[0, args.taskid//args.n_weights])
         # calculate ratio to split the gene_dataset into training and testing dataset
         # to avoid the case when there are very few input data points of the last minibatch in every epoch
         intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
         args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e10) / 1e10
-        args.cross_validation = False
-        trainer_vae = construct_trainer_vae(gene_dataset, args)
-        gene_dataset = trainer_vae.train_set.gene_dataset
-        args.cross_validation = True
         trainer_vae = construct_trainer_vae(gene_dataset, args)
         trainer_vae.train(n_epochs=args.epochs, lr=args.lr)
     else:

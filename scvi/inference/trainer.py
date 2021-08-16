@@ -43,8 +43,7 @@ class Trainer:
                  benchmark=False, verbose=False, frequency=None, weight_decay=1e-6, early_stopping_kwargs=dict(),
                  data_loader_kwargs=dict(), save_path='None', batch_size=128, adv_estimator='None',
                  adv_n_hidden=128, adv_n_layers=10, adv_activation_fun='ELU', unbiased_loss=True, adv_w_initial='Normal',
-                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5, cross_validation: bool=False, nfolds: int=8,
-                 n_fold: int=0, regularize_weight: float=10000, batch_ratio: list=[], nsamples: int=1e5):
+                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5, regularize: bool=False, regularize_weight: float=10000, batch_ratio: list=[], nsamples: int=1e5):
 
         self.model = model
         self.gene_dataset = gene_dataset
@@ -65,10 +64,8 @@ class Trainer:
         elif self.adv_estimator in ['MMD','stdz_MMD']:
             self.MMD_loss = MMD_loss(kernel_mul = MMD_kernel_mul, kernel_num = MMD_kernel_num)
 
-        self.cross_validation = cross_validation
+        self.regularize = regularize
         self.regularize_weight = regularize_weight
-        self.nfolds = nfolds
-        self.n_fold = n_fold
         self.batch_ratio = batch_ratio
         self.nsamples = nsamples
 
@@ -140,7 +137,7 @@ class Trainer:
                 pbar.update(1)
 
                 for tensors_list in self.data_loaders_loop():
-                    if self.cross_validation == True:
+                    if self.regularize == True:
                         self.cal_loss = True
                         self.cal_adv_loss = True
                         loss = self.two_loss(*tensors_list)
@@ -233,18 +230,11 @@ class Trainer:
         model = self.model if model is None and hasattr(self, "model") else model
         gene_dataset = self.gene_dataset if gene_dataset is None and hasattr(self, "model") else gene_dataset
         n = len(gene_dataset)
-        if self.cross_validation==False:
-            n_train, n_test = _validate_shuffle_split(n, test_size, train_size)
-            np.random.seed(seed=seed)
-            permutation = np.random.permutation(n)
-            indices_test = permutation[:n_test]
-            indices_train = permutation[n_test:(n_test + n_train)]
-        else:
-            np.random.seed(seed=seed)
-            permutation = np.random.permutation(n)
-            number_per_fold = int(n/self.nfolds)
-            indices_test = permutation[(self.n_fold-1)*number_per_fold:self.n_fold*number_per_fold]
-            indices_train = [k for k in permutation if k not in indices_test]
+        n_train, n_test = _validate_shuffle_split(n, test_size, train_size)
+        np.random.seed(seed=seed)
+        permutation = np.random.permutation(n)
+        indices_test = permutation[:n_test]
+        indices_train = permutation[n_test:(n_test + n_train)]
 
         return (
             self.create_posterior(model, gene_dataset, indices=indices_train, type_class=type_class),
