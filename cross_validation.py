@@ -25,7 +25,7 @@ def main(taskid):
         'MCs': [20],
         'MC': list(range(20)),
         'n_weights': [10],
-        'regularize_weight': [6000, 4000, 2000, 1000, 100, 80, 60, 40, 20, 10]
+        'regularize_weight': [10, 40, 80, 100, 400, 800, 1000, 2000, 4000, 6000]
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
