@@ -88,7 +88,7 @@ def draw_plot(save_path, dataframe, MC_idx):
                                      name='{}, no'.format(type),
                                      marker_color='rgba(255, 25, 52, .9)', marker_opacity=opacity, showlegend=True))
 
-    fig_title = r'$\Large V_n(\phi)=MMD_{n}(\phi)$'
+    fig_title = 'MMD'
     fig.update_layout(
         width=600,
         height=400,
@@ -122,14 +122,14 @@ def draw_plot(save_path, dataframe, MC_idx):
     fig.update_xaxes(tickfont=dict(size=20), title_text=r'$\large \text{Loss }U_n(\phi, \theta)$',
                      title_font=dict(size=25, family='Times New Roman', color='black'),
                      range=[min(obj1_all) - 50, max(obj1_all) + 50], autorange=False)  # tick0=15200,dtick=100
-    fig.update_yaxes(tickfont=dict(size=20), title_text=r'$\large \text{Batch effect }V_n(\phi)$',
+    fig.update_yaxes(tickfont=dict(size=20), title_text=r'$\large \text{Batch effect }NN_n(\phi)$',
                      title_font=dict(size=25, family='Times New Roman', color='black'),
                      range=[min(obj2_all) - 0.01, max(obj2_all) + 0.01], autorange=False)
 
     fig.write_image(save_path + '/MC{}.png'.format(MC_idx))
 
-def regularize_summary(MCs):
-    dir_path = './result/regularize/tabula_muris/batch'
+def main(MCs):
+    dir_path = './result/regularize1/tabula_muris/batch'
     hyperparameter_config = {
         'MC': list(range(MCs)),
         'regularize_weight': [10, 40, 80, 100, 400, 800, 1000, 2000, 4000, 6000],
@@ -160,3 +160,7 @@ def regularize_summary(MCs):
     for MC in range(MCs):
         dataframe = results_config_total[results_config_total.MC.eq(MC)]
         draw_plot(dir_path, dataframe, MC)
+
+# Run the actual program
+if __name__ == "__main__":
+    main()
