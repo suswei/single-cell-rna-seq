@@ -10,7 +10,7 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # conf_estimator means estimator for confounding effect, it could be 'MINE', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
     hyperparameter_config = {
-        'dataset_name': ['pbmc'],
+        'dataset_name': ['tabula_muris'],
         'confounder': ['batch'],
         'n_layers_encoder': [2], #2
         'n_layers_decoder': [2], #2
@@ -33,7 +33,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --change_composition --pre_train --MCs 20 "
+    os.system("python3 pareto_front_paretoMTL_main.py --pre_train --MCs 20 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "

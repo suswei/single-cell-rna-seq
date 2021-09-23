@@ -572,52 +572,52 @@ def main( ):
             params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
             trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
 
-        trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
-        trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
+            trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
+            trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
 
-    #obj1 for the whole training and testing set
-    obj1_train, obj1_test = obj1_train_test(trainer_vae)
+            #obj1 for the whole training and testing set
+            obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
-    # obj2 for the whole training and testing set
-    if trainer_vae.adv_estimator == 'MINE':
-        obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
-    elif trainer_vae.adv_estimator == 'MMD':
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
-    elif trainer_vae.adv_estimator == 'stdz_MMD':
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
+            # obj2 for the whole training and testing set
+            if trainer_vae.adv_estimator == 'MINE':
+                obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
+            elif trainer_vae.adv_estimator == 'MMD':
+                obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
+            elif trainer_vae.adv_estimator == 'stdz_MMD':
+                obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
 
-    NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
+            NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
 
-    asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
-    be_train = trainer_vae.train_set.entropy_batch_mixing()
+            asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
+            be_train = trainer_vae.train_set.entropy_batch_mixing()
 
-    asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
-    be_test = trainer_vae.test_set.entropy_batch_mixing()
+            asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
+            be_test = trainer_vae.test_set.entropy_batch_mixing()
 
-    results_dict = {'obj1_train': [obj1_train],
-                    'obj2_train': [obj2_train],
-                    'NN_train': [NN_train],
-                    'obj1_test': [obj1_test],
-                    'obj2_test': [obj2_test],
-                    'NN_test': [NN_test],
-                    'asw_train': [asw_train],
-                    'nmi_train': [nmi_train],
-                    'ari_train': [ari_train],
-                    'uca_train': [uca_train],
-                    'be_train': [be_train],
-                    'asw_test': [asw_test],
-                    'nmi_test': [nmi_test],
-                    'ari_test': [ari_test],
-                    'uca_test': [uca_test],
-                    'be_test': [be_test]}
+            results_dict = {'obj1_train': [obj1_train],
+                            'obj2_train': [obj2_train],
+                            'NN_train': [NN_train],
+                            'obj1_test': [obj1_test],
+                            'obj2_test': [obj2_test],
+                            'NN_test': [NN_test],
+                            'asw_train': [asw_train],
+                            'nmi_train': [nmi_train],
+                            'ari_train': [ari_train],
+                            'uca_train': [uca_train],
+                            'be_train': [be_train],
+                            'asw_test': [asw_test],
+                            'nmi_test': [nmi_test],
+                            'ari_test': [ari_test],
+                            'uca_test': [uca_test],
+                            'be_test': [be_test]}
 
-    args_dict = vars(args)
-    with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
-        pickle.dump(args_dict, f)
+            args_dict = vars(args)
+            with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
+                pickle.dump(args_dict, f)
 
-    with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
-        pickle.dump(results_dict, f)
-    print(results_dict)
+            with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
+                pickle.dump(results_dict, f)
+            print(results_dict)
 
 # Run the actual program
 if __name__ == "__main__":
