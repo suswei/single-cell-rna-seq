@@ -429,6 +429,7 @@ class Trainer:
                 return obj1_minibatch_list, obj2_minibatch_list
 
             else:
+                self.load_dict(path=path, lr=lr, eps=eps, adv_estimator=self.adv_estimator)
                 #standardize + paretoMTL
                 obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(std_paretoMTL=std_paretoMTL, obj1_max=obj1_max,
                     obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, epochs=epochs, adv_epochs=adv_epochs,
