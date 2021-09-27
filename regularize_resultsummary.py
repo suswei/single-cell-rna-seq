@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import argparse
 
 def simple_cull(inputPoints, dominates, return_index: bool=False, min_max: str='min'):
     paretoPoints = set()
@@ -122,17 +123,22 @@ def draw_plot(save_path, dataframe, MC_idx):
     fig.update_xaxes(tickfont=dict(size=20), title_text=r'$\large \text{Loss }U_n(\phi, \theta)$',
                      title_font=dict(size=25, family='Times New Roman', color='black'),
                      range=[min(obj1_all) - 50, max(obj1_all) + 50], autorange=False)  # tick0=15200,dtick=100
-    fig.update_yaxes(tickfont=dict(size=20), title_text=r'$\large \text{Batch effect }NN_n(\phi)$',
+    fig.update_yaxes(tickfont=dict(size=20), title_text=r'$\large \text{Batch effect }MMD_n(\phi)$',
                      title_font=dict(size=25, family='Times New Roman', color='black'),
-                     range=[min(obj2_all) - 0.01, max(obj2_all) + 0.01], autorange=False)
+                     range=[min(obj2_all) - 0.2, max(obj2_all) + 0.2], autorange=False)
 
     fig.write_image(save_path + '/MC{}.png'.format(MC_idx))
 
-def main(MCs):
-    dir_path = './result/regularize1/tabula_muris/batch'
+def main( ):
+
+    parser = argparse.ArgumentParser(description='regularize')
+    parser.add_argument('--MCs', type=int, default=20, help='number of Monte Carlos')
+    args = parser.parse_args()
+
+    dir_path = './result/regularize/tabula_muris/batch'
     hyperparameter_config = {
-        'MC': list(range(MCs)),
-        'regularize_weight': [10, 40, 80, 100, 400, 800, 1000, 2000, 4000, 6000],
+        'MC': list(range(args.MCs)),
+        'regularize_weight': [0, 5, 10, 50, 100, 400, 800, 1000, 2000, 4000],
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -157,7 +163,7 @@ def main(MCs):
         else:
             print('taskid{}, MC{}, weight{}'.format(i, MC, regularize_weight))
 
-    for MC in range(MCs):
+    for MC in range(args.MCs):
         dataframe = results_config_total[results_config_total.MC.eq(MC)]
         draw_plot(dir_path, dataframe, MC)
 

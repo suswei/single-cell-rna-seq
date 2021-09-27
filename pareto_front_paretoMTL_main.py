@@ -311,7 +311,7 @@ def main( ):
     parser.add_argument('--MMD_kernel_mul', type=float, default=2.0,
                         help='the multiplier value to calculate bandwidth')
 
-    parser.add_argument('--MMD_kernel_num', type=int, default=5,
+    parser.add_argument('--MMD_kernel_num', type=int, default=15,
                         help='the number of kernels to get MMD')
 
     #for pre_train
@@ -542,9 +542,13 @@ def main( ):
             obj1_max = max(obj1_minibatch_list)
             obj1_min = min(obj1_minibatch_list)
             print('obj1_max: {}, obj1_min: {}'.format(obj1_max, obj1_min))
+
             obj2_max = max(obj2_minibatch_list)
             obj2_min = min(obj2_minibatch_list)
             print('obj2_max: {}, obj2_min: {}'.format(obj2_max, obj2_min))
+
+            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
+            print('obj2_train: {}, obj2_test: {}'.format(obj2_train, obj2_test))
 
         elif args.std_paretoMTL == True:
             _, _ = trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, std_paretoMTL=args.std_paretoMTL,
