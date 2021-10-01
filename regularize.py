@@ -20,26 +20,25 @@ def main(taskid):
         'adv_estimator': ['stdz_MMD'],
         'MMD_kernel_mul': [2],
         'MMD_kernel_num': [15],
-        'epochs': [150],
+        'epochs': [250],
         'lr': [1e-3],
-        'MCs': [20],
         'MC': list(range(20)),
-        'n_weights': [10],
-        'regularize_weight': [0.001, 5, 10, 50, 100, 400, 800, 1000, 2000, 4000]
+        'nweights_weight': [{'n_weights': n, 'weight': i} for n, i in zip([10] * 10, [0, 5, 10, 50, 100, 400, 800, 1000, 2000, 4000])]
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --regularize "
+    os.system("python3 pareto_front_paretoMTL_main.py --regularize --use_batches "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
-              "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
+              "--n_layers_decoder %s --n_hidden %s --n_latent %s  --batch_size %s "
               "--adv_estimator %s --MMD_kernel_mul %s --MMD_kernel_num %s "
-              "--epochs %s --lr %s --MCs %s --MC %s --n_weights %s --regularize_weight %s "
+              "--epochs %s --lr %s --MC %s --n_weights %s --weight %s "
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['MMD_kernel_mul'],
-                 temp['MMD_kernel_num'], temp['epochs'], temp['lr'], temp['MCs'], temp['MC'], temp['n_weights'], temp['regularize_weight'])
+                 temp['MMD_kernel_num'], temp['epochs'], temp['lr'], temp['MC'],
+                 temp['nweights_weight']['n_weights'], temp['nweights_weight']['weight'])
               )
 if __name__ == "__main__":
     main(sys.argv[1:])

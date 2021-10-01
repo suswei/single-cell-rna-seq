@@ -119,7 +119,7 @@ class UnsupervisedTrainer(Trainer):
                     print('Epoch: {}, neg_ELBO: {}, {}: {}, NN: {}.'.format(self.epoch, loss, self.adv_estimator, obj2_minibatch, NN_estimator))
                 else:
                     print('Epoch: {}, neg_ELBO: {}, {}: {}, regularized_loss: {}.'.format(self.epoch, loss, self.adv_estimator,
-                                                                            obj2_minibatch, loss + self.regularize_weight*adv_loss))
+                                                                            obj2_minibatch, loss + self.weight*adv_loss))
         #objective 1 equals loss
         if self.cal_loss == True and self.cal_adv_loss == False:
             return loss, None, None
@@ -128,7 +128,7 @@ class UnsupervisedTrainer(Trainer):
         elif self.cal_loss == True and self.cal_adv_loss == True and self.regularize==False:
             return loss, adv_loss, obj2_minibatch
         elif self.cal_loss == True and self.cal_adv_loss == True and self.regularize==True:
-            return loss + self.regularize_weight*adv_loss
+            return loss + self.weight*adv_loss
 
     def adv_load_minibatch(self, z, batch_index, reference_batch:float=0, compare_batch: float=1):
 

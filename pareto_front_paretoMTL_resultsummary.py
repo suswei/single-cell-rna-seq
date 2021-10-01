@@ -9,6 +9,7 @@ from pygmo import hypervolume
 import math
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import argparse
 
 def simple_cull(inputPoints, dominates, return_index: bool=False, min_max: str='min'):
     paretoPoints = set()
@@ -53,87 +54,95 @@ def dominates(row, candidateRow, return_index, min_max):
         elif min_max == 'max':
             return sum([row[x] >= candidateRow[x] for x in range(len(row))]) == len(row)
 
-def draw_pareto_front_MINE_MMD(dataframe, method, save_path):
+def draw_pareto_front(dataframe, methods_list, one, save_path):
+    if one==True:
+        dataframe=dataframe
 
-    dataframe_MINE = dataframe[dataframe.balance_advestimator.eq(method)]
-    for MC_idx in range(dataframe_MINE.MC.max()+1):
-        dataframe_oneMC = dataframe_MINE[dataframe_MINE.MC.eq(MC_idx)]
-
-        fig = go.Figure()
-        obj1_all, obj2_all = [], []
-        for (i,type) in enumerate(['train', 'test']):
-            pref_idx_list = [k + 1 for k in dataframe_oneMC.loc[:, 'pref_idx'].values.tolist()]
-            obj1 = dataframe_oneMC.loc[:, 'obj1_{}'.format(type)].values.tolist()
-            obj2 = dataframe_oneMC.loc[:, 'obj2_{}'.format(type)].values.tolist()
-
-            obj1_all += obj1
-            obj2_all += obj2
-
-            inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
-            paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates, False, 'min')
-            pp = np.array(list(paretoPoints1))
-            dp = np.array(list(dominatedPoints1))
-
-            if i == 0:
-                marker_symbol = 'cross'
-                opacity = 1
-            else:
-                marker_symbol = 'circle'
-                opacity = 0.5
-
-            fig.add_trace(go.Scatter(x=obj1, y=obj2, opacity=opacity, text=['{}'.format(i) for i in pref_idx_list],
-                                     mode='markers+text', textfont_size=12, textposition='top center', marker_size=10, marker_symbol=marker_symbol,
-                                     marker_color='rgba(0, 0, 0, 0)', marker_opacity=opacity, showlegend=False))
-            if dp.shape[0] > 0:
-                fig.add_trace(go.Scatter(x=dp[:, 0].tolist(), y=dp[:, 1].tolist(),
-                                         mode='markers', marker_size=10, marker_symbol=marker_symbol, name='{}, yes'.format(type),
-                                         marker_color='rgba(0, 0, 255, .9)',marker_opacity=opacity, showlegend=True))
-            if pp.shape[0] > 0:
-                fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
-                                         mode='markers', marker_size=10, marker_symbol=marker_symbol, name='{}, no'.format(type),
-                                         marker_color='rgba(255, 25, 52, .9)',marker_opacity=opacity, showlegend=True))
-
-        if 'MINE' in method:
+        if 'MINE' in methods_list:
             fig_title = r'$\Large V_n(\phi)=MINE_{\psi,n}(\phi)$'
-        elif 'MMD' in method:
+        elif 'MMD' in methods_list:
             fig_title = r'$\Large V_n(\phi)=MMD_{n}(\phi)$'
+    else:
+        for MC in range(dataframe.MC.max()+1):
+            dataframe_oneMC = dataframe[dataframe.MC.eq(MC)]
 
-        fig.update_layout(
-            width=600,
-            height=400,
-            margin=dict(
-                l=80,
-                r=90,
-                b=70,
-                t=40,
-                pad=1
-            ),
-            font=dict(color='black', family='Times New Roman'),
-            title={
-                'text': fig_title,
-                'font': {
-                    'size': 25
-                },
-                'y': 0.94,
-                'x': 0.42,
-                'xanchor': 'center',
-                'yanchor': 'top'},
-            legend_title=dict(font=dict(family='Times New Roman', size=20, color="black"),text='train/test, dominated'),
-            legend=dict(
-                font=dict(
-                    family='Times New Roman',
-                    size=20,
-                    color='black'
-                )
-            ),
-            xaxis_tickformat='s'
-        )
-        fig.update_xaxes(tickfont=dict(size=20),title_text=r'$\large \text{Loss }U_n(\phi, \theta)$' , title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj1_all) - 50, max(obj1_all) + 50], autorange=False) #tick0=15200,dtick=100
-        fig.update_yaxes(tickfont=dict(size=20),title_text=r'$\large \text{Batch effect }V_n(\phi)$' ,title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj2_all) - 0.01, max(obj2_all) + 0.01], autorange=False)
+            fig = go.Figure()
+            obj1_all, obj2_all = [], []
+            image_save_path = save_path
+            for (i, method) in enumerate(methods_list):
+                image_save_path = image_save_path + '{}_'.format(method)
+                dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
 
-        fig.write_image(save_path + '/{}/paretofront_{}_MC{}.png'.format(method, method, MC_idx))
+                for (j,type) in enumerate(['train', 'test']):
+                    if method == 'regularize':
+                        weight_list = list(dataframe_oneMC_oneMethod.loc[:,'regularize_weight'])
+                        idx_list = [[0.001, 5, 10, 50, 100, 400, 800, 1000, 2000, 4000].index(k)+1 for k in weight_list]
+                    else:
+                        idx_list = [int(k) + 1 for k in dataframe_oneMC_oneMethod.loc[:, 'pref_idx'].values.tolist()]
+                    obj1 = dataframe_oneMC_oneMethod.loc[:, 'obj1_{}'.format(type)].values.tolist()
+                    obj2 = dataframe_oneMC_oneMethod.loc[:, 'obj2_{}'.format(type)].values.tolist()
 
-def draw_pareto_front(dataframe, MC_idx, methods_list, pareto_front_type, save_path):
+                    obj1_all += obj1
+                    obj2_all += obj2
+
+                    inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
+                    paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates, False, 'min')
+                    pp = np.array(list(paretoPoints1))
+                    #dp = np.array(list(dominatedPoints1))
+
+                    if j == 0:
+                        marker_symbol = 'circle'
+                    else:
+                        marker_symbol = 'cross'
+
+                    fig.add_trace(go.Scatter(x=obj1, y=obj2, text=['{}'.format(i) for i in idx_list],
+                                             mode='markers+text', textfont_size=12, textposition='top center', marker_size=10, marker_symbol=marker_symbol,
+                                             marker_color='rgba(0, 0, 0, 0)', showlegend=False))
+
+                    if i==0 and pp.shape[0] > 0:
+                        fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
+                                                 mode='markers', marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
+                                                 marker_color='rgba(255, 25, 52, .9)', showlegend=True))
+                    elif i==1 and pp.shape[0] > 0:
+                        fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
+                                                 mode='markers', marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
+                                                 marker_color='rgba(0, 0, 255, .9)', showlegend=True))
+
+            fig.update_layout(
+                width=600,
+                height=400,
+                margin=dict(
+                    l=80,
+                    r=90,
+                    b=70,
+                    t=40,
+                    pad=1
+                ),
+                font=dict(color='black', family='Times New Roman'),
+                title={
+                    'text': 'non-dominated points',
+                    'font': {
+                        'size': 25
+                    },
+                    'y': 0.94,
+                    'x': 0.42,
+                    'xanchor': 'center',
+                    'yanchor': 'top'},
+                legend=dict(
+                    font=dict(
+                        family='Times New Roman',
+                        size=20,
+                        color='black'
+                    )
+                ),
+                xaxis_tickformat='s'
+            )
+            fig.update_xaxes(tickfont=dict(size=20),title_text=r'$\large \text{Loss }U_n(\phi, \theta)$' , title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj1_all) - 50, max(obj1_all) + 50], autorange=False) #tick0=15200,dtick=100
+            fig.update_yaxes(tickfont=dict(size=20),title_text=r'$\large \text{Batch effect }V_n(\phi)$' ,title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj2_all) - 0.1, max(obj2_all) + 0.1], autorange=False)
+
+            fig.write_image(image_save_path + 'MC{}.png'.format(MC))
+
+def draw_pareto_front2(dataframe, MC_idx, methods_list, pareto_front_type, save_path):
 
     if pareto_front_type == 'NN':
         xtitle = r'$\large \text{Loss }U_n(\phi, \theta)$'
@@ -149,8 +158,8 @@ def draw_pareto_front(dataframe, MC_idx, methods_list, pareto_front_type, save_p
     fig = make_subplots(rows=math.ceil(len(methods_list) / 2), cols=2, subplot_titles=tuple(methods_list),
                         horizontal_spacing=0.03, vertical_spacing=0.06, x_title=xtitle, y_title=ytitle, shared_yaxes=True, shared_xaxes=True)
     for (i,type) in enumerate(['train','test']):
-        for (j, balance_advestimator) in enumerate(methods_list):
-            dataframe_adv = dataframe_oneMC[dataframe_oneMC.balance_advestimator.eq(balance_advestimator)]
+        for (j, method) in enumerate(methods_list):
+            dataframe_adv = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
             pref_idx_list = [k + 1 for k in dataframe_adv.loc[:, 'pref_idx'].values.tolist()]
 
             if pareto_front_type in ['obj2', 'NN']:
@@ -445,8 +454,8 @@ def hypervolume_calculation(dataframe, methods_list, pareto_front_type):
             hypervolume_list = []
             dataframe_oneMC = dataframe[dataframe.MC.eq(MC_idx)]
 
-            for balance_advestimator in methods_list:
-                dataframe_adv = dataframe_oneMC[dataframe_oneMC.balance_advestimator.eq(balance_advestimator)]
+            for method in methods_list:
+                dataframe_adv = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
                 if pareto_front_type == 'NN':
                     obj1_list = dataframe_adv.loc[:, 'obj1_{}'.format(type)].values.tolist()
                     obj2_list = dataframe_adv.loc[:, '{}_{}'.format(pareto_front_type, type)].values.tolist()
@@ -532,21 +541,41 @@ def cell_type_composition(dataset_name, change_composition, save_path):
     compare_percentage = dataset1_percentage.merge(dataset2_percentage, how='outer', left_on='cell_type', right_on='cell_type')
     print(compare_percentage.fillna(0))
 
-def paretoMTL_summary(dataset: str='tabula_muris', confounder: str='batch', methods_list: list=['MINE','MMD']):
+def main( ):
 
-    dir_path = './result/pareto_front_paretoMTL/{}/{}'.format(dataset, confounder)
-    hyperparameter_config = {
-        'MC': list(range(20)),
-        'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))]
-    }
-    keys, values = zip(*hyperparameter_config.items())
-    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+    parser = argparse.ArgumentParser(description='resultsummary')
+    parser.add_argument('--dataset', type=str, default='tabula_muris', help='name of dataset')
+    parser.add_argument('--confounder', type=str, default='batch', help='name of confounder')
+    parser.add_argument('--MCs', type=int, default=20, help='number of Monte Carlos')
+    parser.add_argument('--methods_list', type=str, default='MINE,MMD', help='list of methods')
 
-    for balance_advestimator in methods_list:
-        dir_path_subset = dir_path + '/{}'.format(balance_advestimator)
+    parser.add_argument("--mode", default='client')
+    parser.add_argument("--port", default=62364)
+    args = parser.parse_args()
+
+    args.methods_list = args.methods_list.split(',')
+
+    for method in args.methods_list:
+
+        if method == 'regularize':
+            dir_path = './result/{}/{}/regularize'.format(args.dataset, args.confounder)
+            hyperparameter_config = {
+                'MC': list(range(args.MCs)),
+                'nweights_weight': [{'n_weights': n, 'weight': i} for n, i in zip([10] * 10, [0, 5, 10, 50, 100, 400, 800, 1000, 2000, 4000])]
+            }
+        else:
+            dir_path = './result/{}/{}/pareto{}'.format(args.dataset, args.confounder, method)
+            hyperparameter_config = {
+                'MC': list(range(args.MCs)),
+                'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10] * 10, list(range(10)))]
+            }
+
+        keys, values = zip(*hyperparameter_config.items())
+        hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
         for i in range(len(hyperparameter_experiments)):
-            config_path = dir_path_subset + '/taskid{}/config.pkl'.format(i)
-            results_path = dir_path_subset + '/taskid{}/results.pkl'.format(i)
+            config_path = dir_path + '/taskid{}/config.pkl'.format(i)
+            results_path = dir_path + '/taskid{}/results.pkl'.format(i)
 
             if os.path.isfile(config_path) and os.path.isfile(results_path):
                 config = pickle.load(open(config_path, "rb"))
@@ -556,19 +585,25 @@ def paretoMTL_summary(dataset: str='tabula_muris', confounder: str='batch', meth
                     del results['obj1_minibatch_list']
                 if 'obj2_minibatch_list' in results.keys():
                     del results['obj2_minibatch_list']
-
-                results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator','MC', 'pre_epochs', 'pre_lr', 'adv_lr', 'n_epochs', 'lr', 'pref_idx'])}
-                results_config.update({'balance_advestimator': [balance_advestimator]})
+                if method == 'regularize':
+                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'MC', 'regularize_weight'])}
+                else:
+                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator','MC', 'pref_idx'])}
+                results_config.update({'method': [method]})
                 results_config.update(results)
 
-                if balance_advestimator == methods_list[0] and i == 0:
+                if method == args.methods_list[0] and i == 0:
                     results_config_total = pd.DataFrame.from_dict(results_config)
                 else:
                     results_config_total = pd.concat([results_config_total, pd.DataFrame.from_dict(results_config)], axis=0)
             else:
                 print('taskid{}'.format(i))
 
-    for method in methods_list:
-        draw_pareto_front_MINE_MMD(dataframe=results_config_total, method=method, save_path=dir_path)
+    #one means draw Pareto front for only one method, or two methods
+    draw_pareto_front(dataframe=results_config_total, methods_list=args.methods_list, one=False, save_path=os.path.dirname(dir_path)+'/')
 
-    compare_hypervolume_percent(dataframe=results_config_total, methods_list=methods_list, dir_path=dir_path)
+    compare_hypervolume_percent(dataframe=results_config_total, methods_list=args.methods_list, dir_path=dir_path)
+
+# Run the actual program
+if __name__ == "__main__":
+    main()

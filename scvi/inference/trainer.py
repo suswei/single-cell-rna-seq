@@ -43,7 +43,7 @@ class Trainer:
                  benchmark=False, verbose=False, frequency=None, weight_decay=1e-6, early_stopping_kwargs=dict(),
                  data_loader_kwargs=dict(), save_path='None', batch_size=128, adv_estimator='None',
                  adv_n_hidden=128, adv_n_layers=10, adv_activation_fun='ELU', unbiased_loss=True, adv_w_initial='Normal',
-                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5, regularize: bool=False, regularize_weight: float=10000, batch_ratio: list=[], nsamples: int=1e5):
+                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5, regularize: bool=False, weight: float=10000, batch_ratio: list=[], nsamples: int=1e5):
 
         self.model = model
         self.gene_dataset = gene_dataset
@@ -65,7 +65,7 @@ class Trainer:
             self.MMD_loss = MMD_loss(kernel_mul = MMD_kernel_mul, kernel_num = MMD_kernel_num)
 
         self.regularize = regularize
-        self.regularize_weight = regularize_weight
+        self.weight = weight
         self.batch_ratio = batch_ratio
         self.nsamples = nsamples
 

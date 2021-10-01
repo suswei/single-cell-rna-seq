@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="cross_validation"
+#SBATCH --job-name="regularize"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
@@ -10,7 +10,7 @@
 #SBATCH --mem 7000
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=0-4:00:00
+#SBATCH --time=0-10:00:00
 
 # Batch arrays
 #SBATCH --array=0-199
@@ -38,6 +38,6 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-python3 cross_validation.py ${SLURM_ARRAY_TASK_ID}
+python3 regularize.py ${SLURM_ARRAY_TASK_ID}
 
 

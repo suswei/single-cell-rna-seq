@@ -36,7 +36,7 @@ def construct_trainer_vae(gene_dataset, args):
         else:
             trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
                                           seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator,MMD_kernel_mul=args.MMD_kernel_mul,
-                                          MMD_kernel_num=args.MMD_kernel_num, regularize=args.regularize, regularize_weight=args.regularize_weight,
+                                          MMD_kernel_num=args.MMD_kernel_num, regularize=args.regularize, weight=args.weight,
                                           batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
@@ -390,7 +390,7 @@ def main( ):
                         help='whether to regularize or not')
     parser.add_argument('--n_weights', type=int, default=10,
                         help='number of weights')
-    parser.add_argument('--regularize_weight', type=float, default=10000,
+    parser.add_argument('--weight', type=float, default=10000,
                         help='weight for MMD regularization')
 
     # general usage
@@ -407,9 +407,9 @@ def main( ):
         args.adv_w_initial = 'normal'
 
     #load dataset
-    data_save_path = './data/pareto_front_paretoMTL/%s/' % (args.dataset_name)
-    if not os.path.exists('./data/pareto_front_paretoMTL/%s/' % (args.dataset_name)):
-        os.makedirs('./data/pareto_front_paretoMTL/%s/' % (args.dataset_name))
+    data_save_path = './data/%s/' % (args.dataset_name)
+    if not os.path.exists('./data/%s/' % (args.dataset_name)):
+        os.makedirs('./data/%s/' % (args.dataset_name))
 
     if args.dataset_name == 'tabula_muris':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
@@ -463,9 +463,9 @@ def main( ):
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
 
     if args.regularize == True:
-        args.save_path = './result/regularize/{}/{}/MC{}/weight{}'.format(args.dataset_name, args.confounder, args.MC, int(args.regularize_weight))
-        if not os.path.exists('./result/regularize/{}/{}/MC{}/weight{}'.format(args.dataset_name, args.confounder, args.MC, int(args.regularize_weight))):
-            os.makedirs('./result/regularize/{}/{}/MC{}/weight{}'.format(args.dataset_name, args.confounder, args.MC, int(args.regularize_weight)))
+        args.save_path = './result/{}/{}/regularize/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)
+        if not os.path.exists('./result/{}/{}/regularize/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)):
+            os.makedirs('./result/{}/{}/regularize/taskid{}'.format(args.dataset_name, args.confounder, args.taskid))
 
         args.desired_seed = int(desired_seeds[0, args.taskid//args.n_weights])
         # calculate ratio to split the gene_dataset into training and testing dataset
@@ -482,12 +482,12 @@ def main( ):
             args.desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
 
         if args.pre_train == True:
-            args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)
-            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)):
-                os.makedirs('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid))
+            args.save_path = './result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)
+            if not os.path.exists('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)):
+                os.makedirs('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid))
         else:
-            args.save_path = './result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))
-            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))):
+            args.save_path = './result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))
+            if not os.path.exists('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))):
                 print('Error: please pretrain first!')
 
         if args.empirical_MI == True:
@@ -555,9 +555,9 @@ def main( ):
                    obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
                    adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
 
-            args.save_path = './result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
-            if not os.path.exists('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
-                os.makedirs('./result/pareto_front_paretoMTL/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
+            args.save_path = './result/{}/{}/pareto{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
+            if not os.path.exists('./result/{}/{}/pareto{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
+                os.makedirs('./result/{}/{}/pareto{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
 
             if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
                 torch.save(trainer_vae.model.module.state_dict(), args.save_path + '/vae.pkl')
@@ -579,49 +579,49 @@ def main( ):
             trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
             trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
 
-            #obj1 for the whole training and testing set
-            obj1_train, obj1_test = obj1_train_test(trainer_vae)
+    #obj1 for the whole training and testing set
+    obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
-            # obj2 for the whole training and testing set
-            if trainer_vae.adv_estimator == 'MINE':
-                obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
-            elif trainer_vae.adv_estimator == 'MMD':
-                obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
-            elif trainer_vae.adv_estimator == 'stdz_MMD':
-                obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
+    # obj2 for the whole training and testing set
+    if trainer_vae.adv_estimator == 'MINE':
+        obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
+    elif trainer_vae.adv_estimator == 'MMD':
+        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
+    elif trainer_vae.adv_estimator == 'stdz_MMD':
+        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
 
-            NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
+    NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
 
-            asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
-            be_train = trainer_vae.train_set.entropy_batch_mixing()
+    asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
+    be_train = trainer_vae.train_set.entropy_batch_mixing()
 
-            asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
-            be_test = trainer_vae.test_set.entropy_batch_mixing()
+    asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
+    be_test = trainer_vae.test_set.entropy_batch_mixing()
 
-            results_dict = {'obj1_train': [obj1_train],
-                            'obj2_train': [obj2_train],
-                            'NN_train': [NN_train],
-                            'obj1_test': [obj1_test],
-                            'obj2_test': [obj2_test],
-                            'NN_test': [NN_test],
-                            'asw_train': [asw_train],
-                            'nmi_train': [nmi_train],
-                            'ari_train': [ari_train],
-                            'uca_train': [uca_train],
-                            'be_train': [be_train],
-                            'asw_test': [asw_test],
-                            'nmi_test': [nmi_test],
-                            'ari_test': [ari_test],
-                            'uca_test': [uca_test],
-                            'be_test': [be_test]}
+    results_dict = {'obj1_train': [obj1_train],
+                    'obj2_train': [obj2_train],
+                    'NN_train': [NN_train],
+                    'obj1_test': [obj1_test],
+                    'obj2_test': [obj2_test],
+                    'NN_test': [NN_test],
+                    'asw_train': [asw_train],
+                    'nmi_train': [nmi_train],
+                    'ari_train': [ari_train],
+                    'uca_train': [uca_train],
+                    'be_train': [be_train],
+                    'asw_test': [asw_test],
+                    'nmi_test': [nmi_test],
+                    'ari_test': [ari_test],
+                    'uca_test': [uca_test],
+                    'be_test': [be_test]}
 
-            args_dict = vars(args)
-            with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
-                pickle.dump(args_dict, f)
+    args_dict = vars(args)
+    with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
+        pickle.dump(args_dict, f)
 
-            with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
-                pickle.dump(results_dict, f)
-            print(results_dict)
+    with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
+        pickle.dump(results_dict, f)
+    print(results_dict)
 
 # Run the actual program
 if __name__ == "__main__":
