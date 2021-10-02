@@ -92,8 +92,6 @@ def draw_pareto_front(dataframe, methods_list, one, save_path):
                         for index, inputPoint in enumerate(inputPoints1):
                             if paretoPoint[0] == inputPoint[0] and paretoPoint[1] == inputPoint[1]:
                                 index_list += [index+1]
-                    print('index_list:')
-                    print(index_list)
 
                     if j == 0:
                         marker_symbol = 'circle'
