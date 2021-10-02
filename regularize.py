@@ -22,7 +22,7 @@ def main(taskid):
         'MMD_kernel_num': [15],
         'epochs': [250],
         'lr': [1e-3],
-        'MC': list(range(20)),
+        'MCs': list(range(20)),
         'nweights_weight': [{'n_weights': n, 'weight': i} for n, i in zip([10] * 10, [0, 5, 10, 50, 100, 400, 800, 1000, 2000, 4000])]
     }
     keys, values = zip(*hyperparameter_config.items())
@@ -37,7 +37,7 @@ def main(taskid):
               "--epochs %s --lr %s --MC %s --n_weights %s --weight %s "
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['MMD_kernel_mul'],
-                 temp['MMD_kernel_num'], temp['epochs'], temp['lr'], temp['MC'],
+                 temp['MMD_kernel_num'], temp['epochs'], temp['lr'], temp['MCs'],
                  temp['nweights_weight']['n_weights'], temp['nweights_weight']['weight'])
               )
 if __name__ == "__main__":

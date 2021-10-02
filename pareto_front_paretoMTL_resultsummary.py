@@ -74,11 +74,7 @@ def draw_pareto_front(dataframe, methods_list, one, save_path):
                 dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
 
                 for (j,type) in enumerate(['train', 'test']):
-                    if method == 'regularize':
-                        weight_list = list(dataframe_oneMC_oneMethod.loc[:,'regularize_weight'])
-                        idx_list = [[0.001, 5, 10, 50, 100, 400, 800, 1000, 2000, 4000].index(k)+1 for k in weight_list]
-                    else:
-                        idx_list = [int(k) + 1 for k in dataframe_oneMC_oneMethod.loc[:, 'pref_idx'].values.tolist()]
+
                     obj1 = dataframe_oneMC_oneMethod.loc[:, 'obj1_{}'.format(type)].values.tolist()
                     obj2 = dataframe_oneMC_oneMethod.loc[:, 'obj2_{}'.format(type)].values.tolist()
 
@@ -90,22 +86,29 @@ def draw_pareto_front(dataframe, methods_list, one, save_path):
                     pp = np.array(list(paretoPoints1))
                     #dp = np.array(list(dominatedPoints1))
 
+                    inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
+                    index_list = []
+                    for paretoPoint in paretoPoints1:
+                        for index, inputPoint in enumerate(inputPoints1):
+                            if paretoPoint[0] == inputPoint[0] and paretoPoint[1] == inputPoint[1]:
+                                index_list += [index+1]
+                    print('index_list:')
+                    print(index_list)
+
                     if j == 0:
                         marker_symbol = 'circle'
                     else:
                         marker_symbol = 'cross'
 
-                    fig.add_trace(go.Scatter(x=obj1, y=obj2, text=['{}'.format(i) for i in idx_list],
-                                             mode='markers+text', textfont_size=12, textposition='top center', marker_size=10, marker_symbol=marker_symbol,
-                                             marker_color='rgba(0, 0, 0, 0)', showlegend=False))
-
                     if i==0 and pp.shape[0] > 0:
-                        fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
-                                                 mode='markers', marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
+                        fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
+                                                 mode='markers+text', textfont_size=12, textposition='top center',
+                                                 marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
                                                  marker_color='rgba(255, 25, 52, .9)', showlegend=True))
                     elif i==1 and pp.shape[0] > 0:
-                        fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
-                                                 mode='markers', marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
+                        fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
+                                                 mode='markers+text', textfont_size=12, textposition='top center',
+                                                 marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
                                                  marker_color='rgba(0, 0, 255, .9)', showlegend=True))
 
             fig.update_layout(
@@ -597,7 +600,7 @@ def main( ):
                 else:
                     results_config_total = pd.concat([results_config_total, pd.DataFrame.from_dict(results_config)], axis=0)
             else:
-                print('taskid{}'.format(i))
+                print('method:{},taskid{}'.format(method, i))
 
     #one means draw Pareto front for only one method, or two methods
     draw_pareto_front(dataframe=results_config_total, methods_list=args.methods_list, one=False, save_path=os.path.dirname(dir_path)+'/')

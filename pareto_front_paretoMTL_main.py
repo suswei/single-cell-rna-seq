@@ -375,7 +375,7 @@ def main( ):
     parser.add_argument('--n_samples_tsne', type=int, default=1500,
                         help='the number of samples for tsne plot')
 
-    parser.add_argument('--MCs', type=int, default=10,
+    parser.add_argument('--MCs', type=int, default=20,
                         help='the number to repeat pareto MTL')
 
     parser.add_argument('--MC', type=int, default=0,
