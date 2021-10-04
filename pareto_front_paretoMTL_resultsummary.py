@@ -54,95 +54,161 @@ def dominates(row, candidateRow, return_index, min_max):
         elif min_max == 'max':
             return sum([row[x] >= candidateRow[x] for x in range(len(row))]) == len(row)
 
-def draw_pareto_front(dataframe, methods_list, one, save_path):
-    if one==True:
-        dataframe=dataframe
+def draw_pareto_front(dataframe, methods_list, pareto_front_type, cal_metric, save_path):
 
-        if 'MINE' in methods_list:
-            fig_title = r'$\Large V_n(\phi)=MINE_{\psi,n}(\phi)$'
-        elif 'MMD' in methods_list:
-            fig_title = r'$\Large V_n(\phi)=MMD_{n}(\phi)$'
-    else:
-        for MC in range(dataframe.MC.max()+1):
-            dataframe_oneMC = dataframe[dataframe.MC.eq(MC)]
+    if cal_metric:
+        hypervolume_dict = {}
+        percentage_dict = {}
+        if pareto_front_type == 'NN':
+            obj1_max = dataframe.loc[:, ['obj1_train', 'obj1_test']].max(axis=0).max()
+            obj2_max = dataframe.loc[:, ['NN_train', 'NN_test']].max(axis=0).max()
+            ref_point = [obj1_max + 5, obj2_max + 0.01]
+        else:
+            obj1_max = dataframe.loc[:,['{}_train'.format(pareto_front_type), '{}_test'.format(pareto_front_type)]].min(axis=0).min() * (-1)
+            obj2_max = dataframe.loc[:, ['be_train', 'be_test']].min(axis=0).min() * (-1)
+            ref_point = [obj1_max + 0.01, obj2_max + 0.01]
 
-            fig = go.Figure()
-            obj1_all, obj2_all = [], []
-            image_save_path = save_path
-            for (i, method) in enumerate(methods_list):
-                image_save_path = image_save_path + '{}_'.format(method)
-                dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
+    for MC in range(dataframe.MC.max()+1):
+        dataframe_oneMC = dataframe[dataframe.MC.eq(MC)]
 
-                for (j,type) in enumerate(['train', 'test']):
+        fig = go.Figure()
+        obj1_all, obj2_all = [], []
+        image_save_path = save_path
 
+        for (i, method) in enumerate(methods_list):
+            image_save_path = image_save_path + '{}_'.format(method)
+            dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
+
+            for (j,type) in enumerate(['train', 'test']):
+
+                if pareto_front_type in ['obj2', 'NN']:
                     obj1 = dataframe_oneMC_oneMethod.loc[:, 'obj1_{}'.format(type)].values.tolist()
-                    obj2 = dataframe_oneMC_oneMethod.loc[:, 'obj2_{}'.format(type)].values.tolist()
+                    obj2 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_type, type)].values.tolist()
+                else:
+                    obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_type, type)].values.tolist()
+                    obj2 = dataframe_oneMC_oneMethod.loc[:, 'be_{}'.format(type)].values.tolist()
 
-                    obj1_all += obj1
-                    obj2_all += obj2
+                    obj1 = [(-1) * k for k in obj1]
+                    obj2 = [(-1) * k for k in obj2]
 
-                    inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
-                    paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates, False, 'min')
-                    pp = np.array(list(paretoPoints1))
-                    #dp = np.array(list(dominatedPoints1))
+                obj1_all += obj1
+                obj2_all += obj2
 
-                    inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
-                    index_list = []
-                    for paretoPoint in paretoPoints1:
-                        for index, inputPoint in enumerate(inputPoints1):
-                            if paretoPoint[0] == inputPoint[0] and paretoPoint[1] == inputPoint[1]:
-                                index_list += [index+1]
+                inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
+                paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates, False, 'min')
+                pp = np.array(list(paretoPoints1))
+                #dp = np.array(list(dominatedPoints1))
 
-                    if j == 0:
-                        marker_symbol = 'circle'
-                    else:
-                        marker_symbol = 'cross'
+                inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
+                index_list = []
+                for paretoPoint in paretoPoints1:
+                    for index, inputPoint in enumerate(inputPoints1):
+                        if paretoPoint[0] == inputPoint[0] and paretoPoint[1] == inputPoint[1]:
+                            index_list += [index+1]
 
-                    if i==0 and pp.shape[0] > 0:
-                        fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
-                                                 mode='markers+text', textfont_size=12, textposition='top center',
-                                                 marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
-                                                 marker_color='rgba(255, 25, 52, .9)', showlegend=True))
-                    elif i==1 and pp.shape[0] > 0:
-                        fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
-                                                 mode='markers+text', textfont_size=12, textposition='top center',
-                                                 marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
-                                                 marker_color='rgba(0, 0, 255, .9)', showlegend=True))
+                if cal_metric:
+                    # when hypervolume is calculated, the rectangles of dominated points will be covered by those of non-dominated points
+                    hv = hypervolume(inputPoints1)
+                    hypervolume_dict.update({'{}_{}'.format(method, type): [hv.compute(ref_point)]})
 
-            fig.update_layout(
-                width=600,
-                height=400,
-                margin=dict(
-                    l=80,
-                    r=90,
-                    b=70,
-                    t=40,
-                    pad=1
-                ),
-                font=dict(color='black', family='Times New Roman'),
-                title={
-                    'text': 'non-dominated points',
-                    'font': {
-                        'size': 25
-                    },
-                    'y': 0.94,
-                    'x': 0.42,
-                    'xanchor': 'center',
-                    'yanchor': 'top'},
-                legend=dict(
-                    font=dict(
-                        family='Times New Roman',
-                        size=20,
-                        color='black'
-                    )
-                ),
-                xaxis_tickformat='s'
-            )
-            fig.update_xaxes(tickfont=dict(size=20),title_text=r'$\large \text{Loss }U_n(\phi, \theta)$' , title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj1_all) - 50, max(obj1_all) + 50], autorange=False) #tick0=15200,dtick=100
-            fig.update_yaxes(tickfont=dict(size=20),title_text=r'$\large \text{Batch effect }V_n(\phi)$' ,title_font=dict(size=25, family='Times New Roman', color='black'),range=[min(obj2_all) - 0.1, max(obj2_all) + 0.1], autorange=False)
+                    percentage_dict.update({'{}_{}'.format(method, type): [len(list(paretoPoints1))/10]})
 
-            fig.write_image(image_save_path + 'MC{}.png'.format(MC))
+                if i == 0:
+                    marker_symbol = 'circle'
+                elif i == 1:
+                    marker_symbol = 'cross'
+                elif i == 2:
+                    marker_symbol = 'triangle-up'
 
+                if method != 'regularize':
+                    method_legend = 'pareto' + method
+                else:
+                    method_legend = method
+
+                if j==0 and pp.shape[0] > 0:
+                    fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
+                                             mode='markers+text', textfont_size=12, textposition='top center',
+                                             marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method_legend, type),
+                                             marker_color='rgba(0, 0, 0, 0)', showlegend=True))
+                elif j==1 and pp.shape[0] > 0:
+                    fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
+                                             mode='markers+text', textfont_size=12, textposition='top center',
+                                             marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method_legend, type),
+                                             marker_color='rgba(0, 0,0, 0)', showlegend=True))
+
+                if j == 0 and pp.shape[0] > 0:
+                    fig.add_trace(
+                        go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
+                                   mode='markers', textfont_size=12, textposition='top center',
+                                   marker_size=10, marker_symbol=marker_symbol,
+                                   marker_color='rgba(255, 25, 52, .9)', showlegend=False))
+                elif j == 1 and pp.shape[0] > 0:
+                    fig.add_trace(
+                        go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
+                                   mode='markers', textfont_size=12, textposition='top center',
+                                   marker_size=10, marker_symbol=marker_symbol,
+                                   marker_color='rgba(0, 0, 255, .9)', showlegend=False))
+
+        fig.update_layout(
+            width=600,
+            height=400,
+            margin=dict(
+                l=80,
+                r=90,
+                b=70,
+                t=50,
+                pad=1
+            ),
+            font=dict(color='black', family='Times New Roman'),
+            title={
+                'text': 'non-dominated points',
+                'font': {
+                    'size': 25
+                },
+                'y': 0.94,
+                'x': 0.42,
+                'xanchor': 'center',
+                'yanchor': 'top'},
+            legend=dict(
+                font=dict(
+                    family='Times New Roman',
+                    size=20,
+                    color='black'
+                )
+            ),
+            xaxis_tickformat='s'
+        )
+        if pareto_front_type == 'obj2':
+            fig.update_xaxes(tickfont=dict(size=20),title_text=r'$\large \text{Loss }U_n(\phi, \theta)$' ,
+                             title_font=dict(size=25, family='Times New Roman', color='black'),
+                             range=[min(obj1_all) - 50, max(obj1_all) + 50], autorange=False) #tick0=15200,dtick=100
+            fig.update_yaxes(tickfont=dict(size=20),title_text=r'$\large \text{Batch effect }V_n(\phi)$' ,
+                             title_font=dict(size=25, family='Times New Roman', color='black'),
+                             range=[min(obj2_all) - 0.1, max(obj2_all) + 0.1], autorange=False)
+        elif pareto_front_type == 'NN':
+            fig.update_xaxes(tickfont=dict(size=20), title_text=r'$\large \text{Loss }U_n(\phi, \theta)$',
+                             title_font=dict(size=25, family='Times New Roman', color='black'),
+                             range=[min(obj1_all) - 50, max(obj1_all) + 50], autorange=False)  # tick0=15200,dtick=100
+            fig.update_yaxes(tickfont=dict(size=20), title_text=r'$\large \text{Batch effect }NN_n(\phi)$',
+                             title_font=dict(size=25, family='Times New Roman', color='black'),
+                             range=[min(obj2_all) - 0.08, max(obj2_all) + 0.08], autorange=False)
+        else:
+            print(min(obj2_all))
+            print(max(obj2_all))
+            fig.update_xaxes(tickfont=dict(size=20), title_text='negative {}'.format(pareto_front_type),
+                             title_font=dict(size=25, family='Times New Roman', color='black'),
+                             range=[min(obj1_all) - 0.08, max(obj1_all) + 0.08], autorange=False)  # tick0=15200,dtick=100
+            fig.update_yaxes(tickfont=dict(size=20), title_text='negative BE',
+                             title_font=dict(size=25, family='Times New Roman', color='black'),
+                             range=[min(obj2_all) - 0.08, max(obj2_all) + 0.08], autorange=False)
+
+        fig.write_image(image_save_path + '{}_MC{}.png'.format(pareto_front_type, MC))
+
+    if cal_metric:
+        return hypervolume_dict, percentage_dict
+    else:
+        return None, None
+'''
 def draw_pareto_front2(dataframe, MC_idx, methods_list, pareto_front_type, save_path):
 
     if pareto_front_type == 'NN':
@@ -541,14 +607,28 @@ def cell_type_composition(dataset_name, change_composition, save_path):
 
     compare_percentage = dataset1_percentage.merge(dataset2_percentage, how='outer', left_on='cell_type', right_on='cell_type')
     print(compare_percentage.fillna(0))
-
+'''
 def main( ):
 
     parser = argparse.ArgumentParser(description='resultsummary')
-    parser.add_argument('--dataset', type=str, default='tabula_muris', help='name of dataset')
-    parser.add_argument('--confounder', type=str, default='batch', help='name of confounder')
-    parser.add_argument('--MCs', type=int, default=20, help='number of Monte Carlos')
-    parser.add_argument('--methods_list', type=str, default='MINE,MMD', help='list of methods')
+
+    parser.add_argument('--dataset', type=str, default='tabula_muris',
+                        help='name of dataset')
+
+    parser.add_argument('--confounder', type=str, default='batch',
+                        help='name of confounder')
+
+    parser.add_argument('--MCs', type=int, default=20,
+                        help='number of Monte Carlos')
+
+    parser.add_argument('--pareto_front_type', type=str, default='obj2',
+                        help='the type of the pareto front') #obj2, NN, asw, ari, uca, nmi
+
+    parser.add_argument('--methods_list', type=str, default='MINE,MMD',
+                        help='list of methods')
+
+    parser.add_argument('--cal_metric', action='store_true', default=False,
+                        help='whether to calculate hypervolume and percentage of non-dominated points')
 
     parser.add_argument("--mode", default='client')
     parser.add_argument("--port", default=62364)
@@ -600,10 +680,10 @@ def main( ):
             else:
                 print('method:{},taskid{}'.format(method, i))
 
-    #one means draw Pareto front for only one method, or two methods
-    draw_pareto_front(dataframe=results_config_total, methods_list=args.methods_list, one=False, save_path=os.path.dirname(dir_path)+'/')
+    hypervolume_dict, percentage_dict = draw_pareto_front(dataframe=results_config_total, methods_list=args.methods_list,
+                                        pareto_front_type=args.pareto_front_type, cal_metric=args.cal_metric, save_path=os.path.dirname(dir_path)+'/')
 
-    compare_hypervolume_percent(dataframe=results_config_total, methods_list=args.methods_list, dir_path=dir_path)
+    #compare_hypervolume_percent(dataframe=results_config_total, methods_list=args.methods_list, dir_path=dir_path)
 
 # Run the actual program
 if __name__ == "__main__":
