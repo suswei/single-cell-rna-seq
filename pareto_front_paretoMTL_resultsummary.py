@@ -10,6 +10,7 @@ import math
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import argparse
+import statistics
 
 def simple_cull(inputPoints, dominates, return_index: bool=False, min_max: str='min'):
     paretoPoints = set()
@@ -59,9 +60,9 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_type, cal_metric, sa
     if cal_metric:
         hypervolume_dict = {}
         percentage_dict = {}
-        if pareto_front_type == 'NN':
+        if pareto_front_type in ['obj2','NN']:
             obj1_max = dataframe.loc[:, ['obj1_train', 'obj1_test']].max(axis=0).max()
-            obj2_max = dataframe.loc[:, ['NN_train', 'NN_test']].max(axis=0).max()
+            obj2_max = dataframe.loc[:, ['{}_train'.format(pareto_front_type), '{}_test'.format(pareto_front_type)]].max(axis=0).max()
             ref_point = [obj1_max + 5, obj2_max + 0.01]
         else:
             obj1_max = dataframe.loc[:,['{}_train'.format(pareto_front_type), '{}_test'.format(pareto_front_type)]].min(axis=0).min() * (-1)
@@ -109,9 +110,9 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_type, cal_metric, sa
                 if cal_metric:
                     # when hypervolume is calculated, the rectangles of dominated points will be covered by those of non-dominated points
                     hv = hypervolume(inputPoints1)
-                    hypervolume_dict.update({'{}_{}'.format(method, type): [hv.compute(ref_point)]})
+                    hypervolume_dict.update({'{}_{}_MC{}'.format(method, type, MC): [hv.compute(ref_point)]})
 
-                    percentage_dict.update({'{}_{}'.format(method, type): [len(list(paretoPoints1))/10]})
+                    percentage_dict.update({'{}_{}_MC{}'.format(method, type, MC): [len(list(paretoPoints1))/10]})
 
                 if i == 0:
                     marker_symbol = 'circle'
@@ -128,26 +129,26 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_type, cal_metric, sa
                 if j==0 and pp.shape[0] > 0:
                     fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
                                              mode='markers+text', textfont_size=12, textposition='top center',
-                                             marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method_legend, type),
-                                             marker_color='rgba(0, 0, 0, 0)', showlegend=True))
+                                             marker_size=10, marker_symbol=marker_symbol,
+                                             marker_color='rgba(0, 0, 0, 0)', showlegend=False))
                 elif j==1 and pp.shape[0] > 0:
                     fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
                                              mode='markers+text', textfont_size=12, textposition='top center',
                                              marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method_legend, type),
-                                             marker_color='rgba(0, 0,0, 0)', showlegend=True))
+                                             marker_color='rgba(0, 0,0, 0)', showlegend=False))
 
                 if j == 0 and pp.shape[0] > 0:
                     fig.add_trace(
                         go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
                                    mode='markers', textfont_size=12, textposition='top center',
-                                   marker_size=10, marker_symbol=marker_symbol,
-                                   marker_color='rgba(255, 25, 52, .9)', showlegend=False))
+                                   marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method_legend, type),
+                                   marker_color='rgba(255, 25, 52, .9)', showlegend=True))
                 elif j == 1 and pp.shape[0] > 0:
                     fig.add_trace(
                         go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
                                    mode='markers', textfont_size=12, textposition='top center',
-                                   marker_size=10, marker_symbol=marker_symbol,
-                                   marker_color='rgba(0, 0, 255, .9)', showlegend=False))
+                                   marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method_legend, type),
+                                   marker_color='rgba(0, 0, 255, .9)', showlegend=True))
 
         fig.update_layout(
             width=600,
@@ -175,9 +176,9 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_type, cal_metric, sa
                     size=20,
                     color='black'
                 )
-            ),
-            xaxis_tickformat='s'
+            )
         )
+
         if pareto_front_type == 'obj2':
             fig.update_xaxes(tickfont=dict(size=20),title_text=r'$\large \text{Loss }U_n(\phi, \theta)$' ,
                              title_font=dict(size=25, family='Times New Roman', color='black'),
@@ -193,8 +194,6 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_type, cal_metric, sa
                              title_font=dict(size=25, family='Times New Roman', color='black'),
                              range=[min(obj2_all) - 0.08, max(obj2_all) + 0.08], autorange=False)
         else:
-            print(min(obj2_all))
-            print(max(obj2_all))
             fig.update_xaxes(tickfont=dict(size=20), title_text='negative {}'.format(pareto_front_type),
                              title_font=dict(size=25, family='Times New Roman', color='black'),
                              range=[min(obj1_all) - 0.08, max(obj1_all) + 0.08], autorange=False)  # tick0=15200,dtick=100
@@ -208,6 +207,39 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_type, cal_metric, sa
         return hypervolume_dict, percentage_dict
     else:
         return None, None
+
+def compare_hypervolume_percent(methods_list, hypervolume_dict, percentage_dict, pareto_front_type, save_path):
+
+    for metric in ['hypervolume','percentage']:
+        if metric == 'hypervolume':
+            metric_dict = hypervolume_dict
+        else:
+            metric_dict = percentage_dict
+
+        fig = go.Figure()
+        for type in ['train', 'test']:
+            metric_mean_list, metric_std_list= [], []
+            for method in methods_list:
+                metric_oneMethod_oneType = [value[0] for key, value in metric_dict.items() if '{}_{}'.format(method,type) in key]
+
+                metric_mean_list += [statistics.mean(metric_oneMethod_oneType)]
+                metric_std_list += [statistics.stdev(metric_oneMethod_oneType)]
+
+            fig.add_trace(go.Scatter(x=methods_list, y=metric_mean_list, mode='lines+markers+text',
+                                     text=['{}'.format(round(metric_mean_list[i],2)) + u"\u00B1" + '{}'.format(round(metric_std_list[i],2)) for i in list(range(len(methods_list)))],
+                                     textfont_size=12, textposition='top center',marker_size=10,marker_color='rgba(0, 0, 0, 0)',
+                                     line=dict(color='rgba(0, 0, 0, 0)'), showlegend=False))
+            if type == 'train':
+                fig.add_trace(go.Scatter(x=methods_list, y=metric_mean_list, error_y=dict(type='data', array=metric_std_list, visible=True),
+                                         mode='lines+markers', marker_size=10, marker_color='rgba(255, 25, 52, .9)',
+                                         line=dict(color='rgba(255, 25, 52, .9)'), name='{}'.format(type),showlegend=True))
+            else:
+                fig.add_trace(go.Scatter(x=methods_list, y=metric_mean_list, error_y=dict(type='data', array=metric_std_list, visible=True),
+                                         mode='lines+markers', marker_size=10, marker_color='rgba(0, 0, 255, .9)',
+                                         line=dict(color='rgba(0, 0, 255, .9)'), name='{}'.format(type), showlegend=True))
+
+        fig.write_image(save_path + '{}_compare_{}.png'.format(pareto_front_type,metric))
+
 '''
 def draw_pareto_front2(dataframe, MC_idx, methods_list, pareto_front_type, save_path):
 
@@ -683,7 +715,8 @@ def main( ):
     hypervolume_dict, percentage_dict = draw_pareto_front(dataframe=results_config_total, methods_list=args.methods_list,
                                         pareto_front_type=args.pareto_front_type, cal_metric=args.cal_metric, save_path=os.path.dirname(dir_path)+'/')
 
-    #compare_hypervolume_percent(dataframe=results_config_total, methods_list=args.methods_list, dir_path=dir_path)
+    compare_hypervolume_percent(methods_list=args.methods_list, hypervolume_dict=hypervolume_dict, percentage_dict=percentage_dict,
+                                pareto_front_type=args.pareto_front_type, save_path=os.path.dirname(dir_path)+'/')
 
 # Run the actual program
 if __name__ == "__main__":

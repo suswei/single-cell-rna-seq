@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="regularize"
+#SBATCH --job-name="regularize_stdMINE"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
@@ -13,7 +13,7 @@
 #SBATCH --time=0-10:00:00
 
 # Batch arrays
-#SBATCH --array=28,29
+#SBATCH --array=0-199
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
@@ -38,6 +38,6 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-python3 regularize.py ${SLURM_ARRAY_TASK_ID}
+python3 regularize_stdMINE.py ${SLURM_ARRAY_TASK_ID}
 
 

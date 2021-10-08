@@ -22,8 +22,13 @@ def main(taskid):
         'MMD_kernel_num': [15],
         'epochs': [250],
         'lr': [1e-3],
-        'MCs': list(range(20)),
-        'nweights_weight': [{'n_weights': n, 'weight': i} for n, i in zip([10] * 10, [0, 5, 10, 50, 100, 400, 800, 1000, 2000, 4000])]
+        'obj1_max': [30967],
+        'obj1_min': [11909],
+        'obj2_max': [0.949],
+        'obj2_min': [0.374],
+        'MC': list(range(20)),
+        'weights_total': [12],
+        'nweight_weight': [{'n_weight': i, 'weight': j} for i,j in zip(list(range(12)), [0, 1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11, 1])]
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -34,11 +39,12 @@ def main(taskid):
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s  --batch_size %s "
               "--adv_estimator %s --MMD_kernel_mul %s --MMD_kernel_num %s "
-              "--epochs %s --lr %s --MC %s --n_weights %s --weight %s "
+              "--epochs %s --lr %s --obj1_max % --obj1_min % --obj2_max % --obj2_min % "
+              "--MC %s --weights_total %s --n_weight %s --weight %s "
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['MMD_kernel_mul'],
-                 temp['MMD_kernel_num'], temp['epochs'], temp['lr'], temp['MCs'],
-                 temp['nweights_weight']['n_weights'], temp['nweights_weight']['weight'])
+                 temp['MMD_kernel_num'], temp['epochs'], temp['lr'], temp['obj1_max'], temp['obj1_min'], temp['obj2_max'], temp['obj2_min'],
+                 temp['MC'], temp['weights_total'], temp['nweight_weight']['n_weight'], temp['nweight_weight']['weight'])
               )
 if __name__ == "__main__":
     main(sys.argv[1:])

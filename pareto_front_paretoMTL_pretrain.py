@@ -37,11 +37,11 @@ def main(taskid):
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
-              "--pre_epochs %s --pre_adv_epochs %s --pre_lr %s --pre_adv_lr %s --num_workers %s"
+              "--pre_epochs %s --pre_adv_epochs %s --pre_lr %s --pre_adv_lr %s --MC %s --num_workers %s "
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
-                 temp['n_hidden'], temp['n_latent'], temp['batch_size'],
-                 temp['adv_estimator'], temp['adv_n_hidden'], temp['adv_n_layers'], temp['adv_activation_fun'],
-                 temp['pre_epochs'], temp['pre_adv_epochs'], temp['pre_lr'], temp['pre_adv_lr'], temp['num_workers'])
+                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['adv_n_hidden'],
+                 temp['adv_n_layers'], temp['adv_activation_fun'], temp['pre_epochs'], temp['pre_adv_epochs'],
+                 temp['pre_lr'], temp['pre_adv_lr'], temp['MC'], temp['num_workers'])
               )
 
 if __name__ == "__main__":
