@@ -26,7 +26,7 @@ def main(taskid):
         'pre_lr': [1e-3],
         'pre_adv_lr': [5e-5],
         'MC': list(range(20)),
-        'num_workers': [4]
+        'num_workers': [1] #4
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]

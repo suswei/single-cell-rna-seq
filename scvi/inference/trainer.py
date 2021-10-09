@@ -137,12 +137,7 @@ class Trainer:
                 pbar.update(1)
 
                 for tensors_list in self.data_loaders_loop():
-                    if self.regularize == True:
-                        self.cal_loss = True
-                        self.cal_adv_loss = True
-                        loss = self.two_loss(*tensors_list)
-                    else:
-                        loss = self.loss(*tensors_list)
+                    loss = self.loss(*tensors_list)
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
@@ -291,7 +286,7 @@ class Trainer:
         plt.savefig("{}/{}_train_test_error.png".format(path,type))
         plt.close()
 
-    def load_dict(self, path, lr, eps, adv_estimator, adv_lr=5e-5):
+    def load_dict(self, path, lr, eps, adv_lr):
         self.model.load_state_dict(torch.load(path + '/vae.pkl', map_location='cpu'))
 
         if torch.cuda.device_count() > 1:
@@ -312,10 +307,41 @@ class Trainer:
             self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
             # self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[30], gamma=0.5)
 
+    def regularize_fun(self, epochs, adv_epochs, obj1_max, obj1_min, obj2_max, obj2_min):
+
+        self.cal_loss = True
+        self.cal_adv_loss = True
+        self.model.train()
+        for epoch in range(epochs):
+
+            if self.adv_estimator == 'MINE':
+
+                self.cal_loss = False
+                self.cal_adv_loss = True
+                self.adv_model.train()
+                for adv_epoch in range(adv_epochs):
+                    for adv_tensors_list in self.data_loaders_loop():
+                        _, adv_loss, _ = self.two_loss(*adv_tensors_list)
+                        self.adv_optimizer.zero_grad()
+                        self.optimizer.zero_grad()
+                        adv_loss.backward()
+                        self.adv_optimizer.step()
+
+            for tensors_list in self.data_loaders_loop():
+                obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
+                regularize_loss =  self.weight*(obj1_minibatch - obj1_min)/(obj1_max - obj1_min) + (1- self.weight)*(obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+
+                self.optimizer.zero_grad()
+                if self.adv_estimator == 'MINE':
+                    self.adv_optimizer.zero_grad()
+
+                regularize_loss.backward()
+                self.optimizer.step()
+
     def pretrain_paretoMTL(self, pre_train: bool=False, pre_epochs: int=250, pre_lr: float=1e-3, eps: float = 0.01,
-                        pre_adv_epochs: int=100, pre_adv_lr: float=5e-5, path: str='None', lr: float=1e-3, adv_lr: float=5e-5, standardize: bool=False,
-                        std_paretoMTL: bool = False, obj1_max: float = 20000, obj1_min: float = 12000, obj2_max: float = 0.6, obj2_min: float = 0,
-                        epochs: int=150, adv_epochs: int=1, n_tasks: int=2, npref: int=10, pref_idx: int=0, taskid: int=0):
+        pre_adv_epochs: int=100, pre_adv_lr: float=5e-5, path: str='None', lr: float=1e-3, adv_lr: float=5e-5, standardize: bool=False,
+        std_paretoMTL: bool = False, obj1_max: float = 20000, obj1_min: float = 12000, obj2_max: float = 0.6, obj2_min: float = 0,
+        epochs: int=150, adv_epochs: int=1, regularize: bool=False, n_tasks: int=2, npref: int=10, pref_idx: int=0, taskid: int=0):
 
         if pre_train == True:
 
@@ -378,59 +404,21 @@ class Trainer:
                     torch.save(self.adv_model.module.state_dict(), path + '/MINE.pkl')
                 else:
                     torch.save(self.adv_model.state_dict(), path + '/MINE.pkl')
+        elif standardize == True:
+            self.load_dict(path=path, lr=lr, eps=eps, adv_lr=adv_lr)
+            obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(epochs=epochs, adv_epochs=adv_epochs, n_tasks=n_tasks,
+                                                        npref=npref, pref_idx=pref_idx)
+            return obj1_minibatch_list, obj2_minibatch_list
+
         else:
-            if standardize == True:
+            self.load_dict(path=path, lr=lr, eps=eps, adv_lr=adv_lr)
 
-                '''
-                obj1_minibatch_list, obj2_minibatch_list = [], []
-                self.load_dict(path=path, lr=lr, eps=eps, adv_estimator='None')
-                self.cal_loss = True
-                self.cal_adv_loss = False
-                for std_epoch in range(epochs):
-                    self.model.train()
-                    for tensors_list in self.data_loaders_loop():
-                        loss, _, _ = self.two_loss(*tensors_list)
-                        self.optimizer.zero_grad()
-                        loss.backward()
-                        self.optimizer.step()
-                        obj1_minibatch_list.append(loss.data)
-                
-                self.load_dict(path=path, lr=lr, eps=eps, adv_estimator=self.adv_estimator)
-                self.cal_loss = False
-                self.cal_adv_loss = True
-                for std_epoch in range(epochs):
-                    print('epoch: {}'.format(std_epoch))
-                    self.model.train()
-                    if self.adv_estimator == 'MINE':
-                        self.adv_model.train()
-                    for tensors_list in self.data_loaders_loop():
+            if regularize == True:
+                self.regularize_fun(epochs=epochs, adv_epochs=adv_epochs, obj1_max=obj1_max,
+                                    obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min)
 
-                        if self.adv_estimator == 'MINE':
-                            for adv_epoch in range(adv_epochs):
-                                for adv_tensors_list in self.data_loaders_loop():
-                                    _, adv_loss, _ = self.two_loss(*adv_tensors_list)
-                                    self.adv_optimizer.zero_grad()
-                                    self.optimizer.zero_grad()
-                                    adv_loss.backward()
-                                    self.adv_optimizer.step()
-
-                        _, adv_loss, obj2_minibatch = self.two_loss(*tensors_list)
-                        self.optimizer.zero_grad()
-                        if self.adv_estimator == 'MINE':
-                            self.adv_optimizer.zero_grad()
-                        print(obj2_minibatch)
-                        obj2_minibatch.backward()
-                        self.optimizer.step()
-                        obj2_minibatch_list.append(obj2_minibatch.data)
-                '''
-                self.load_dict(path=path, lr=lr, eps=eps, adv_estimator=self.adv_estimator)
-                obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(epochs=epochs, adv_epochs=adv_epochs, n_tasks=n_tasks,
-                                                            npref=npref, pref_idx=pref_idx)
-                return obj1_minibatch_list, obj2_minibatch_list
-
-            else:
-                self.load_dict(path=path, lr=lr, eps=eps, adv_estimator=self.adv_estimator)
-                #standardize + paretoMTL
+            #standardize + paretoMTL
+            elif std_paretoMTL == True:
                 obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(std_paretoMTL=std_paretoMTL, obj1_max=obj1_max,
                     obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, epochs=epochs, adv_epochs=adv_epochs,
                     n_tasks=n_tasks, npref=npref, pref_idx=pref_idx, path=path, taskid=taskid)

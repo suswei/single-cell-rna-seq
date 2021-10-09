@@ -388,10 +388,15 @@ def main( ):
     #for regularization
     parser.add_argument('--regularize', action='store_true', default=False,
                         help='whether to regularize or not')
-    parser.add_argument('--n_weights', type=int, default=10,
-                        help='number of weights')
+
+    parser.add_argument('--weights_total', type=int, default=12,
+                        help='total number of weights')
+
+    parser.add_argument('--n_weight', type=int, default=10,
+                        help='index of which weight')
+
     parser.add_argument('--weight', type=float, default=10000,
-                        help='weight for MMD regularization')
+                        help='regularization weight')
 
     # general usage
     parser.add_argument('--num_workers', type=int, default=1,
@@ -462,166 +467,164 @@ def main( ):
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
 
-    if args.regularize == True:
-        args.save_path = './result/{}/{}/regularize/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)
-        if not os.path.exists('./result/{}/{}/regularize/taskid{}'.format(args.dataset_name, args.confounder, args.taskid)):
-            os.makedirs('./result/{}/{}/regularize/taskid{}'.format(args.dataset_name, args.confounder, args.taskid))
 
-        args.desired_seed = int(desired_seeds[0, args.taskid//args.n_weights])
-        # calculate ratio to split the gene_dataset into training and testing dataset
-        # to avoid the case when there are very few input data points of the last minibatch in every epoch
-        intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
-        args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e10) / 1e10
-        trainer_vae = construct_trainer_vae(gene_dataset, args)
-        trainer_vae.train(n_epochs=args.epochs, lr=args.lr)
+    if args.pre_train == True:
+        #index = 0
+        index = args.taskid
+    elif args.regularize == True:
+        index = args.taskid // args.weights_total
     else:
-        if args.pre_train == True:
-            args.desired_seed = int(desired_seeds[0, args.taskid])
-            #args.desired_seed = int(desired_seeds[0, 0])
-        else:
-            args.desired_seed = int(desired_seeds[0, int(args.taskid/args.npref)])
+        index = args.taskid//args.npref
 
-        if args.pre_train == True:
-            args.save_path = './result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)
-            if not os.path.exists('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid)):
-                os.makedirs('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, args.taskid))
-        else:
-            args.save_path = './result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))
-            if not os.path.exists('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, int(args.taskid/args.npref))):
-                print('Error: please pretrain first!')
+    args.desired_seed = int(desired_seeds[0, index])
 
-        if args.empirical_MI == True:
-            for i in range(gene_dataset.n_batches-1):
-                ratio_perbatch = gene_dataset.batch_indices[gene_dataset.batch_indices[:,0]==i].shape[0]/gene_dataset.batch_indices.shape[0]
-                args.batch_ratio +=[ratio_perbatch]
-            args.batch_ratio += [1-sum(args.batch_ratio)]
+    args.save_path = './result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index)
+    if not os.path.exists('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index)):
+        os.makedirs('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index))
 
-        # calculate ratio to split the gene_dataset into training and testing dataset
-        # to avoid the case when there are very few input data points of the last minibatch in every epoch
-        intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
-        args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e10) / 1e10
+    if args.empirical_MI == True:
+        for i in range(gene_dataset.n_batches-1):
+            ratio_perbatch = gene_dataset.batch_indices[gene_dataset.batch_indices[:,0]==i].shape[0]/gene_dataset.batch_indices.shape[0]
+            args.batch_ratio +=[ratio_perbatch]
+        args.batch_ratio += [1-sum(args.batch_ratio)]
 
-        '''
-        # If train vae alone
-        vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
-                  n_hidden=128, n_latent=10, n_layers_encoder=1, n_layers_decoder=1, dropout_rate=0.1, reconstruction_loss='zinb')
-        # frequency controls how often the statistics in trainer_vae.model are evaluated by compute_metrics() function in trainer.py
-        trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=args.train_size, seed=args.desired_seed, frequency=10, kl=1)
-        trainer_vae.train(n_epochs=150, lr=0.001)
-        #torch.save(trainer_vae.model.state_dict(), args.save_path) #saved into pickle file
-        trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels',save_name=args.save_path + '/tsne_batch_label_train')
-        ll_train_set = trainer_vae.history["ll_train_set"]
-        ll_test_set = trainer_vae.history["ll_test_set"]
-        x = np.linspace(0, 500, (len(ll_train_set)))
-    
-        fig = plt.figure(figsize=(14, 7))
-        plt.plot(x, ll_train_set)
-        plt.plot(x, ll_test_set)
-        plt.title("Blue for training error and orange for testing error")
-        fig.savefig(args.save_path + '/training_testing_error.png')
-        plt.close(fig)
-        '''
-        trainer_vae = construct_trainer_vae(gene_dataset, args)
+    # calculate ratio to split the gene_dataset into training and testing dataset
+    # to avoid the case when there are very few input data points of the last minibatch in every epoch
+    intended_trainset_size = int(gene_dataset._X.shape[0] / args.batch_size / 10) * 10 * args.train_size * args.batch_size + (int(gene_dataset._X.shape[0] / args.batch_size) % 10) * 128
+    args.train_size = int(intended_trainset_size / gene_dataset._X.shape[0] * 1e10) / 1e10
 
-        if args.pre_train == True:
-            trainer_vae.pretrain_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
-                            pre_adv_epochs=args.pre_adv_epochs, pre_adv_lr=args.pre_adv_lr, path=args.save_path)
+    '''
+    # If train vae alone
+    vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
+              n_hidden=128, n_latent=10, n_layers_encoder=1, n_layers_decoder=1, dropout_rate=0.1, reconstruction_loss='zinb')
+    # frequency controls how often the statistics in trainer_vae.model are evaluated by compute_metrics() function in trainer.py
+    trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=args.train_size, seed=args.desired_seed, frequency=10, kl=1)
+    trainer_vae.train(n_epochs=150, lr=0.001)
+    #torch.save(trainer_vae.model.state_dict(), args.save_path) #saved into pickle file
+    trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels',save_name=args.save_path + '/tsne_batch_label_train')
+    ll_train_set = trainer_vae.history["ll_train_set"]
+    ll_test_set = trainer_vae.history["ll_test_set"]
+    x = np.linspace(0, 500, (len(ll_train_set)))
 
-            if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
-                trainer_vae = construct_trainer_vae(gene_dataset, args)
-                trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location='cpu'))
-                trainer_vae.model.to(trainer_vae.device)
-                trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels',save_name=args.save_path + '/tsne_batch_label_train')
-            obj1_train, obj1_test = obj1_train_test(trainer_vae)
-            print(obj1_train, obj1_test)
-        elif args.standardize == True:
-            obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_paretoMTL(
-                path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs,
-                adv_epochs=args.adv_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
+    fig = plt.figure(figsize=(14, 7))
+    plt.plot(x, ll_train_set)
+    plt.plot(x, ll_test_set)
+    plt.title("Blue for training error and orange for testing error")
+    fig.savefig(args.save_path + '/training_testing_error.png')
+    plt.close(fig)
+    '''
+    trainer_vae = construct_trainer_vae(gene_dataset, args)
 
-            obj1_max = max(obj1_minibatch_list)
-            obj1_min = min(obj1_minibatch_list)
-            print('obj1_max: {}, obj1_min: {}'.format(obj1_max, obj1_min))
+    if args.pre_train == True:
+        trainer_vae.pretrain_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
+                        pre_adv_epochs=args.pre_adv_epochs, pre_adv_lr=args.pre_adv_lr, path=args.save_path)
 
-            obj2_max = max(obj2_minibatch_list)
-            obj2_min = min(obj2_minibatch_list)
-            print('obj2_max: {}, obj2_min: {}'.format(obj2_max, obj2_min))
+        if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
+            trainer_vae = construct_trainer_vae(gene_dataset, args)
+            trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location='cpu'))
+            trainer_vae.model.to(trainer_vae.device)
+            trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels',save_name=args.save_path + '/tsne_batch_label_train')
+        obj1_train, obj1_test = obj1_train_test(trainer_vae)
+        print(obj1_train, obj1_test)
 
-            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
-            print('obj2_train: {}, obj2_test: {}'.format(obj2_train, obj2_test))
+    elif args.standardize == True:
+        obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_paretoMTL(
+            path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs,
+            adv_epochs=args.adv_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
+
+        obj1_max = max(obj1_minibatch_list)
+        obj1_min = min(obj1_minibatch_list)
+        print('obj1_max: {}, obj1_min: {}'.format(obj1_max, obj1_min))
+
+        obj2_max = max(obj2_minibatch_list)
+        obj2_min = min(obj2_minibatch_list)
+        print('obj2_max: {}, obj2_min: {}'.format(obj2_max, obj2_min))
+
+        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
+        print('obj2_train: {}, obj2_test: {}'.format(obj2_train, obj2_test))
+
+    else:
+        if args.regularize == True:
+            trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
+            regularize=args.reguarize, epochs = args.epochs, adv_epochs = args.adv_epochs,
+            obj1_max=args.obj1_max, obj1_min = args.obj1_min, obj2_max = args.obj2_max, obj2_min = args.obj2_min)
+
+            method = 'regularize'
 
         elif args.std_paretoMTL == True:
             _, _ = trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, std_paretoMTL=args.std_paretoMTL,
-                   obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
-                   adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
+                obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
+                adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
 
-            args.save_path = './result/{}/{}/pareto{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)
-            if not os.path.exists('./result/{}/{}/pareto{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid)):
-                os.makedirs('./result/{}/{}/pareto{}/taskid{}'.format(args.dataset_name, args.confounder, args.adv_estimator, args.taskid))
+            method = 'pareto{}'.format(args.adv_estimator)
 
-            if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
-                torch.save(trainer_vae.model.module.state_dict(), args.save_path + '/vae.pkl')
-                if args.adv_estimator == 'MINE':
-                    torch.save(trainer_vae.adv_model.module.state_dict(), args.save_path + '/MINE.pkl')
+        args.save_path = './result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)
+        if not os.path.exists('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)):
+            os.makedirs('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,method, args.taskid))
 
-                trainer_vae = construct_trainer_vae(gene_dataset, args)
-                trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location='cpu'))
-                os.remove(args.save_path + '/vae.pkl')
-                if args.adv_estimator == 'MINE':
-                    trainer_vae.adv_model.load_state_dict(torch.load(args.save_path + '/MINE.pkl', map_location='cpu'))
-                    os.remove(args.save_path + '/MINE.pkl')
+        if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
+            torch.save(trainer_vae.model.module.state_dict(), args.save_path + '/vae.pkl')
+            if args.adv_estimator == 'MINE':
+                torch.save(trainer_vae.adv_model.module.state_dict(), args.save_path + '/MINE.pkl')
 
-            if torch.cuda.is_available():
-                trainer_vae.model.to(trainer_vae.device)
-            params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
-            trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
+            trainer_vae = construct_trainer_vae(gene_dataset, args)
+            trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location='cpu'))
+            os.remove(args.save_path + '/vae.pkl')
+            if args.adv_estimator == 'MINE':
+                trainer_vae.adv_model.load_state_dict(torch.load(args.save_path + '/MINE.pkl', map_location='cpu'))
+                os.remove(args.save_path + '/MINE.pkl')
 
-            trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
-            trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
+        if torch.cuda.is_available():
+            trainer_vae.model.to(trainer_vae.device)
+        params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
+        trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
 
-    #obj1 for the whole training and testing set
-    obj1_train, obj1_test = obj1_train_test(trainer_vae)
+        trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
+        trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
 
-    # obj2 for the whole training and testing set
-    if trainer_vae.adv_estimator == 'MINE':
-        obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
-    elif trainer_vae.adv_estimator == 'MMD':
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
-    elif trainer_vae.adv_estimator == 'stdz_MMD':
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
+        #obj1 for the whole training and testing set
+        obj1_train, obj1_test = obj1_train_test(trainer_vae)
 
-    NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
+        # obj2 for the whole training and testing set
+        if trainer_vae.adv_estimator == 'MINE':
+            obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
+        elif trainer_vae.adv_estimator == 'MMD':
+            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
+        elif trainer_vae.adv_estimator == 'stdz_MMD':
+            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
 
-    asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
-    be_train = trainer_vae.train_set.entropy_batch_mixing()
+        NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
 
-    asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
-    be_test = trainer_vae.test_set.entropy_batch_mixing()
+        asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
+        be_train = trainer_vae.train_set.entropy_batch_mixing()
 
-    results_dict = {'obj1_train': [obj1_train],
-                    'obj2_train': [obj2_train],
-                    'NN_train': [NN_train],
-                    'obj1_test': [obj1_test],
-                    'obj2_test': [obj2_test],
-                    'NN_test': [NN_test],
-                    'asw_train': [asw_train],
-                    'nmi_train': [nmi_train],
-                    'ari_train': [ari_train],
-                    'uca_train': [uca_train],
-                    'be_train': [be_train],
-                    'asw_test': [asw_test],
-                    'nmi_test': [nmi_test],
-                    'ari_test': [ari_test],
-                    'uca_test': [uca_test],
-                    'be_test': [be_test]}
+        asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
+        be_test = trainer_vae.test_set.entropy_batch_mixing()
 
-    args_dict = vars(args)
-    with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
-        pickle.dump(args_dict, f)
+        results_dict = {'obj1_train': [obj1_train],
+                        'obj2_train': [obj2_train],
+                        'NN_train': [NN_train],
+                        'obj1_test': [obj1_test],
+                        'obj2_test': [obj2_test],
+                        'NN_test': [NN_test],
+                        'asw_train': [asw_train],
+                        'nmi_train': [nmi_train],
+                        'ari_train': [ari_train],
+                        'uca_train': [uca_train],
+                        'be_train': [be_train],
+                        'asw_test': [asw_test],
+                        'nmi_test': [nmi_test],
+                        'ari_test': [ari_test],
+                        'uca_test': [uca_test],
+                        'be_test': [be_test]}
 
-    with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
-        pickle.dump(results_dict, f)
-    print(results_dict)
+        args_dict = vars(args)
+        with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
+            pickle.dump(args_dict, f)
+
+        with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
+            pickle.dump(results_dict, f)
+        print(results_dict)
 
 # Run the actual program
 if __name__ == "__main__":
