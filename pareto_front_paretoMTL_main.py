@@ -467,7 +467,6 @@ def main( ):
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
 
-
     if args.pre_train == True:
         #index = 0
         index = args.taskid

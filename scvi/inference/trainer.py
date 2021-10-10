@@ -430,7 +430,7 @@ class Trainer:
 
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0]).to(self.device)
 
-        obj1_minibatch_list, obj2_minibatch_list, obj1_train_list, obj1_test_list, weightloss1_list, weighted_obj1_list, weighted_obj2_list = [], [], [], [], [], [], []
+        obj1_minibatch_list, obj2_minibatch_list, obj1_train_list, obj1_test_list = [], [], [], []
         # run until the initial solution is found when flag==True
         # usually can be found with a few steps
 
