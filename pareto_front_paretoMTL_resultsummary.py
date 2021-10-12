@@ -55,18 +55,25 @@ def dominates(row, candidateRow, return_index, min_max):
         elif min_max == 'max':
             return sum([row[x] >= candidateRow[x] for x in range(len(row))]) == len(row)
 
-def draw_pareto_front(dataframe, methods_list, pareto_front_type, cal_metric, save_path):
+def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, cal_metric, save_path):
 
     if cal_metric:
         hypervolume_dict = {}
         percentage_dict = {}
-        if pareto_front_type in ['obj2','NN']:
+        if pareto_front_x =='obj1':
             obj1_max = dataframe.loc[:, ['obj1_train', 'obj1_test']].max(axis=0).max()
-            obj2_max = dataframe.loc[:, ['{}_train'.format(pareto_front_type), '{}_test'.format(pareto_front_type)]].max(axis=0).max()
+            if pareto_front_y in ['obj2','NN']:
+                obj2_max = dataframe.loc[:,['{}_train'.format(pareto_front_y), '{}_test'.format(pareto_front_y)]].max(axis=0).max()
+            elif pareto_front_y == 'be':
+                obj2_max = dataframe.loc[:, ['be_train', 'be_test']].min(axis=0).min() * (-1)
             ref_point = [obj1_max + 5, obj2_max + 0.01]
-        else:
-            obj1_max = dataframe.loc[:,['{}_train'.format(pareto_front_type), '{}_test'.format(pareto_front_type)]].min(axis=0).min() * (-1)
-            obj2_max = dataframe.loc[:, ['be_train', 'be_test']].min(axis=0).min() * (-1)
+
+        else :
+            obj1_max = dataframe.loc[:,['{}_train'.format(pareto_front_x), '{}_test'.format(pareto_front_x)]].min(axis=0).min() * (-1)
+            if pareto_front_y in ['obj2','NN']:
+                obj2_max = dataframe.loc[:, ['{}_train'.format(pareto_front_y), '{}_test'.format(pareto_front_y)]].max(axis=0).max()
+            elif pareto_front_y == 'be':
+                obj2_max = dataframe.loc[:, ['be_train', 'be_test']].min(axis=0).min() * (-1)
             ref_point = [obj1_max + 0.01, obj2_max + 0.01]
 
     for MC in range(dataframe.MC.max()+1):
@@ -82,13 +89,14 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_type, cal_metric, sa
 
             for (j,type) in enumerate(['train', 'test']):
 
-                if pareto_front_type in ['obj2', 'NN']:
-                    obj1 = dataframe_oneMC_oneMethod.loc[:, 'obj1_{}'.format(type)].values.tolist()
-                    obj2 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_type, type)].values.tolist()
-                else:
-                    obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_type, type)].values.tolist()
-                    obj2 = dataframe_oneMC_oneMethod.loc[:, 'be_{}'.format(type)].values.tolist()
+                obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_x, type)].values.tolist()
+                obj2 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_y, type)].values.tolist()
 
+                if pareto_front_x == 'obj1' and pareto_front_y == 'be':
+                    obj2 = [(-1) * k for k in obj2]
+                elif pareto_front_x != 'obj1' and pareto_front_y != 'be':
+                    obj1 = [(-1) * k for k in obj1]
+                elif pareto_front_x != 'obj1' and pareto_front_y == 'be':
                     obj1 = [(-1) * k for k in obj1]
                     obj2 = [(-1) * k for k in obj2]
 
@@ -120,11 +128,8 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_type, cal_metric, sa
                     marker_symbol = 'cross'
                 elif i == 2:
                     marker_symbol = 'triangle-up'
-
-                if method != 'regularize':
-                    method_legend = 'pareto' + method
-                else:
-                    method_legend = method
+                elif i == 3:
+                    marker_symbol = 'diamond'
 
                 if j==0 and pp.shape[0] > 0:
                     fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
@@ -134,20 +139,20 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_type, cal_metric, sa
                 elif j==1 and pp.shape[0] > 0:
                     fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
                                              mode='markers+text', textfont_size=12, textposition='top center',
-                                             marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method_legend, type),
+                                             marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
                                              marker_color='rgba(0, 0,0, 0)', showlegend=False))
 
                 if j == 0 and pp.shape[0] > 0:
                     fig.add_trace(
                         go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
                                    mode='markers', textfont_size=12, textposition='top center',
-                                   marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method_legend, type),
+                                   marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
                                    marker_color='rgba(255, 25, 52, .9)', showlegend=True))
                 elif j == 1 and pp.shape[0] > 0:
                     fig.add_trace(
                         go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
                                    mode='markers', textfont_size=12, textposition='top center',
-                                   marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method_legend, type),
+                                   marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
                                    marker_color='rgba(0, 0, 255, .9)', showlegend=True))
 
         fig.update_layout(
@@ -653,8 +658,11 @@ def main( ):
     parser.add_argument('--MCs', type=int, default=20,
                         help='number of Monte Carlos')
 
-    parser.add_argument('--pareto_front_type', type=str, default='obj2',
-                        help='the type of the pareto front') #obj2, NN, asw, ari, uca, nmi
+    parser.add_argument('--pareto_front_x', type=str, default='asw',
+                        help='xaxis value') #asw, ari, uca, nmi,obj1
+
+    parser.add_argument('--pareto_front_y', type=str, default='obj2',
+                        help='yaxis value') #obj2, NN, be
 
     parser.add_argument('--methods_list', type=str, default='MINE,MMD',
                         help='list of methods')
@@ -713,7 +721,8 @@ def main( ):
                 print('method:{},taskid{}'.format(method, i))
 
     hypervolume_dict, percentage_dict = draw_pareto_front(dataframe=results_config_total, methods_list=args.methods_list,
-                                        pareto_front_type=args.pareto_front_type, cal_metric=args.cal_metric, save_path=os.path.dirname(dir_path)+'/')
+                                        pareto_front_x=args.pareto_front_x, pareto_front_y=args.pareto_front_y,
+                                        cal_metric=args.cal_metric, save_path=os.path.dirname(dir_path)+'/')
 
     compare_hypervolume_percent(methods_list=args.methods_list, hypervolume_dict=hypervolume_dict, percentage_dict=percentage_dict,
                                 pareto_front_type=args.pareto_front_type, save_path=os.path.dirname(dir_path)+'/')

@@ -144,7 +144,7 @@ class Trainer:
 
                 #if not self.on_epoch_end():
                 #    break
-        '''
+
         if self.early_stopping.save_best_state_metric is not None:
             self.model.load_state_dict(self.best_state_dict)
             self.compute_metrics()
@@ -153,7 +153,7 @@ class Trainer:
         self.training_time += (time.time() - begin) - self.compute_metrics_time
         if self.verbose and self.frequency:
             print("\nTraining time:  %i s. / %i epochs" % (int(self.training_time), self.n_epochs))
-        '''
+
     def on_epoch_begin(self):
         pass
 
@@ -244,8 +244,12 @@ class Trainer:
                           data_loader_kwargs=self.data_loader_kwargs)
 
     def obj1_obj2_eval(self, type='obj1'):
+
         with torch.no_grad():
             self.model.eval()
+            if self.adv_estimator=='MINE':
+                self.adv_model.eval()
+
             if type == 'obj1':
                 self.cal_loss = True
                 self.cal_adv_loss = False
@@ -309,17 +313,14 @@ class Trainer:
 
     def regularize_fun(self, epochs, adv_epochs, obj1_max, obj1_min, obj2_max, obj2_min):
 
-        self.cal_loss = True
-        self.cal_adv_loss = True
-        self.model.train()
         for epoch in range(epochs):
+            self.model.train()
 
             if self.adv_estimator == 'MINE':
-
                 self.cal_loss = False
                 self.cal_adv_loss = True
-                self.adv_model.train()
                 for adv_epoch in range(adv_epochs):
+                    self.adv_model.train()
                     for adv_tensors_list in self.data_loaders_loop():
                         _, adv_loss, _ = self.two_loss(*adv_tensors_list)
                         self.adv_optimizer.zero_grad()
@@ -327,6 +328,8 @@ class Trainer:
                         adv_loss.backward()
                         self.adv_optimizer.step()
 
+            self.cal_loss = True
+            self.cal_adv_loss = True
             for tensors_list in self.data_loaders_loop():
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
                 regularize_loss =  self.weight*(obj1_minibatch - obj1_min)/(obj1_max - obj1_min) + (1- self.weight)*(obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
@@ -357,8 +360,8 @@ class Trainer:
             # pretrain vae_MI, here loss is not standardized
             self.cal_loss = True
             self.cal_adv_loss = False
-            self.model.train()
             for pre_epoch in range(pre_epochs):
+                self.model.train()
                 for tensors_list in self.data_loaders_loop():
                     loss, _, _ = self.two_loss(*tensors_list)
                     self.optimizer.zero_grad()
@@ -386,8 +389,8 @@ class Trainer:
                 # pretrain adv_model to make MINE works
                 self.cal_loss = False
                 self.cal_adv_loss = True
-                self.adv_model.train()
                 for pre_adv_epoch in range(pre_adv_epochs):
+                    self.adv_model.train()
                     for adv_tensors_list in self.data_loaders_loop():
                         _, adv_loss, _ = self.two_loss(*adv_tensors_list)
                         self.adv_optimizer.zero_grad()
@@ -404,26 +407,21 @@ class Trainer:
                     torch.save(self.adv_model.module.state_dict(), path + '/MINE.pkl')
                 else:
                     torch.save(self.adv_model.state_dict(), path + '/MINE.pkl')
-        elif standardize == True:
-            self.load_dict(path=path, lr=lr, eps=eps, adv_lr=adv_lr)
-            obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(epochs=epochs, adv_epochs=adv_epochs, n_tasks=n_tasks,
-                                                        npref=npref, pref_idx=pref_idx)
-            return obj1_minibatch_list, obj2_minibatch_list
-
         else:
+
             self.load_dict(path=path, lr=lr, eps=eps, adv_lr=adv_lr)
 
-            if regularize == True:
-                self.regularize_fun(epochs=epochs, adv_epochs=adv_epochs, obj1_max=obj1_max,
-                                    obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min)
+            if standardize == True or std_paretoMTL == True:
 
-            #standardize + paretoMTL
-            elif std_paretoMTL == True:
                 obj1_minibatch_list, obj2_minibatch_list = self.paretoMTL(std_paretoMTL=std_paretoMTL, obj1_max=obj1_max,
                     obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, epochs=epochs, adv_epochs=adv_epochs,
                     n_tasks=n_tasks, npref=npref, pref_idx=pref_idx, path=path, taskid=taskid)
 
                 return obj1_minibatch_list, obj2_minibatch_list
+
+            elif regularize == True:
+
+                self.regularize_fun(epochs=epochs, adv_epochs=adv_epochs, obj1_max=obj1_max, obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min)
 
     def paretoMTL(self, std_paretoMTL: bool=False, obj1_max: float=20000, obj1_min: float=12000, obj2_max: float=0.6, obj2_min: float=0,
                   epochs: int=50, adv_epochs: int=1, n_tasks: int=2, npref: int=10, pref_idx: int=0, path: str='.', taskid: int=0):
@@ -506,7 +504,7 @@ class Trainer:
                 self.optimizer.step()
 
             else:
-                # continue if no feasible solution is found
+            # continue if no feasible solution is found
                 continue
             # break the loop once a feasible solutions is found
             break

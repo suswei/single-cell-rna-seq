@@ -20,24 +20,28 @@ import pickle
 import matplotlib.pyplot as plt
 
 def construct_trainer_vae(gene_dataset, args):
+
     vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * args.use_batches,n_labels=gene_dataset.n_labels,
                     n_hidden=args.n_hidden, n_latent=args.n_latent, n_layers_encoder=args.n_layers_encoder,
                     n_layers_decoder=args.n_layers_decoder,dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss)
+
     if args.adv_estimator == 'MINE':
+
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
-                                          seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator,
-                                          adv_n_hidden=args.adv_n_hidden, adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
-                                          unbiased_loss=args.unbiased_loss, adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+                      seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, adv_n_hidden=args.adv_n_hidden,
+                      adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun, unbiased_loss=args.unbiased_loss,
+                      adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+
     elif args.adv_estimator in ['MMD','stdz_MMD']:
-        if args.regularize == False:
-            trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
-                                          seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, MMD_kernel_mul=args.MMD_kernel_mul,
-                                          MMD_kernel_num=args.MMD_kernel_num, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
-        else:
-            trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
-                                          seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator,MMD_kernel_mul=args.MMD_kernel_mul,
-                                          MMD_kernel_num=args.MMD_kernel_num, regularize=args.regularize, weight=args.weight,
-                                          batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+
+        trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
+                      seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, MMD_kernel_mul=args.MMD_kernel_mul,
+                      MMD_kernel_num=args.MMD_kernel_num, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+
+    if args.regularize == True:
+        trainer_vae.regularize = args.regularize
+        trainer_vae.weight = args.weight
+
 
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
     trainer_vae.kl_weight = 1
