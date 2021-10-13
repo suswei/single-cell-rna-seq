@@ -392,7 +392,7 @@ def main( ):
     parser.add_argument('--weights_total', type=int, default=12,
                         help='total number of weights')
 
-    parser.add_argument('--n_weight', type=int, default=10,
+    parser.add_argument('--nweight', type=int, default=10,
                         help='index of which weight')
 
     parser.add_argument('--weight', type=float, default=1/11,
