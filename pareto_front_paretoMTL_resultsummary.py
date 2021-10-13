@@ -662,9 +662,9 @@ def main( ):
                         help='xaxis value') #asw, ari, uca, nmi,obj1
 
     parser.add_argument('--pareto_front_y', type=str, default='obj2',
-                        help='yaxis value') #obj2, NN, be
+                        help='yaxis value') #obj2 (MINE or stdz_MMD), NN, be
 
-    parser.add_argument('--methods_list', type=str, default='MINE,MMD',
+    parser.add_argument('--methods_list', type=str, default='paretoMINE,paretoMMD',
                         help='list of methods')
 
     parser.add_argument('--cal_metric', action='store_true', default=False,
@@ -678,14 +678,13 @@ def main( ):
 
     for method in args.methods_list:
 
-        if method == 'regularize':
-            dir_path = './result/{}/{}/regularize'.format(args.dataset, args.confounder)
+        dir_path = './result/{}/{}/{}'.format(args.dataset, args.confounder, method)
+        if 'regularize' in method:
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),
-                'nweights_weight': [{'n_weights': n, 'weight': i} for n, i in zip([10] * 10, [0, 5, 10, 50, 100, 400, 800, 1000, 2000, 4000])]
+                'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(10)), [1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11])]
             }
         else:
-            dir_path = './result/{}/{}/pareto{}'.format(args.dataset, args.confounder, method)
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),
                 'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10] * 10, list(range(10)))]
@@ -706,8 +705,8 @@ def main( ):
                     del results['obj1_minibatch_list']
                 if 'obj2_minibatch_list' in results.keys():
                     del results['obj2_minibatch_list']
-                if method == 'regularize':
-                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'MC', 'regularize_weight'])}
+                if 'regularize' in method:
+                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'MC', 'n_weight'])}
                 else:
                     results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator','MC', 'pref_idx'])}
                 results_config.update({'method': [method]})

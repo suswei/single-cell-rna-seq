@@ -38,10 +38,6 @@ def construct_trainer_vae(gene_dataset, args):
                       seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, MMD_kernel_mul=args.MMD_kernel_mul,
                       MMD_kernel_num=args.MMD_kernel_num, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
-    if args.regularize == True:
-        trainer_vae.regularize = args.regularize
-        trainer_vae.weight = args.weight
-
 
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
     trainer_vae.kl_weight = 1
@@ -399,7 +395,7 @@ def main( ):
     parser.add_argument('--n_weight', type=int, default=10,
                         help='index of which weight')
 
-    parser.add_argument('--weight', type=float, default=10000,
+    parser.add_argument('--weight', type=float, default=1/11,
                         help='regularization weight')
 
     # general usage
@@ -549,10 +545,10 @@ def main( ):
     else:
         if args.regularize == True:
             trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
-            regularize=args.reguarize, epochs = args.epochs, adv_epochs = args.adv_epochs,
+            regularize=args.regularize, weight=args.weight, epochs = args.epochs, adv_epochs = args.adv_epochs,
             obj1_max=args.obj1_max, obj1_min = args.obj1_min, obj2_max = args.obj2_max, obj2_min = args.obj2_min)
 
-            method = 'regularize'
+            method = 'regularize{}'.format(args.adv_estimator)
 
         elif args.std_paretoMTL == True:
             _, _ = trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, std_paretoMTL=args.std_paretoMTL,

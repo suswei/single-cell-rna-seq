@@ -20,12 +20,12 @@ def main(taskid):
         'adv_estimator': ['stdz_MMD'], #
         'MMD_kernel_mul': [2], #
         'MMD_kernel_num': [15],#
-        'epochs': [20],#150
+        'epochs': [250],#150
         'lr': [1e-3],
-        'obj1_max': [30967], #
-        'obj1_min': [11909], #
-        'obj2_max': [0.949], #
-        'obj2_min': [0.374], #
+        'obj1_max': [19996], #
+        'obj1_min': [11427], #
+        'obj2_max': [0.9937], #
+        'obj2_min': [0.4237], #
         'n_tasks': [2],
         'MC': list(range(20)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))],
@@ -36,7 +36,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --standardize --use_batches --MCs 20 "
+    os.system("python3 pareto_front_paretoMTL_main.py --std_paretoMTL --use_batches --MCs 20 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "        
               "--adv_estimator %s --MMD_kernel_mul %s --MMD_kernel_num %s "

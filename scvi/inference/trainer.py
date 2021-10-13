@@ -43,7 +43,7 @@ class Trainer:
                  benchmark=False, verbose=False, frequency=None, weight_decay=1e-6, early_stopping_kwargs=dict(),
                  data_loader_kwargs=dict(), save_path='None', batch_size=128, adv_estimator='None',
                  adv_n_hidden=128, adv_n_layers=10, adv_activation_fun='ELU', unbiased_loss=True, adv_w_initial='Normal',
-                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5, regularize: bool=False, weight: float=10000, batch_ratio: list=[], nsamples: int=1e5):
+                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5, batch_ratio: list=[], nsamples: int=1e5):
 
         self.model = model
         self.gene_dataset = gene_dataset
@@ -64,8 +64,6 @@ class Trainer:
         elif self.adv_estimator in ['MMD','stdz_MMD']:
             self.MMD_loss = MMD_loss(kernel_mul = MMD_kernel_mul, kernel_num = MMD_kernel_num)
 
-        self.regularize = regularize
-        self.weight = weight
         self.batch_ratio = batch_ratio
         self.nsamples = nsamples
 
@@ -311,7 +309,7 @@ class Trainer:
             self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
             # self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[30], gamma=0.5)
 
-    def regularize_fun(self, epochs, adv_epochs, obj1_max, obj1_min, obj2_max, obj2_min):
+    def regularize_fun(self, epochs, adv_epochs, weight, obj1_max, obj1_min, obj2_max, obj2_min):
 
         for epoch in range(epochs):
             self.model.train()
@@ -332,7 +330,7 @@ class Trainer:
             self.cal_adv_loss = True
             for tensors_list in self.data_loaders_loop():
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
-                regularize_loss =  self.weight*(obj1_minibatch - obj1_min)/(obj1_max - obj1_min) + (1- self.weight)*(obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+                regularize_loss =  weight*(obj1_minibatch - obj1_min)/(obj1_max - obj1_min) + (1- weight)*(obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
 
                 self.optimizer.zero_grad()
                 if self.adv_estimator == 'MINE':
@@ -341,10 +339,10 @@ class Trainer:
                 regularize_loss.backward()
                 self.optimizer.step()
 
-    def pretrain_paretoMTL(self, pre_train: bool=False, pre_epochs: int=250, pre_lr: float=1e-3, eps: float = 0.01,
-        pre_adv_epochs: int=100, pre_adv_lr: float=5e-5, path: str='None', lr: float=1e-3, adv_lr: float=5e-5, standardize: bool=False,
-        std_paretoMTL: bool = False, obj1_max: float = 20000, obj1_min: float = 12000, obj2_max: float = 0.6, obj2_min: float = 0,
-        epochs: int=150, adv_epochs: int=1, regularize: bool=False, n_tasks: int=2, npref: int=10, pref_idx: int=0, taskid: int=0):
+    def pretrain_paretoMTL(self, pre_train: bool=False, pre_epochs: int=200, pre_lr: float=1e-3, eps: float = 0.01,
+        pre_adv_epochs: int=400, pre_adv_lr: float=5e-5, path: str='None', lr: float=1e-3, adv_lr: float=5e-5, standardize: bool=False,
+        std_paretoMTL: bool = False, n_tasks: int=2, npref: int=10, pref_idx: int=0, taskid: int=0, epochs: int=150, adv_epochs: int=1,
+        obj1_max: float = 20000, obj1_min: float = 12000, obj2_max: float = 0.6, obj2_min: float = 0, regularize: bool=False, weight: float=1/11):
 
         if pre_train == True:
 
@@ -421,7 +419,7 @@ class Trainer:
 
             elif regularize == True:
 
-                self.regularize_fun(epochs=epochs, adv_epochs=adv_epochs, obj1_max=obj1_max, obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min)
+                self.regularize_fun(epochs=epochs, adv_epochs=adv_epochs, weight=weight, obj1_max=obj1_max, obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min)
 
     def paretoMTL(self, std_paretoMTL: bool=False, obj1_max: float=20000, obj1_min: float=12000, obj2_max: float=0.6, obj2_min: float=0,
                   epochs: int=50, adv_epochs: int=1, n_tasks: int=2, npref: int=10, pref_idx: int=0, path: str='.', taskid: int=0):
