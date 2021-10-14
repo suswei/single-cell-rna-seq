@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="regularize_stdzMMD"
+#SBATCH --job-name="regularize_stdMMD"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
@@ -13,7 +13,7 @@
 #SBATCH --time=0-10:00:00
 
 # Batch arrays
-#SBATCH --array=0
+#SBATCH --array=0-239
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
