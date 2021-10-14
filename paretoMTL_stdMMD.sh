@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="regularize_stdzMMD"
+#SBATCH --job-name="pareto_front"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem 7000
+#SBATCH --mem 7400
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=0-4:00:00
+#SBATCH --time=0-10:0:00
 
 # Batch arrays
-#SBATCH --array=0-239
+#SBATCH --array=0-199
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
@@ -38,6 +38,5 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-python3 regularize_stdzMMD.py ${SLURM_ARRAY_TASK_ID}
-
+python3 paretoMTL_stdMMD.py ${SLURM_ARRAY_TASK_ID}
 

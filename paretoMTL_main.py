@@ -32,7 +32,7 @@ def construct_trainer_vae(gene_dataset, args):
                       adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun, unbiased_loss=args.unbiased_loss,
                       adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
-    elif args.adv_estimator in ['MMD','stdz_MMD']:
+    elif args.adv_estimator in ['MMD','stdMMD']:
 
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
                       seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, MMD_kernel_mul=args.MMD_kernel_mul,
@@ -63,8 +63,8 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference
         shuffle_index = torch.randperm(z.shape[0])
         sample2 = torch.cat((z[shuffle_index], batch_dummy), 1)
         return sample1, sample2, z, batch_dummy
-    elif obj2_type in ['MMD', 'stdz_MMD']:
-        if obj2_type == 'stdz_MMD':
+    elif obj2_type in ['MMD', 'stdMMD']:
+        if obj2_type == 'stdMMD':
             # standardize each dimension for z
             z_mean = torch.mean(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
             z_std = torch.std(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
@@ -89,7 +89,7 @@ def sample1_sample2_all(trainer_vae, input_data, obj2_type, reference_batch: int
         if obj2_type == 'MINE':
             z_all = torch.cat((z_all, z), 0)
             batch_dummy_all = torch.cat((batch_dummy_all, batch_dummy), 0)
-        elif obj2_type in ['MMD','stdz_MMD']:
+        elif obj2_type in ['MMD','stdMMD']:
             z_reference_all = torch.cat((z_reference_all, sample1),0)
             z_compare_all = torch.cat((z_compare_all, sample2),0)
         elif obj2_type == 'NN':
@@ -98,7 +98,7 @@ def sample1_sample2_all(trainer_vae, input_data, obj2_type, reference_batch: int
 
     if obj2_type == 'MINE':
         return z_all, batch_dummy_all
-    elif obj2_type in ['MMD','stdz_MMD']:
+    elif obj2_type in ['MMD','stdMMD']:
         return z_reference_all, z_compare_all
     elif obj2_type == 'NN':
         return z_all, batch_index_all
@@ -192,7 +192,7 @@ def MMD_train_test(z_reference, z_compare, MMD_kernel_mul, MMD_kernel_num):
 
 def MMD_NN_train_test(trainer_vae, obj2_type, args):
 
-    if obj2_type in ['MMD','stdz_MMD']:
+    if obj2_type in ['MMD','stdMMD']:
         reference_batch = 0
         MMD_loss_train, MMD_loss_test = [], []
         for i in range(trainer_vae.model.n_batch-1):
@@ -539,7 +539,7 @@ def main( ):
         obj2_min = min(obj2_minibatch_list)
         print('obj2_max: {}, obj2_min: {}'.format(obj2_max, obj2_min))
 
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
+        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD', args)
         print('obj2_train: {}, obj2_test: {}'.format(obj2_train, obj2_test))
 
     else:
@@ -549,6 +549,8 @@ def main( ):
             obj1_max=args.obj1_max, obj1_min = args.obj1_min, obj2_max = args.obj2_max, obj2_min = args.obj2_min)
 
             method = 'regularize{}'.format(args.adv_estimator)
+            if args.adv_estimator in ['MMD','stdMMD']:
+                method = 'regularizeMMD'
 
         elif args.std_paretoMTL == True:
             _, _ = trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, std_paretoMTL=args.std_paretoMTL,
@@ -556,6 +558,8 @@ def main( ):
                 adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
 
             method = 'pareto{}'.format(args.adv_estimator)
+            if args.adv_estimator in ['MMD','stdMMD']:
+                method = 'paretoMMD'
 
         args.save_path = './result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)
         if not os.path.exists('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)):
@@ -589,8 +593,8 @@ def main( ):
             obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
         elif trainer_vae.adv_estimator == 'MMD':
             obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
-        elif trainer_vae.adv_estimator == 'stdz_MMD':
-            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdz_MMD', args)
+        elif trainer_vae.adv_estimator == 'stdMMD':
+            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD', args)
 
         NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
 

@@ -17,10 +17,10 @@ def main(taskid):
         'n_hidden': [128],
         'n_latent': [10],
         'batch_size': [128],
-        'adv_estimator': ['stdz_MMD'],
+        'adv_estimator': ['stdMMD'],
         'MMD_kernel_mul': [2],
         'MMD_kernel_num': [15],
-        'epochs': [250],
+        'epochs': [2],
         'lr': [1e-3],
         'obj1_max': [19996],
         'obj1_min': [11427],
@@ -36,11 +36,11 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --regularize --use_batches --MCs 20 "
+    os.system("python3 paretoMTL_main.py --regularize --use_batches --MCs 20 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s  --batch_size %s "
               "--adv_estimator %s --MMD_kernel_mul %s --MMD_kernel_num %s "
-              "--epochs %s --lr %s --obj1_max % --obj1_min % --obj2_max % --obj2_min % "
+              "--epochs %s --lr %s --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "
               "--MC %s --weights_total %s --nweight %s --weight %s --num_workers %s "
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['MMD_kernel_mul'],

@@ -17,7 +17,7 @@ def main(taskid):
         'n_hidden': [128], #128
         'n_latent': [10], #10,50
         'batch_size': [128], #4 GPUs
-        'adv_estimator': ['MINE'],
+        'adv_estimator': ['MINE'], #stdMMD
         'adv_n_hidden': [128], #128
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
@@ -33,7 +33,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 pareto_front_paretoMTL_main.py --pre_train --MCs 20 "
+    os.system("python3 paretoMTL_main.py --pre_train --MCs 20 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "

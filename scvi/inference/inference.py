@@ -97,7 +97,7 @@ class UnsupervisedTrainer(Trainer):
             if self.adv_estimator == 'MINE':
                 sample1, sample2 = self.adv_load_minibatch(z, batch_index)
                 adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
-            elif self.adv_estimator in ['MMD','stdz_MMD']:
+            elif self.adv_estimator in ['MMD','stdMMD']:
                 reference_batch = 0
                 for i in range(self.gene_dataset.n_batches -1):
                     compare_batch = i + 1
@@ -142,10 +142,10 @@ class UnsupervisedTrainer(Trainer):
             shuffle_index = torch.randperm(z.shape[0])
             shuffle_z_batch = torch.cat((z[shuffle_index], batch_dummy), 1)  # marginal
             return z_batch, shuffle_z_batch
-        elif self.adv_estimator in ['MMD','stdz_MMD']:
+        elif self.adv_estimator in ['MMD','stdMMD']:
             batch_index_copy = batch_index.type(torch.FloatTensor).to(self.device)
             batch_index_copy = Variable(batch_index_copy.type(torch.FloatTensor), requires_grad=True)
-            if self.adv_estimator == 'stdz_MMD':
+            if self.adv_estimator == 'stdMMD':
                 #standardize each dimension for z
                 z_mean = torch.mean(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
                 z_std = torch.std(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))

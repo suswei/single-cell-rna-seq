@@ -662,7 +662,7 @@ def main( ):
                         help='xaxis value') #asw, ari, uca, nmi,obj1
 
     parser.add_argument('--pareto_front_y', type=str, default='obj2',
-                        help='yaxis value') #obj2 (MINE or stdz_MMD), NN, be
+                        help='yaxis value') #obj2 (MINE or stdMMD), NN, be
 
     parser.add_argument('--methods_list', type=str, default='paretoMINE,paretoMMD',
                         help='list of methods')
@@ -706,7 +706,7 @@ def main( ):
                 if 'obj2_minibatch_list' in results.keys():
                     del results['obj2_minibatch_list']
                 if 'regularize' in method:
-                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'MC', 'n_weight'])}
+                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'MC', 'nweight'])}
                 else:
                     results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator','MC', 'pref_idx'])}
                 results_config.update({'method': [method]})

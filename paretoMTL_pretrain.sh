@@ -7,13 +7,13 @@
 
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem 7400
+#SBATCH --mem 7200
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=0-6:0:00
+#SBATCH --time=0-10:30:00
 
 # Batch arrays
-#SBATCH --array=0-199
+#SBATCH --array=0-19
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
@@ -38,5 +38,6 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-python3 pareto_front_paretoMTL_std_MMD.py ${SLURM_ARRAY_TASK_ID}
+python3 paretoMTL_pretrain.py ${SLURM_ARRAY_TASK_ID}
+
 
