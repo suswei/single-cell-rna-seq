@@ -581,11 +581,11 @@ class Trainer:
                     train_eval, test_eval = self.obj1_obj2_eval(type='obj1')
                     obj1_train_list.append(train_eval)
                     obj1_test_list.append(test_eval)
-
+        '''
         if std_paretoMTL==True:
             path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(self.adv_estimator, taskid)
             self.diagnosis_plot(obj1_train_list, obj1_test_list, 'obj1', path)
-
+        '''
         return obj1_minibatch_list, obj2_minibatch_list
 
     def paretoMTL_param(self, n_tasks, obj1, obj2):
