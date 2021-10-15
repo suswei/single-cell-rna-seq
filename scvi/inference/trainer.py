@@ -311,7 +311,7 @@ class Trainer:
 
     def regularize_fun(self, epochs, adv_epochs, weight, obj1_max, obj1_min, obj2_max, obj2_min):
 
-        for epoch in range(epochs):
+        for self.epoch in range(epochs):
             self.model.train()
 
             if self.adv_estimator == 'MINE':

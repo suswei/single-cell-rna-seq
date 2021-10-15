@@ -85,7 +85,16 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
 
         for (i, method) in enumerate(methods_list):
             image_save_path = image_save_path + '{}_'.format(method)
-            dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
+            if method in ['regularizeMINE','regularizeMMD']:
+                dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
+            else:
+                if method == 'paretoMINE':
+                    subset_string = 'regularizeMINE'
+                else:
+                    subset_string = 'regularizeMMD'
+                dataframe_oneMC_extreme = dataframe_oneMC[dataframe_oneMC.method.eq(subset_string) & dataframe_oneMC.nweight.isin([0,11])]
+                dataframe_oneMC_extreme.pref_idx = dataframe_oneMC_extreme.nweight
+
 
             for (j,type) in enumerate(['train', 'test']):
 
@@ -682,7 +691,7 @@ def main( ):
         if 'regularize' in method:
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),
-                'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(10)), [1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11])]
+                'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(12)), [0, 1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11, 1])]
             }
         else:
             hyperparameter_config = {
