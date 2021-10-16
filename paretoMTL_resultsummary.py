@@ -94,7 +94,9 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                     subset_string = 'regularizeMMD'
                 dataframe_oneMC_extreme = dataframe_oneMC[dataframe_oneMC.method.eq(subset_string) & dataframe_oneMC.nweight.isin([0,11])]
                 dataframe_oneMC_extreme.pref_idx = dataframe_oneMC_extreme.nweight
-
+                dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
+                dataframe_oneMC_oneMethod.pref_idx = dataframe_oneMC_oneMethod.pref_idx + 1
+                dataframe_oneMC_oneMethod = pd.concat([dataframe_oneMC_extreme, dataframe_oneMC_oneMethod],axis=0)
 
             for (j,type) in enumerate(['train', 'test']):
 

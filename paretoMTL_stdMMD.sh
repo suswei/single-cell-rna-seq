@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="pareto_front"
+#SBATCH --job-name="paretoMTL_stdMMD"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
