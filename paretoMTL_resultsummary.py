@@ -2,6 +2,7 @@ import os
 import itertools
 import numpy as np
 import pandas as pd
+pd.options.mode.chained_assignment = None
 from scvi.dataset.tabula_muris import TabulaMuris
 from scipy import sparse
 import pickle
@@ -85,18 +86,16 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
 
         for (i, method) in enumerate(methods_list):
             image_save_path = image_save_path + '{}_'.format(method)
-            if method in ['regularizeMINE','regularizeMMD']:
-                dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
-            else:
-                if method == 'paretoMINE':
-                    subset_string = 'regularizeMINE'
-                else:
-                    subset_string = 'regularizeMMD'
+
+            dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
+
+            if 'pareto' in method:
+                subset_string = method.replace('pareto', 'regularize')
                 dataframe_oneMC_extreme = dataframe_oneMC[dataframe_oneMC.method.eq(subset_string) & dataframe_oneMC.nweight.isin([0,11])]
-                dataframe_oneMC_extreme.pref_idx = dataframe_oneMC_extreme.nweight
-                dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
-                dataframe_oneMC_oneMethod.pref_idx = dataframe_oneMC_oneMethod.pref_idx + 1
-                dataframe_oneMC_oneMethod = pd.concat([dataframe_oneMC_extreme, dataframe_oneMC_oneMethod],axis=0)
+                if dataframe_oneMC_extreme.shape[0]>0:
+                    dataframe_oneMC_extreme.pref_idx = dataframe_oneMC_extreme.nweight
+                    dataframe_oneMC_oneMethod['pref_idx'] = dataframe_oneMC_oneMethod.apply(lambda row: row.pref_idx + 1, axis=1)
+                    dataframe_oneMC_oneMethod = pd.concat([dataframe_oneMC_extreme, dataframe_oneMC_oneMethod],axis=0).sort_values('pref_idx')
 
             for (j,type) in enumerate(['train', 'test']):
 
@@ -119,19 +118,24 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                 pp = np.array(list(paretoPoints1))
                 #dp = np.array(list(dominatedPoints1))
 
+                if 'pareto' in method:
+                    index_list = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:,'pref_idx'])]
+                else:
+                    index_list = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'nweight'])]
+
                 inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
-                index_list = []
+                index_list_Pareto = []
                 for paretoPoint in paretoPoints1:
-                    for index, inputPoint in enumerate(inputPoints1):
+                    for index, inputPoint in zip(index_list, inputPoints1):
                         if paretoPoint[0] == inputPoint[0] and paretoPoint[1] == inputPoint[1]:
-                            index_list += [index+1]
+                            index_list_Pareto += [index]
 
                 if cal_metric:
                     # when hypervolume is calculated, the rectangles of dominated points will be covered by those of non-dominated points
                     hv = hypervolume(inputPoints1)
                     hypervolume_dict.update({'{}_{}_MC{}'.format(method, type, MC): [hv.compute(ref_point)]})
 
-                    percentage_dict.update({'{}_{}_MC{}'.format(method, type, MC): [len(list(paretoPoints1))/10]})
+                    percentage_dict.update({'{}_{}_MC{}'.format(method, type, MC): [len(list(paretoPoints1))/12]})
 
                 if i == 0:
                     marker_symbol = 'circle'
@@ -142,29 +146,20 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                 elif i == 3:
                     marker_symbol = 'diamond'
 
-                if j==0 and pp.shape[0] > 0:
-                    fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
-                                             mode='markers+text', textfont_size=12, textposition='top center',
-                                             marker_size=10, marker_symbol=marker_symbol,
-                                             marker_color='rgba(0, 0, 0, 0)', showlegend=False))
-                elif j==1 and pp.shape[0] > 0:
-                    fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list],
-                                             mode='markers+text', textfont_size=12, textposition='top center',
-                                             marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
-                                             marker_color='rgba(0, 0,0, 0)', showlegend=False))
+                if j == 0:
+                    marker_color = 'rgba(255, 25, 52, .9)'
+                elif j == 1:
+                    marker_color = 'rgba(0, 0, 255, .9)'
 
-                if j == 0 and pp.shape[0] > 0:
-                    fig.add_trace(
-                        go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
-                                   mode='markers', textfont_size=12, textposition='top center',
+                if pp.shape[0] > 0:
+                    fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list_Pareto],
+                                             mode='markers+text', textfont_size=12, textposition='top center', marker_size=10,
+                                             marker_symbol=marker_symbol, marker_color='rgba(0, 0, 0, 0)', showlegend=False))
+
+                if pp.shape[0] > 0:
+                    fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), mode='markers',
                                    marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
-                                   marker_color='rgba(255, 25, 52, .9)', showlegend=True))
-                elif j == 1 and pp.shape[0] > 0:
-                    fig.add_trace(
-                        go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(),
-                                   mode='markers', textfont_size=12, textposition='top center',
-                                   marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
-                                   marker_color='rgba(0, 0, 255, .9)', showlegend=True))
+                                   marker_color=marker_color, showlegend=True))
 
         fig.update_layout(
             width=600,
@@ -195,36 +190,36 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
             )
         )
 
-        if pareto_front_type == 'obj2':
-            fig.update_xaxes(tickfont=dict(size=20),title_text=r'$\large \text{Loss }U_n(\phi, \theta)$' ,
-                             title_font=dict(size=25, family='Times New Roman', color='black'),
-                             range=[min(obj1_all) - 50, max(obj1_all) + 50], autorange=False) #tick0=15200,dtick=100
-            fig.update_yaxes(tickfont=dict(size=20),title_text=r'$\large \text{Batch effect }V_n(\phi)$' ,
-                             title_font=dict(size=25, family='Times New Roman', color='black'),
-                             range=[min(obj2_all) - 0.1, max(obj2_all) + 0.1], autorange=False)
-        elif pareto_front_type == 'NN':
-            fig.update_xaxes(tickfont=dict(size=20), title_text=r'$\large \text{Loss }U_n(\phi, \theta)$',
-                             title_font=dict(size=25, family='Times New Roman', color='black'),
-                             range=[min(obj1_all) - 50, max(obj1_all) + 50], autorange=False)  # tick0=15200,dtick=100
-            fig.update_yaxes(tickfont=dict(size=20), title_text=r'$\large \text{Batch effect }NN_n(\phi)$',
-                             title_font=dict(size=25, family='Times New Roman', color='black'),
-                             range=[min(obj2_all) - 0.08, max(obj2_all) + 0.08], autorange=False)
+        if pareto_front_x == 'obj1':
+            xaxes_title = r'$\large \text{Loss }U_n(\phi, \theta)$'
+            xvalue_adjust = 50
         else:
-            fig.update_xaxes(tickfont=dict(size=20), title_text='negative {}'.format(pareto_front_type),
-                             title_font=dict(size=25, family='Times New Roman', color='black'),
-                             range=[min(obj1_all) - 0.08, max(obj1_all) + 0.08], autorange=False)  # tick0=15200,dtick=100
-            fig.update_yaxes(tickfont=dict(size=20), title_text='negative BE',
-                             title_font=dict(size=25, family='Times New Roman', color='black'),
-                             range=[min(obj2_all) - 0.08, max(obj2_all) + 0.08], autorange=False)
+            xaxes_title = 'negative {}'.format(pareto_front_x)
+            xvalue_adjust = 0.1
 
-        fig.write_image(image_save_path + '{}_MC{}.png'.format(pareto_front_type, MC))
+        if pareto_front_y == 'obj2':
+            yaxes_title = r'$\large \text{Batch effect }V_n(\phi)$'
+        elif pareto_front_y == 'NN':
+            yaxes_title = r'$\large \text{Batch effect }NN_n(\phi)$'
+        else:
+            yaxes_title = 'negative BE'
+        yvalue_adjust = 0.1
+
+        fig.update_xaxes(tickfont=dict(size=20),title_text=xaxes_title,
+                         title_font=dict(size=25, family='Times New Roman', color='black'),
+                         range=[min(obj1_all) - xvalue_adjust, max(obj1_all) + xvalue_adjust], autorange=False) #tick0=15200,dtick=100
+        fig.update_yaxes(tickfont=dict(size=20),title_text=yaxes_title,
+                         title_font=dict(size=25, family='Times New Roman', color='black'),
+                         range=[min(obj2_all) - yvalue_adjust, max(obj2_all) + yvalue_adjust], autorange=False)
+
+        fig.write_image(image_save_path + '{}_{}_MC{}.png'.format(pareto_front_x, pareto_front_y, MC))
 
     if cal_metric:
         return hypervolume_dict, percentage_dict
     else:
         return None, None
 
-def compare_hypervolume_percent(methods_list, hypervolume_dict, percentage_dict, pareto_front_type, save_path):
+def compare_hypervolume_percent(methods_list, hypervolume_dict, percentage_dict, pareto_front_x, pareto_front_y, save_path):
 
     for metric in ['hypervolume','percentage']:
         if metric == 'hypervolume':
@@ -241,20 +236,38 @@ def compare_hypervolume_percent(methods_list, hypervolume_dict, percentage_dict,
                 metric_mean_list += [statistics.mean(metric_oneMethod_oneType)]
                 metric_std_list += [statistics.stdev(metric_oneMethod_oneType)]
 
-            fig.add_trace(go.Scatter(x=methods_list, y=metric_mean_list, mode='lines+markers+text',
-                                     text=['{}'.format(round(metric_mean_list[i],2)) + u"\u00B1" + '{}'.format(round(metric_std_list[i],2)) for i in list(range(len(methods_list)))],
-                                     textfont_size=12, textposition='top center',marker_size=10,marker_color='rgba(0, 0, 0, 0)',
-                                     line=dict(color='rgba(0, 0, 0, 0)'), showlegend=False))
             if type == 'train':
-                fig.add_trace(go.Scatter(x=methods_list, y=metric_mean_list, error_y=dict(type='data', array=metric_std_list, visible=True),
-                                         mode='lines+markers', marker_size=10, marker_color='rgba(255, 25, 52, .9)',
-                                         line=dict(color='rgba(255, 25, 52, .9)'), name='{}'.format(type),showlegend=True))
-            else:
-                fig.add_trace(go.Scatter(x=methods_list, y=metric_mean_list, error_y=dict(type='data', array=metric_std_list, visible=True),
-                                         mode='lines+markers', marker_size=10, marker_color='rgba(0, 0, 255, .9)',
-                                         line=dict(color='rgba(0, 0, 255, .9)'), name='{}'.format(type), showlegend=True))
+                marker_color = 'rgba(255, 25, 52, .9)'
+            elif type == 'test':
+                marker_color = 'rgba(0, 0, 255, .9)'
 
-        fig.write_image(save_path + '{}_compare_{}.png'.format(pareto_front_type,metric))
+            fig.add_trace(go.Bar(x=methods_list,y=metric_mean_list,name='{}'.format(type),
+                                 error_y= dict(type='data', array=metric_std_list, visible=True),
+                                 marker_color=marker_color))
+
+        if pareto_front_x == 'obj1' and pareto_front_y == 'obj2':
+            title_text = '$\text{loss }U_n \text{vs} \text{loss} V_n'
+        elif pareto_front_x == 'obj1' and pareto_front_y == 'NN':
+            title_text = r'$\text{loss }U_n \text{vs} NN_n$'
+        elif pareto_front_x == 'obj1' and pareto_front_y == 'be':
+            title_text = 'loss U_n vs negative be, {}'.format(metric)
+        elif pareto_front_x != 'obj1' and pareto_front_y == 'obj2':
+            title_text = '$negative {} vs loss {}, {}$'.format(pareto_front_x, 'V_n', metric)
+        elif pareto_front_x != 'obj1' and pareto_front_y == 'NN':
+            title_text = 'negative {} vs NN, {}'.format(pareto_front_x, metric)
+        elif pareto_front_x != 'obj1' and pareto_front_y == 'be':
+            title_text = 'negative {} vs negative be, {}'.format(pareto_front_x, metric)
+
+        fig.update_layout(barmode='group',
+                          font_family="Times New Roman",
+                          title_font_family="Times New Roman",
+                          title={'text': title_text,
+                                 'y':0.85,
+                                 'x':0.5,
+                                 'xanchor': 'center',
+                                 'yanchor': 'top'})
+
+        fig.write_image(save_path + '{}_{}_compare_{}.png'.format(pareto_front_x, pareto_front_y, metric))
 
 '''
 def draw_pareto_front2(dataframe, MC_idx, methods_list, pareto_front_type, save_path):
@@ -735,7 +748,7 @@ def main( ):
                                         cal_metric=args.cal_metric, save_path=os.path.dirname(dir_path)+'/')
 
     compare_hypervolume_percent(methods_list=args.methods_list, hypervolume_dict=hypervolume_dict, percentage_dict=percentage_dict,
-                                pareto_front_type=args.pareto_front_type, save_path=os.path.dirname(dir_path)+'/')
+                                pareto_front_x=args.pareto_front_x, pareto_front_y=args.pareto_front_y, save_path=os.path.dirname(dir_path)+'/')
 
 # Run the actual program
 if __name__ == "__main__":
