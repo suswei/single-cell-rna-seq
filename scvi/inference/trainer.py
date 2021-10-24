@@ -339,11 +339,8 @@ class Trainer:
                 regularize_loss.backward()
                 self.optimizer.step()
 
-            print('z_encoder, the first layer weight:')
-            print(self.model.z_encoder.encoder.fc_layers[0][0].weight)
-            if self.adv_estimator == 'MINE':
-                print('MINE neural network, the second layer weight:')
-                print(self.adv_model.layers[1].weight)
+                print('z_encoder, the first layer weight:')
+                print(self.model.z_encoder.encoder.fc_layers[0][0].weight)
 
 
     def pretrain_paretoMTL(self, pre_train: bool=False, pre_epochs: int=200, pre_lr: float=1e-3, eps: float = 0.01,
