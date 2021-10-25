@@ -274,15 +274,21 @@ class Trainer:
 
     def diagnosis_plot(self, list1, list2, type, path):
         plt.figure()
-        plt.plot(np.arange(0, len(list1), 1), list1, label='obj1_train')
-        plt.plot(np.arange(0, len(list2), 1), list2, label='obj1_test')
+        plt.plot(np.arange(0, len(list1), 1), list1, label='train')
+        plt.plot(np.arange(0, len(list2), 1), list2, label='test')
         plt.legend()
         plt.xticks(np.arange(0, len(list1), 1))
         plt.title('train error vs test error', fontsize=10)
         if type == 'obj1':
             plt.ylabel('error (negative ELBO)')
         elif type == 'obj2':
-            plt.ylabel('MINE or MMD or stdMMD')
+            if self.adv_estimator=='MINE':
+                plt.ylabel('MINE')
+            elif self.adv_estimator=='MMD':
+                plt.ylabel('MMD')
+            elif self.adv_estimator == 'stdMMD':
+                plt.ylabel('stdMMD')
+
         if not os.path.exists(path):
             os.makedirs(path)
         plt.savefig("{}/{}_train_test_error.png".format(path,type))
@@ -313,24 +319,39 @@ class Trainer:
 
         for self.epoch in range(epochs):
             self.model.train()
-
             if self.adv_estimator == 'MINE':
-                self.cal_loss = False
-                self.cal_adv_loss = True
-                for adv_epoch in range(adv_epochs):
-                    self.adv_model.train()
-                    for adv_tensors_list in self.data_loaders_loop():
-                        _, adv_loss, _ = self.two_loss(*adv_tensors_list)
-                        self.adv_optimizer.zero_grad()
-                        self.optimizer.zero_grad()
-                        adv_loss.backward()
-                        self.adv_optimizer.step()
+                self.adv_model.train()
 
-            self.cal_loss = True
-            self.cal_adv_loss = True
             for tensors_list in self.data_loaders_loop():
+
+                if self.adv_estimator == 'MINE':
+                    self.cal_loss = False
+                    self.cal_adv_loss = True
+                    for adv_epoch in range(adv_epochs):
+                        for adv_tensors_list in self.data_loaders_loop():
+                            _, adv_loss, _ = self.two_loss(*adv_tensors_list)
+                            self.adv_optimizer.zero_grad()
+                            self.optimizer.zero_grad()
+                            adv_loss.backward()
+                            self.adv_optimizer.step()
+
+                if weight == 0:
+                    self.cal_loss = False
+                    self.cal_adv_loss = True
+                elif weight == 1:
+                    self.cal_loss = True
+                    self.cal_adv_loss = False
+                else:
+                    self.cal_loss = True
+                    self.cal_adv_loss = True
+
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
-                regularize_loss =  weight*(obj1_minibatch - obj1_min)/(obj1_max - obj1_min) + (1- weight)*(obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+                if weight == 0:
+                    regularize_loss = (1 - weight) * (obj2_minibatch - obj2_min) / (obj2_max - obj2_min)
+                elif weight == 1:
+                    regularize_loss = weight * (obj1_minibatch - obj1_min) / (obj1_max - obj1_min)
+                else:
+                    regularize_loss = weight*(obj1_minibatch - obj1_min)/(obj1_max - obj1_min) + (1- weight)*(obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
 
                 self.optimizer.zero_grad()
                 if self.adv_estimator == 'MINE':
@@ -430,7 +451,7 @@ class Trainer:
 
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0]).to(self.device)
 
-        obj1_minibatch_list, obj2_minibatch_list, obj1_train_list, obj1_test_list = [], [], [], []
+        obj1_minibatch_list, obj2_minibatch_list, obj1_train_list, obj1_test_list, obj2_train_list, obj2_test_list = [], [], [], [],[],[]
         # run until the initial solution is found when flag==True
         # usually can be found with a few steps
 
@@ -580,16 +601,23 @@ class Trainer:
                 loss_total.backward()
                 self.optimizer.step()
             # diagnosis
-            if std_paretoMTL == True:
-                if self.epoch % 10 == 0:
-                    train_eval, test_eval = self.obj1_obj2_eval(type='obj1')
-                    obj1_train_list.append(train_eval)
-                    obj1_test_list.append(test_eval)
-        '''
+            if std_paretoMTL == True and self.epoch % 10 == 0:
+                obj1_train_eval, obj1_test_eval = self.obj1_obj2_eval(type='obj1')
+                obj1_train_list.append(obj1_train_eval)
+                obj1_test_list.append(obj1_test_eval)
+                obj2_train_eval, obj2_test_eval = self.obj1_obj2_eval(type='obj2')
+                obj2_train_list.append(obj2_train_eval)
+                obj2_test_list.append(obj2_test_eval)
+
         if std_paretoMTL==True:
-            path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(self.adv_estimator, taskid)
+            if self.adv_estimator == 'MINE':
+                string = 'paretoMINE'
+            else:
+                string = 'paretoMMD'
+            path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(string, taskid)
             self.diagnosis_plot(obj1_train_list, obj1_test_list, 'obj1', path)
-        '''
+            self.diagnosis_plot(obj2_train_list, obj2_test_list, 'obj2', path)
+
         return obj1_minibatch_list, obj2_minibatch_list
 
     def paretoMTL_param(self, n_tasks, obj1, obj2):
