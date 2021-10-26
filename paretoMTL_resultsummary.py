@@ -62,7 +62,6 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
     if subset_dataframe.shape[0]>0:
         dataframe = pd.concat([dataframe, subset_dataframe]).drop_duplicates(keep=False)
 
-    '''
     if cal_metric:
         hypervolume_dict = {}
         percentage_dict = {}
@@ -81,7 +80,6 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
             elif pareto_front_y == 'be':
                 obj2_max = dataframe.loc[:, ['be_train', 'be_test']].min(axis=0).min() * (-1)
             ref_point = [obj1_max + 0.01, obj2_max + 0.01]
-    '''
 
     for MC in range(dataframe.MC.max()+1):
         dataframe_oneMC = dataframe[dataframe.MC.eq(MC)]
@@ -94,7 +92,7 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
             image_save_path = image_save_path + '{}_'.format(method)
 
             dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
-            '''
+
             if 'pareto' in method:
                 subset_string = method.replace('pareto', 'regularize')
                 dataframe_oneMC_extreme = dataframe_oneMC[dataframe_oneMC.method.eq(subset_string) & dataframe_oneMC.nweight.isin([0,11])]
@@ -102,7 +100,7 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                     dataframe_oneMC_extreme.pref_idx = dataframe_oneMC_extreme.nweight
                     dataframe_oneMC_oneMethod['pref_idx'] = dataframe_oneMC_oneMethod.apply(lambda row: row.pref_idx + 1, axis=1)
                     dataframe_oneMC_oneMethod = pd.concat([dataframe_oneMC_extreme, dataframe_oneMC_oneMethod],axis=0).sort_values('pref_idx')
-            '''
+
             for (j,type) in enumerate(['train', 'test']):
 
                 obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_x, type)].values.tolist()
@@ -121,7 +119,7 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
 
                 inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
                 pp = np.array(list(inputPoints1))
-                '''
+
                 paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates, False, 'min')
                 pp = np.array(list(paretoPoints1))
                 #dp = np.array(list(dominatedPoints1))
@@ -146,7 +144,7 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                     percentage_dict.update({'{}_{}_MC{}'.format(method, type, MC): [len(list(paretoPoints1))/12]})
                 '''
                 index_list_Pareto = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'nweight'])]
-
+                '''
                 if i == 0:
                     marker_symbol = 'circle'
                 elif i == 1:
@@ -224,12 +222,11 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                          range=[min(obj2_all) - yvalue_adjust, max(obj2_all) + yvalue_adjust], autorange=False)
 
         fig.write_image(image_save_path + '{}_{}_MC{}.png'.format(pareto_front_x, pareto_front_y, MC))
-    '''
+
     if cal_metric:
         return hypervolume_dict, percentage_dict
     else:
-    '''
-    return None, None
+        return None, None
 
 def compare_hypervolume_percent(methods_list, hypervolume_dict, percentage_dict, pareto_front_x, pareto_front_y, save_path):
 
@@ -764,8 +761,8 @@ def main( ):
                                         pareto_front_x=args.pareto_front_x, pareto_front_y=args.pareto_front_y,
                                         cal_metric=args.cal_metric, save_path=os.path.dirname(dir_path)+'/')
 
-    #compare_hypervolume_percent(methods_list=args.methods_list, hypervolume_dict=hypervolume_dict, percentage_dict=percentage_dict,
-    #                            pareto_front_x=args.pareto_front_x, pareto_front_y=args.pareto_front_y, save_path=os.path.dirname(dir_path)+'/')
+    compare_hypervolume_percent(methods_list=args.methods_list, hypervolume_dict=hypervolume_dict, percentage_dict=percentage_dict,
+                                pareto_front_x=args.pareto_front_x, pareto_front_y=args.pareto_front_y, save_path=os.path.dirname(dir_path)+'/')
 
 # Run the actual program
 if __name__ == "__main__":
