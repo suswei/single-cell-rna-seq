@@ -272,26 +272,17 @@ class Trainer:
         test_eval = sum(minibatch_test_eval) / len(minibatch_test_eval)
         return train_eval, test_eval
 
-    def diagnosis_plot(self, list1, list2, type, path):
+    def diagnosis_plot(self, list1, list2, path):
         plt.figure()
         plt.plot(np.arange(0, len(list1), 1), list1, label='train')
         plt.plot(np.arange(0, len(list2), 1), list2, label='test')
         plt.legend()
         plt.xticks(np.arange(0, len(list1), 1))
-        plt.title('train error vs test error', fontsize=10)
-        if type == 'obj1':
-            plt.ylabel('error (negative ELBO)')
-        elif type == 'obj2':
-            if self.adv_estimator=='MINE':
-                plt.ylabel('MINE')
-            elif self.adv_estimator=='MMD':
-                plt.ylabel('MMD')
-            elif self.adv_estimator == 'stdMMD':
-                plt.ylabel('stdMMD')
+        plt.title('total loss, train vs test, adv_estimator: {}'.format(self.adv_estimator), fontsize=10)
 
         if not os.path.exists(path):
             os.makedirs(path)
-        plt.savefig("{}/{}_train_test_error.png".format(path,type))
+        plt.savefig("{}/totalloss_train_test_error.png".format(path))
         plt.close()
 
     def load_dict(self, path, lr, eps, adv_lr):
@@ -315,7 +306,9 @@ class Trainer:
             self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
             # self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[30], gamma=0.5)
 
-    def regularize_fun(self, epochs, adv_epochs, weight, obj1_max, obj1_min, obj2_max, obj2_min):
+    def regularize_fun(self, epochs, adv_epochs, weight, obj1_max, obj1_min, obj2_max, obj2_min, path, taskid):
+
+        loss_total_train_list, loss_total_test_list = [], []
 
         for self.epoch in range(epochs):
             self.model.train()
@@ -363,6 +356,30 @@ class Trainer:
                 print('z_encoder, the first layer weight:')
                 print(self.model.z_encoder.encoder.fc_layers[0][0].weight)
 
+            if self.epoch % 10 == 0:
+                if weight == 0:
+                    obj2_train_eval, obj2_test_eval = self.obj1_obj2_eval(type='obj2')
+                    loss_total_train = (1 - weight) * (obj2_train_eval - obj2_min) / (obj2_max - obj2_min)
+                    loss_total_test = (1 - weight) * (obj2_test_eval - obj2_min) / (obj2_max - obj2_min)
+                elif weight == 1:
+                    obj1_train_eval, obj1_test_eval = self.obj1_obj2_eval(type='obj1')
+                    loss_total_train = weight * (obj1_train_eval - obj1_min) / (obj1_max - obj1_min)
+                    loss_total_test = weight * (obj1_test_eval - obj1_min) / (obj1_max - obj1_min)
+                else:
+                    obj1_train_eval, obj1_test_eval = self.obj1_obj2_eval(type='obj1')
+                    obj2_train_eval, obj2_test_eval = self.obj1_obj2_eval(type='obj2')
+                    loss_total_train = weight*(obj1_train_eval - obj1_min)/(obj1_max - obj1_min) + (1- weight)*(obj2_train_eval - obj2_min)/(obj2_max - obj2_min)
+                    loss_total_test = weight*(obj1_test_eval - obj1_min)/(obj1_max - obj1_min) + (1 - weight) * (obj2_test_eval - obj2_min) / (obj2_max - obj2_min)
+
+                loss_total_train_list.append(loss_total_train)
+                loss_total_test_list.append(loss_total_test)
+
+        if self.adv_estimator == 'MINE':
+            string = 'regularizeMINE'
+        else:
+            string = 'regularizeMMD'
+        path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(string, taskid)
+        self.diagnosis_plot(loss_total_train_list, loss_total_test_list, path)
 
     def pretrain_paretoMTL(self, pre_train: bool=False, pre_epochs: int=200, pre_lr: float=1e-3, eps: float = 0.01,
         pre_adv_epochs: int=400, pre_adv_lr: float=5e-5, path: str='None', lr: float=1e-3, adv_lr: float=5e-5, standardize: bool=False,
@@ -444,14 +461,15 @@ class Trainer:
 
             elif regularize == True:
 
-                self.regularize_fun(epochs=epochs, adv_epochs=adv_epochs, weight=weight, obj1_max=obj1_max, obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min)
+                self.regularize_fun(epochs=epochs, adv_epochs=adv_epochs, weight=weight, obj1_max=obj1_max, obj1_min=obj1_min,
+                                    obj2_max=obj2_max, obj2_min=obj2_min, path=path, taskid=taskid)
 
     def paretoMTL(self, std_paretoMTL: bool=False, obj1_max: float=20000, obj1_min: float=12000, obj2_max: float=0.6, obj2_min: float=0,
                   epochs: int=50, adv_epochs: int=1, n_tasks: int=2, npref: int=10, pref_idx: int=0, path: str='.', taskid: int=0):
 
         ref_vec = torch.FloatTensor(circle_points([1], [npref])[0]).to(self.device)
 
-        obj1_minibatch_list, obj2_minibatch_list, obj1_train_list, obj1_test_list, obj2_train_list, obj2_test_list = [], [], [], [],[],[]
+        obj1_minibatch_list, obj2_minibatch_list, loss_total_train_list, loss_total_test_list = [], [], [], []
         # run until the initial solution is found when flag==True
         # usually can be found with a few steps
 
@@ -603,11 +621,18 @@ class Trainer:
             # diagnosis
             if std_paretoMTL == True and self.epoch % 10 == 0:
                 obj1_train_eval, obj1_test_eval = self.obj1_obj2_eval(type='obj1')
-                obj1_train_list.append(obj1_train_eval)
-                obj1_test_list.append(obj1_test_eval)
                 obj2_train_eval, obj2_test_eval = self.obj1_obj2_eval(type='obj2')
-                obj2_train_list.append(obj2_train_eval)
-                obj2_test_list.append(obj2_test_eval)
+
+                for i in range(n_tasks):
+                    if i == 0:
+                        loss_total_train = weight_vec[i] * obj1_train_eval
+                        loss_total_test = weight_vec[i] * obj1_test_eval
+                    else:
+                        loss_total_train = loss_total_train + weight_vec[i] * obj2_train_eval
+                        loss_total_test = loss_total_test + weight_vec[i] * obj2_test_eval
+
+                loss_total_train_list.append(loss_total_train)
+                loss_total_test_list.append(loss_total_test)
 
         if std_paretoMTL==True:
             if self.adv_estimator == 'MINE':
@@ -615,8 +640,7 @@ class Trainer:
             else:
                 string = 'paretoMMD'
             path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(string, taskid)
-            self.diagnosis_plot(obj1_train_list, obj1_test_list, 'obj1', path)
-            self.diagnosis_plot(obj2_train_list, obj2_test_list, 'obj2', path)
+            self.diagnosis_plot(loss_total_train_list, loss_total_test_list, path)
 
         return obj1_minibatch_list, obj2_minibatch_list
 
