@@ -277,7 +277,8 @@ class Trainer:
         plt.plot(np.arange(0, len(list1), 1), list1, label='train')
         plt.plot(np.arange(0, len(list2), 1), list2, label='test')
         plt.legend()
-        plt.xticks(np.arange(0, len(list1), 1))
+        plt.xticks(list(range(0, len(list1), 1)), [k*10 for k in list(range(0, len(list1), 1))])
+        plt.xlabel("epochs")
         plt.title('total loss, train vs test, adv_estimator: {}'.format(self.adv_estimator), fontsize=10)
 
         if not os.path.exists(path):
@@ -341,10 +342,13 @@ class Trainer:
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
                 if weight == 0:
                     regularize_loss = (1 - weight) * (obj2_minibatch - obj2_min) / (obj2_max - obj2_min)
+                    print('epoch: {}, obj2_minibatch: {}'.format(self.epoch, obj2_minibatch.data))
                 elif weight == 1:
                     regularize_loss = weight * (obj1_minibatch - obj1_min) / (obj1_max - obj1_min)
+                    print('epoch: {}, obj1_minibatch: {}'.format(self.epoch, obj1_minibatch.data))
                 else:
                     regularize_loss = weight*(obj1_minibatch - obj1_min)/(obj1_max - obj1_min) + (1- weight)*(obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+                    print('epoch: {}, obj1_minibatch: {}, obj2_minibatch: {}'.format(self.epoch, obj1_minibatch.data, obj2_minibatch.data))
 
                 self.optimizer.zero_grad()
                 if self.adv_estimator == 'MINE':
