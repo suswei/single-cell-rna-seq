@@ -546,7 +546,8 @@ def main( ):
         if args.regularize == True:
             trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
             regularize=args.regularize, weight=args.weight, epochs = args.epochs, adv_epochs = args.adv_epochs,
-            obj1_max=args.obj1_max, obj1_min = args.obj1_min, obj2_max = args.obj2_max, obj2_min = args.obj2_min)
+            obj1_max=args.obj1_max, obj1_min = args.obj1_min, obj2_max = args.obj2_max, obj2_min = args.obj2_min,
+            taskid=args.taskid)
 
             method = 'regularize{}'.format(args.adv_estimator)
             if args.adv_estimator in ['MMD','stdMMD']:

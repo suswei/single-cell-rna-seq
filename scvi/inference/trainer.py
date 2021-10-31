@@ -629,11 +629,11 @@ class Trainer:
 
                 for i in range(n_tasks):
                     if i == 0:
-                        loss_total_train = weight_vec[i] * obj1_train_eval
-                        loss_total_test = weight_vec[i] * obj1_test_eval
+                        loss_total_train = weight_vec[i] * (obj1_train_eval - obj1_min)/(obj1_max - obj1_min)
+                        loss_total_test = weight_vec[i] * (obj1_test_eval - obj1_min)/(obj1_max - obj1_min)
                     else:
-                        loss_total_train = loss_total_train + weight_vec[i] * obj2_train_eval
-                        loss_total_test = loss_total_test + weight_vec[i] * obj2_test_eval
+                        loss_total_train = loss_total_train + weight_vec[i] * (obj2_train_eval - obj2_min)/(obj2_max - obj2_min)
+                        loss_total_test = loss_total_test + weight_vec[i] * (obj2_test_eval - obj2_min)/(obj2_max - obj2_min)
 
                 loss_total_train_list.append(loss_total_train)
                 loss_total_test_list.append(loss_total_test)
