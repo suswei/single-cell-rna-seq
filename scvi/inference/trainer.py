@@ -316,8 +316,9 @@ class Trainer:
             if self.adv_estimator == 'MINE':
                 self.adv_model.train()
 
+            minibatch_index = 0
             for tensors_list in self.data_loaders_loop():
-
+                minibatch_index += 1
                 if self.adv_estimator == 'MINE':
                     self.cal_loss = False
                     self.cal_adv_loss = True
@@ -357,8 +358,13 @@ class Trainer:
                 regularize_loss.backward()
                 self.optimizer.step()
 
-                print('z_encoder, the first layer weight:')
-                print(self.model.z_encoder.encoder.fc_layers[0][0].weight)
+                if self.adv_estimator == 'stdMMD':
+                    for param in self.model.parameters():
+                        print('epoch: {}, minibatch: {}, is there NaN in weights of the neural network?'.format(self.epoch,minibatch_index))
+                        print(torch.isnan(param).any())
+                        if param.grad is not None:
+                            print('epoch: {}, minibatch: {}, is there NaN in the gradients?'.format(self.epoch, minibatch_index))
+                            print(torch.isnan(param.grad).any())
 
             if self.epoch % 10 == 0:
                 if weight == 0:

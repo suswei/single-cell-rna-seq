@@ -1,5 +1,3 @@
-
-
 from abc import abstractmethod
 import copy
 
@@ -72,7 +70,6 @@ class Posterior:
 
     def __init__(self, model, gene_dataset, shuffle=False, indices=None, use_cuda=True, data_loader_kwargs=dict()):
         '''
-
         When added to annotation, has a private name attribute
         '''
         self.model = model
