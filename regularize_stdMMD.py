@@ -19,13 +19,13 @@ def main(taskid):
         'batch_size': [128],
         'adv_estimator': ['stdMMD'],
         'MMD_kernel_mul': [2],
-        'MMD_kernel_num': [15],
-        'epochs': [400],
-        'lr': [0.0005],
-        'obj1_max': [22502], #19996
-        'obj1_min': [11782], #11427
-        'obj2_max': [1.009], #0.9937
-        'obj2_min': [0.397], #0.4237
+        'MMD_kernel_num': [10],#15
+        'epochs': [250],
+        'lr': [0.001],
+        'obj1_max': [19568], #19996
+        'obj1_min': [11895], #11427
+        'obj2_max': [0.834], #0.9937
+        'obj2_min': [0.333], #0.4237
         'MC': list(range(20)),
         'weights_total': [12],
         'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(12)), [0, 1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11, 1])],
