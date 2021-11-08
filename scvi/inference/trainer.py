@@ -295,6 +295,7 @@ class Trainer:
 
         params = filter(lambda p: p.requires_grad, self.model.parameters())
         self.optimizer = torch.optim.Adam(params, lr=lr, eps=eps)
+
         # self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=[30], gamma=0.5)
 
         if self.adv_estimator == 'MINE':
