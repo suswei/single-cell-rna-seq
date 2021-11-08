@@ -21,11 +21,11 @@ def main(taskid):
         'MMD_kernel_mul': [2],
         'MMD_kernel_num': [15],
         'epochs': [250],
-        'lr': [0.0001],
-        'obj1_max': [19776], #19996
-        'obj1_min': [11641], #11427
-        'obj2_max': [1.023], #0.9937
-        'obj2_min': [0.436], #0.4237
+        'lr': [0.00005],
+        'obj1_max': [20259], #19996
+        'obj1_min': [11392], #11427
+        'obj2_max': [1.028], #0.9937
+        'obj2_min': [0.451], #0.4237
         'MC': list(range(20)),
         'weights_total': [12],
         'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(12)), [0, 1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11, 1])],
