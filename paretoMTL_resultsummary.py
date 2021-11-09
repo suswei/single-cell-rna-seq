@@ -223,7 +223,7 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                          title_font=dict(size=25, family='Times New Roman', color='black'),
                          range=[min(obj2_all) - yvalue_adjust, max(obj2_all) + yvalue_adjust], autorange=False)
 
-        fig.write_image(image_save_path + '{}_{}_MC{}.png'.format(pareto_front_x, pareto_front_y, MC))
+        fig.write_image(image_save_path + '{}_{}_MC{}_paretofront.png'.format(pareto_front_x, pareto_front_y, MC))
 
     if cal_metric:
         return hypervolume_dict, percentage_dict
@@ -416,7 +416,7 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
                          title_font=dict(size=25, family='Times New Roman', color='black'),
                          range=[min(obj2_all) - yvalue_adjust, max(obj2_all) + yvalue_adjust], autorange=False)
 
-        fig.write_image(image_save_path + '{}_{}_MC{}.png'.format(pareto_front_x, pareto_front_y, MC))
+        fig.write_image(image_save_path + '{}_{}_MC{}_allInputPoints.png'.format(pareto_front_x, pareto_front_y, MC))
 
 def cell_type_composition(dataset_name, change_composition, save_path):
     if dataset_name == 'tabula_muris':
@@ -526,6 +526,9 @@ def main( ):
         keys, values = zip(*hyperparameter_config.items())
         hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
+        if args.diagnosis == True:
+            initial_frame = False
+
         for i in range(len(hyperparameter_experiments)):
 
             config_path = dir_path + '/taskid{}/config.pkl'.format(i)
@@ -553,19 +556,24 @@ def main( ):
             else:
                 print('method:{},taskid{}'.format(method, i))
 
-            if args.diagnosis==True and i==0:
-                frame = cv2.imread(dir_path + '/taskid0/totalloss_train_test_error.png')
-                height, width, layers = frame.shape
-                video = cv2.VideoWriter(dir_path + '/diagnosis_video.mp4', 0, 1, (width, height))
-            if args.diagnosis==True:
-                img = cv2.imread(dir_path + '/taskid{}/totalloss_train_test_error.png'.format(i))
-                if 'pareto' in method:
-                    cv2.putText(img, 'MC:{}, pref_idx: {}'.format(hyperparameter_experiments[i]['MC'],hyperparameter_experiments[i]['npref_prefidx']['pref_idx'] ),
-                        (10,40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 2)
+            diagnosis_img_path = dir_path + '/taskid{}/totalloss_train_test_error.png'.format(i)
+            if args.diagnosis == True:
+                if os.path.isfile(diagnosis_img_path) and initial_frame==False:
+                    frame = cv2.imread(dir_path + '/taskid0/totalloss_train_test_error.png')
+                    height, width, layers = frame.shape
+                    video = cv2.VideoWriter(dir_path + '/diagnosis_video.avi', 0, 1, (width, height))
+                    initial_frame = True
+                elif os.path.isfile(diagnosis_img_path) and initial_frame==True:
+                    img = cv2.imread(dir_path + '/taskid{}/totalloss_train_test_error.png'.format(i))
+                    if 'pareto' in method:
+                        cv2.putText(img, 'MC:{}, pref_idx: {}'.format(hyperparameter_experiments[i]['MC'],
+                                    hyperparameter_experiments[i]['npref_prefidx']['pref_idx']),(10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+                    else:
+                        cv2.putText(img, 'MC:{}, weight_idx: {}'.format(hyperparameter_experiments[i]['MC'],
+                                    hyperparameter_experiments[i]['nweight_weight']['n_weight']),(10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+                    video.write(img)
                 else:
-                    cv2.putText(img, 'MC:{}, weight_idx: {}'.format(hyperparameter_experiments[i]['MC'], hyperparameter_experiments[i]['nweight_weight']['n_weight']),
-                            (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                video.write(img)
+                    continue
 
         if args.diagnosis == True:
             cv2.destroyAllWindows()
