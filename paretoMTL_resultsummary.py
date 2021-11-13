@@ -284,7 +284,10 @@ def compare_hypervolume_percent(methods_list, hypervolume_dict, percentage_dict,
         fig.update_yaxes(tickfont=dict(size=20, family='Times New Roman'), title_text='{}'.format(metric),
                          title_font=dict(size=20, family='Times New Roman', color='black'))
 
-        fig.write_image(save_path + '{}_{}_compare_{}.png'.format(pareto_front_x, pareto_front_y, metric))
+        img_save_path = save_path
+        for method in methods_list:
+            img_save_path = img_save_path + '{}_'.format(method)
+        fig.write_image(img_save_path + '{}_{}_{}.png'.format(pareto_front_x, pareto_front_y, metric))
 
 def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, save_path):
     subset_dataframe = dataframe[(dataframe == np.inf).any(axis=1)]
