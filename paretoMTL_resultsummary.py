@@ -96,11 +96,12 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
 
             if 'pareto' in method:
                 subset_string = method.replace('pareto', 'regularize')
-                dataframe_oneMC_extreme = dataframe_oneMC[dataframe_oneMC.method.eq(subset_string) & dataframe_oneMC.nweight.isin([0,11])]
-                if dataframe_oneMC_extreme.shape[0]>0:
-                    dataframe_oneMC_extreme.pref_idx = dataframe_oneMC_extreme.nweight
-                    dataframe_oneMC_oneMethod['pref_idx'] = dataframe_oneMC_oneMethod.apply(lambda row: row.pref_idx + 1, axis=1)
-                    dataframe_oneMC_oneMethod = pd.concat([dataframe_oneMC_extreme, dataframe_oneMC_oneMethod],axis=0).sort_values('pref_idx')
+                if subset_string in methods_list:
+                    dataframe_oneMC_extreme = dataframe_oneMC[dataframe_oneMC.method.eq(subset_string) & dataframe_oneMC.nweight.isin([0,11])]
+                    if dataframe_oneMC_extreme.shape[0]>0:
+                        dataframe_oneMC_extreme.pref_idx = dataframe_oneMC_extreme.nweight
+                        dataframe_oneMC_oneMethod['pref_idx'] = dataframe_oneMC_oneMethod.apply(lambda row: row.pref_idx + 1, axis=1)
+                        dataframe_oneMC_oneMethod = pd.concat([dataframe_oneMC_extreme, dataframe_oneMC_oneMethod],axis=0).sort_values('pref_idx')
 
             for (j,type) in enumerate(['train', 'test']):
 
@@ -169,7 +170,7 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                 if pp.shape[0] > 0:
                     fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), mode='markers',
                                    marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
-                                   marker_color=marker_color, showlegend=True))
+                                   marker_color=marker_color, opacity=0.75, showlegend=True))
 
 
         fig.update_layout(

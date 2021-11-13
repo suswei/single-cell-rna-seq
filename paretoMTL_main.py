@@ -193,16 +193,32 @@ def MMD_train_test(z_reference, z_compare, MMD_kernel_mul, MMD_kernel_num):
 def MMD_NN_train_test(trainer_vae, obj2_type, args):
 
     if obj2_type in ['MMD','stdMMD']:
+
+        MMD_loss_fun = MMD_loss(args.MMD_kernel_mul, args.MMD_kernel_num)
         reference_batch = 0
         MMD_loss_train, MMD_loss_test = [], []
         for i in range(trainer_vae.model.n_batch-1):
             compare_batch = i + 1
+            MMD_loss_train_minibatch, MMD_loss_test_minibatch= [],[]
+            for tensors_list in trainer_vae.train_set:
+                sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
+                z_reference_batch, z_compare_batch, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference_batch, compare_batch)
+                MMD_loss_train_minibatch += [MMD_loss_fun(z_reference_batch, z_compare_batch).item()]
+            for tensors_list in trainer_vae.test_set:
+                sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
+                z_reference_batch, z_compare_batch, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch,batch_index, obj2_type,reference_batch, compare_batch)
+                MMD_loss_test_minibatch += [MMD_loss_fun(z_reference_batch, z_compare_batch).item()]
+
+            MMD_loss_train += [sum(MMD_loss_train_minibatch)/len(MMD_loss_train_minibatch)]
+            MMD_loss_test += [sum(MMD_loss_test_minibatch) / len(MMD_loss_test_minibatch)]
+
+            '''
             z_reference_train, z_compare_train = sample1_sample2_all(trainer_vae, trainer_vae.train_set, obj2_type, reference_batch, compare_batch)
             MMD_loss_train += [MMD_train_test(z_reference_train, z_compare_train, args.MMD_kernel_mul, args.MMD_kernel_num)]
 
             z_reference_test, z_compare_test = sample1_sample2_all(trainer_vae, trainer_vae.test_set, obj2_type, reference_batch, compare_batch)
             MMD_loss_test += [MMD_train_test(z_reference_test, z_compare_test, args.MMD_kernel_mul, args.MMD_kernel_num)]
-
+            '''
         estimator_train = max(MMD_loss_train)
         estimator_test = max(MMD_loss_test)
     elif obj2_type == 'NN':
