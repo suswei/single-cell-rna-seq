@@ -20,12 +20,12 @@ def main(taskid):
         'adv_estimator': ['stdMMD'],
         'MMD_kernel_mul': [2],
         'MMD_kernel_num': [15],
-        'epochs': [350],
-        'lr': [1e-4],
-        'obj1_max': [19932], #19996
-        'obj1_min': [11514], #11427
-        'obj2_max': [1.024], #0.9937
-        'obj2_min': [0.415], #0.4237
+        'epochs': [250],
+        'lr': [2e-4],
+        'obj1_max': [20702], #19996
+        'obj1_min': [11721], #11427
+        'obj2_max': [0.998], #0.9937
+        'obj2_min': [0.4108], #0.4237
         'MC': list(range(20)),
         'weights_total': [12],
         'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(12)), [0, 1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11, 1])],
