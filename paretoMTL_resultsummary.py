@@ -579,7 +579,7 @@ def main( ):
                 else:
                     continue
 
-        if args.diagnosis == True:
+        if args.diagnosis == True and initial_frame==True:
             cv2.destroyAllWindows()
             video.release()
 

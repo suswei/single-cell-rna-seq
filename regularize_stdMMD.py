@@ -21,7 +21,7 @@ def main(taskid):
         'MMD_kernel_mul': [1],
         'MMD_kernel_num': [1],
         'epochs': [250],
-        'lr': [1e-3],
+        'lr': [1e-4],
         'obj1_max': [20575], #19996
         'obj1_min': [11877], #11427
         'obj2_max': [0.373], #0.9937
