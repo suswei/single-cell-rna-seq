@@ -18,14 +18,14 @@ def main(taskid):
         'n_latent': [10], #
         'batch_size': [128], #4 GPUs
         'adv_estimator': ['stdMMD'], #
-        'MMD_kernel_mul': [2], #
-        'MMD_kernel_num': [15],#15
+        'MMD_kernel_mul': [1], #
+        'MMD_kernel_num': [1],#15
         'epochs': [250],
-        'lr': [2e-4],
-        'obj1_max': [20702], #19996
-        'obj1_min': [11721], #11427
-        'obj2_max': [0.998], #0.9937
-        'obj2_min': [0.4108], #0.4237
+        'lr': [1e-3],
+        'obj1_max': [20575], #19996
+        'obj1_min': [11877], #11427
+        'obj2_max': [0.373], #0.9937
+        'obj2_min': [0.081], #0.4237
         'n_tasks': [2],
         'MC': list(range(20)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))],
