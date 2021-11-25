@@ -306,16 +306,17 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
 
             dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
 
-            if 'pareto' in method:
+            if 'pareto' in method :
                 subset_string = method.replace('pareto', 'regularize')
-                dataframe_oneMC_extreme = dataframe_oneMC[
-                    dataframe_oneMC.method.eq(subset_string) & dataframe_oneMC.nweight.isin([0, 11])]
-                if dataframe_oneMC_extreme.shape[0] > 0:
-                    dataframe_oneMC_extreme.pref_idx = dataframe_oneMC_extreme.nweight
-                    dataframe_oneMC_oneMethod['pref_idx'] = dataframe_oneMC_oneMethod.apply(
-                        lambda row: row.pref_idx + 1, axis=1)
-                    dataframe_oneMC_oneMethod = pd.concat([dataframe_oneMC_extreme, dataframe_oneMC_oneMethod],
-                                                          axis=0).sort_values('pref_idx')
+                if subset_string in methods_list:
+                    dataframe_oneMC_extreme = dataframe_oneMC[
+                        dataframe_oneMC.method.eq(subset_string) & dataframe_oneMC.nweight.isin([0, 11])]
+                    if dataframe_oneMC_extreme.shape[0] > 0:
+                        dataframe_oneMC_extreme.pref_idx = dataframe_oneMC_extreme.nweight
+                        dataframe_oneMC_oneMethod['pref_idx'] = dataframe_oneMC_oneMethod.apply(
+                            lambda row: row.pref_idx + 1, axis=1)
+                        dataframe_oneMC_oneMethod = pd.concat([dataframe_oneMC_extreme, dataframe_oneMC_oneMethod],
+                                                              axis=0).sort_values('pref_idx')
 
             for (j, type) in enumerate(['train', 'test']):
 

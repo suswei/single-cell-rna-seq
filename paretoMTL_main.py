@@ -35,8 +35,7 @@ def construct_trainer_vae(gene_dataset, args):
     elif args.adv_estimator in ['MMD','stdMMD']:
 
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
-                      seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, MMD_kernel_mul=args.MMD_kernel_mul,
-                      MMD_kernel_num=args.MMD_kernel_num, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+                      seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, MMD_bandwidths = args.MMD_bandwidths, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
 
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
@@ -173,28 +172,10 @@ def MINE_after_trainerVae(trainer_vae, args):
 
     return MINE_estimator_train, MINE_estimator_test
 
-def MMD_train_test(z_reference, z_compare, MMD_kernel_mul, MMD_kernel_num):
-
-    MMD_loss_fun = MMD_loss(MMD_kernel_mul, MMD_kernel_num)
-
-    if z_reference.shape[0]<=2000:
-        z_reference_subset = z_reference
-    else:
-        z_reference_subset = z_reference[0:2000,:]
-
-    if z_compare.shape[0]<=2000:
-        z_compare_subset = z_compare
-    else:
-        z_compare_subset = z_compare[0:2000,:]
-
-    estimator = MMD_loss_fun(z_reference_subset, z_compare_subset)
-    return estimator.item()
-
 def MMD_NN_train_test(trainer_vae, obj2_type, args):
 
     if obj2_type in ['MMD','stdMMD']:
-
-        MMD_loss_fun = MMD_loss(args.MMD_kernel_mul, args.MMD_kernel_num)
+        MMD_loss_fun = MMD_loss(bandwidths=args.MMD_bandwidths)
         reference_batch = 0
         MMD_loss_train, MMD_loss_test = [], []
         for i in range(trainer_vae.model.n_batch-1):
@@ -212,13 +193,6 @@ def MMD_NN_train_test(trainer_vae, obj2_type, args):
             MMD_loss_train += [sum(MMD_loss_train_minibatch)/len(MMD_loss_train_minibatch)]
             MMD_loss_test += [sum(MMD_loss_test_minibatch) / len(MMD_loss_test_minibatch)]
 
-            '''
-            z_reference_train, z_compare_train = sample1_sample2_all(trainer_vae, trainer_vae.train_set, obj2_type, reference_batch, compare_batch)
-            MMD_loss_train += [MMD_train_test(z_reference_train, z_compare_train, args.MMD_kernel_mul, args.MMD_kernel_num)]
-
-            z_reference_test, z_compare_test = sample1_sample2_all(trainer_vae, trainer_vae.test_set, obj2_type, reference_batch, compare_batch)
-            MMD_loss_test += [MMD_train_test(z_reference_test, z_compare_test, args.MMD_kernel_mul, args.MMD_kernel_num)]
-            '''
         estimator_train = max(MMD_loss_train)
         estimator_test = max(MMD_loss_test)
     elif obj2_type == 'NN':
@@ -329,6 +303,9 @@ def main( ):
 
     parser.add_argument('--MMD_kernel_num', type=int, default=15,
                         help='the number of kernels to get MMD')
+
+    parser.add_argument('--MMD_bandwidths', type=list, default=[1., 2., 5., 8., 10],
+                        help='the list of bandwidths')
 
     #for pre_train
     parser.add_argument('--pre_train', action='store_true', default=False,

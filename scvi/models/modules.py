@@ -316,7 +316,7 @@ def Nearest_Neighbor_Estimate(discrete, continuous, k:int = 3):
     constant = torch.digamma(torch.tensor([continuous.size(0)]).type(torch.FloatTensor)) + torch.digamma(torch.tensor([k]).type(torch.FloatTensor))
     NN_estimator = constant - torch.mean(torch.digamma(number_same_category.type(torch.FloatTensor))) -  torch.mean(torch.digamma(number_samecategory_d.type(torch.FloatTensor)))
     return NN_estimator.item()
-
+'''
 #code is referred to https://github.com/ZongxianLee/MMD_Loss.Pytorch/blob/master/mmd_loss.py
 import torch.nn as nn
 class MMD_loss(nn.Module):
@@ -351,6 +351,44 @@ class MMD_loss(nn.Module):
         YX = kernels[batch_size:, :batch_size]
         loss = torch.sqrt(torch.mean(XX) + torch.mean(YY) - torch.mean(XY) - torch.mean(YX))
         return loss
+'''
+
+import torch.nn as nn
+import numpy as np
+
+"""
+Return the mmd score between a pair of observations
+Notes:
+Reimplementation in pytorch of the Information Constraints on Auto-Encoding Variational Bayes
+https://github.com/romain-lopez/HCV/blob/master/scVI/scVI.py
+"""
+
+class MMD_loss(nn.Module):
+    def __init__(self, bandwidths):
+        super(MMD_loss, self).__init__()
+        self.bandwidths = bandwidths
+        return
+    def K(self,x1, x2, gamma=1.):
+        x1_expand = x1.unsqueeze(0).expand(int(x2.size(0)), int(x1.size(0)), int(x1.size(1)))
+        x2_expand = x2.unsqueeze(1).expand(int(x2.size(0)), int(x1.size(0)), int(x2.size(1)))
+        dist_table = x1_expand - x2_expand
+
+        return torch.transpose(torch.exp(-gamma * ((dist_table ** 2).sum(2))),0,1)
+
+    def forward(self, x1, x2):
+        bandwidths = 1. / (2 * (np.array(self.bandwidths) ** 2))
+
+        d1 = x1.size()[1]
+        d2 = x2.size()[1]
+
+        # possibly mixture of kernels
+        x1x1, x1x2, x2x2 = 0, 0, 0
+        for bandwidth in bandwidths:
+            x1x1 += self.K(x1, x1, gamma=np.sqrt(d1) * bandwidth) / len(bandwidths)
+            x2x2 += self.K(x2, x2, gamma=np.sqrt(d2) * bandwidth) / len(bandwidths)
+            x1x2 += self.K(x1, x2, gamma=np.sqrt(d1) * bandwidth) / len(bandwidths)
+
+        return torch.sqrt(torch.mean(x1x1) - 2 * torch.mean(x1x2) + torch.mean(x2x2))
 
 def EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index, batch_ratio, nsamples):
     # nsamples_z: the number of z taken from the aggregated posterior distribution of z
