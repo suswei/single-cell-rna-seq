@@ -18,7 +18,7 @@ def main(taskid):
         'n_latent': [10], #
         'batch_size': [128], #4 GPUs
         'adv_estimator': ['stdMMD'], #
-        'MMD_bandwidths': [[1., 2., 5., 8., 10]],
+        'MMD_bandwidths': ['1,2,5,8,10'],
         'epochs': [250],
         'lr': [1e-3],
         'obj1_max': [20408],

@@ -33,7 +33,7 @@ def construct_trainer_vae(gene_dataset, args):
                       adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
     elif args.adv_estimator in ['MMD','stdMMD']:
-
+        args.MMD_bandwidths = [float(k) for k in args.MMD_bandwidths.split(',')]
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
                       seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, MMD_bandwidths = args.MMD_bandwidths, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
@@ -304,7 +304,7 @@ def main( ):
     parser.add_argument('--MMD_kernel_num', type=int, default=15,
                         help='the number of kernels to get MMD')
 
-    parser.add_argument('--MMD_bandwidths', type=list, default=[1., 2., 5., 8., 10],
+    parser.add_argument('--MMD_bandwidths', type=str, default='1,2,5,8,10',
                         help='the list of bandwidths')
 
     #for pre_train
