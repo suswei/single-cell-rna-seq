@@ -19,7 +19,7 @@ def main(taskid):
         'batch_size': [128],
         'adv_estimator': ['stdMMD'],
         'MMD_bandwidths': ['1,2,5,8,10'],
-        'epochs': [400],
+        'epochs': [600],
         'lr': [1e-4],
         'obj1_max': [20408],
         'obj1_min': [11697],
