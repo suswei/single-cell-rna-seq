@@ -20,7 +20,7 @@ def main(taskid):
         'adv_estimator': ['stdMMD'],
         'MMD_bandwidths': ['1,2,5,8,10'],
         'epochs': [400],
-        'lr': [2e-4],
+        'lr': [5e-4],
         'obj1_max': [20408],
         'obj1_min': [11697],
         'obj2_max': [0.29],
