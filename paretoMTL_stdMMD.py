@@ -20,11 +20,11 @@ def main(taskid):
         'adv_estimator': ['stdMMD'], #
         'MMD_bandwidths': ['1,2,5,8,10'],
         'epochs': [400],
-        'lr': [1e-4],
+        'lr': [1e-3],
         'obj1_max': [20408],
         'obj1_min': [11697],
         'obj2_max': [0.29],
-        'obj2_min': [0.0469],
+        'obj2_min': [0],
         'n_tasks': [2],
         'MC': list(range(20)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))],
