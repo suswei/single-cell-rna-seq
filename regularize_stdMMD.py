@@ -18,13 +18,12 @@ def main(taskid):
         'n_latent': [10],
         'batch_size': [128],
         'adv_estimator': ['stdMMD'],
-        'MMD_bandwidths': ['1,2,5,8,10'],
-        'epochs': [400],
-        'lr': [4e-4],
-        'obj1_max': [20100],
-        'obj1_min': [11288],
-        'obj2_max': [0.324],
-        'obj2_min': [0.05],
+        'epochs': [250],
+        'lr': [1e-3],
+        'obj1_max': [19665],
+        'obj1_min': [11466],
+        'obj2_max': [0.303],
+        'obj2_min': [0],
         'MC': list(range(20)),
         'weights_total': [12],
         'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(12)), [0, 1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11, 1])],
@@ -38,11 +37,10 @@ def main(taskid):
     os.system("python3 paretoMTL_main.py --regularize --use_batches --MCs 20 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s  --batch_size %s "
-              "--adv_estimator %s --MMD_bandwidths %s "
-              "--epochs %s --lr %s --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "
+              "--adv_estimator %s --epochs %s --lr %s --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "
               "--MC %s --weights_total %s --nweight %s --weight %s --num_workers %s "
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
-                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['MMD_bandwidths'],
+                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'],
                  temp['epochs'], temp['lr'], temp['obj1_max'], temp['obj1_min'], temp['obj2_max'], temp['obj2_min'],
                  temp['MC'], temp['weights_total'], temp['nweight_weight']['nweight'], temp['nweight_weight']['weight'], temp['num_workers'])
               )

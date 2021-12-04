@@ -355,7 +355,7 @@ class MMD_loss(nn.Module):
 
 import torch.nn as nn
 import numpy as np
-
+from scipy.special import gamma
 """
 Return the mmd score between a pair of observations
 Notes:
@@ -364,10 +364,17 @@ https://github.com/romain-lopez/HCV/blob/master/scVI/scVI.py
 """
 
 class MMD_loss(nn.Module):
-    def __init__(self, bandwidths):
+    def __init__(self):
         super(MMD_loss, self).__init__()
-        self.bandwidths = bandwidths
         return
+    def bandwidth(self, d):
+        """
+        in the case of Gaussian random variables and the use of a RBF kernel,
+        this can be used to select the bandwidth according to the median heuristic
+        """
+        gz = 2 * gamma(0.5 * (d + 1)) / gamma(0.5 * d)
+        return 1. / (2. * gz ** 2)
+
     def K(self,x1, x2, gamma=1.):
         x1_expand = x1.unsqueeze(0).expand(int(x2.size(0)), int(x1.size(0)), int(x1.size(1)))
         x2_expand = x2.unsqueeze(1).expand(int(x2.size(0)), int(x1.size(0)), int(x2.size(1)))
@@ -376,17 +383,13 @@ class MMD_loss(nn.Module):
         return torch.transpose(torch.exp(-gamma * ((dist_table ** 2).sum(2))),0,1)
 
     def forward(self, x1, x2):
-        bandwidths = 1. / (2 * (np.array(self.bandwidths) ** 2))
 
         d1 = x1.size()[1]
         d2 = x2.size()[1]
 
-        # possibly mixture of kernels
-        x1x1, x1x2, x2x2 = 0, 0, 0
-        for bandwidth in bandwidths:
-            x1x1 += self.K(x1, x1, gamma=np.sqrt(d1) * bandwidth) / len(bandwidths)
-            x2x2 += self.K(x2, x2, gamma=np.sqrt(d2) * bandwidth) / len(bandwidths)
-            x1x2 += self.K(x1, x2, gamma=np.sqrt(d1) * bandwidth) / len(bandwidths)
+        x1x1 = self.K(x1, x1, gamma=self.bandwidth(d1))
+        x2x2 = self.K(x2, x2, gamma=self.bandwidth(d2))
+        x1x2 = self.K(x1, x2, gamma=self.bandwidth(d1))
 
         return torch.sqrt(torch.mean(x1x1) - 2 * torch.mean(x1x2) + torch.mean(x2x2))
 

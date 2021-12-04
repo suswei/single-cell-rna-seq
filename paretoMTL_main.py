@@ -33,9 +33,8 @@ def construct_trainer_vae(gene_dataset, args):
                       adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
     elif args.adv_estimator in ['MMD','stdMMD']:
-        args.MMD_bandwidths = [float(k) for k in args.MMD_bandwidths.split(',')]
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
-                      seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, MMD_bandwidths = args.MMD_bandwidths, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+                      seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
 
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
@@ -175,7 +174,7 @@ def MINE_after_trainerVae(trainer_vae, args):
 def MMD_NN_train_test(trainer_vae, obj2_type, args):
 
     if obj2_type in ['MMD','stdMMD']:
-        MMD_loss_fun = MMD_loss(bandwidths=args.MMD_bandwidths)
+        MMD_loss_fun = MMD_loss()
         reference_batch = 0
         MMD_loss_train, MMD_loss_test = [], []
         for i in range(trainer_vae.model.n_batch-1):
@@ -303,9 +302,6 @@ def main( ):
 
     parser.add_argument('--MMD_kernel_num', type=int, default=15,
                         help='the number of kernels to get MMD')
-
-    parser.add_argument('--MMD_bandwidths', type=str, default='1,2,5,8,10',
-                        help='the list of bandwidths')
 
     #for pre_train
     parser.add_argument('--pre_train', action='store_true', default=False,
