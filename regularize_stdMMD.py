@@ -18,7 +18,7 @@ def main(taskid):
         'n_latent': [10],
         'batch_size': [128],
         'adv_estimator': ['stdMMD'],
-        'epochs': [350],
+        'epochs': [600],
         'lr': [1e-3],
         'obj1_max': [19665],
         'obj1_min': [11466],
