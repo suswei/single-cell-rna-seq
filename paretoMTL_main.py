@@ -343,6 +343,9 @@ def main( ):
     parser.add_argument('--npref', type=int, default=10,
                         help='number of subproblems when the multiple optimization problem is decomposed')
 
+    parser.add_argument('--pref_type', type=str, default='even',
+                        help='evenly or not evenly divide the bi-objective space')
+
     parser.add_argument('--pref_idx', type=int, default=0,
                         help='which subproblem')
 
@@ -518,7 +521,7 @@ def main( ):
     elif args.standardize == True:
         obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_paretoMTL(
             path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs,
-            adv_epochs=args.adv_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_idx=args.pref_idx)
+            adv_epochs=args.adv_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_type=args.pref_type, pref_idx=args.pref_idx)
 
         obj1_max = max(obj1_minibatch_list)
         obj1_min = min(obj1_minibatch_list)
@@ -545,7 +548,7 @@ def main( ):
         elif args.std_paretoMTL == True:
             _, _ = trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, std_paretoMTL=args.std_paretoMTL,
                 obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
-                adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_idx = args.pref_idx, taskid=args.taskid)
+                adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_type=args.pref_type, pref_idx = args.pref_idx, taskid=args.taskid)
 
             method = 'pareto{}'.format(args.adv_estimator)
             if args.adv_estimator in ['MMD','stdMMD']:

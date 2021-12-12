@@ -268,13 +268,18 @@ def get_d_paretomtl(grads, value, weights, i):
 
     return weight
 
-def circle_points(r, n):
+def circle_points(r, n, pref_type: str='even'):
     """
     generate evenly distributed unit preference vectors for two tasks
     """
     circles = []
     for r, n in zip(r, n):
-        t = np.linspace(0, 0.5 * np.pi, n)
+        if pref_type=='even':
+            t = np.linspace(0, 0.5 * np.pi, n)
+        else:
+            t1 = np.linspace(0, 1/3* 0.5 * np.pi, int(n/2)+1)
+            t2 = np.linspace(1/3* 0.5 * np.pi, 0.5 * np.pi, n- int(n/2))
+            t = np.concatenate((t1,t2[1:]))
         x = r * np.cos(t)
         y = r * np.sin(t)
         circles.append(np.c_[x, y])
