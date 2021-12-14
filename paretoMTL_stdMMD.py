@@ -18,15 +18,15 @@ def main(taskid):
         'n_latent': [10], #
         'batch_size': [128], #4 GPUs
         'adv_estimator': ['stdMMD'], #
-        'epochs': [250],
-        'lr': [1e-3],
+        'epochs': [400],
+        'lr': [4e-4],
         'obj1_max': [19665],
         'obj1_min': [11466],
         'obj2_max': [0.303],
         'obj2_min': [0],
         'n_tasks': [2],
         'MC': list(range(20)),
-        'pref_type': ['uneven'],
+        'pref_type': ['even'],
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))],
         'num_workers': [1]
     }
@@ -35,7 +35,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 paretoMTL_main.py --std_paretoMTL --use_batches --MCs 20 "
+    os.system("python3 paretoMTL_main.py --standardize --use_batches --MCs 20 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "        
               "--adv_estimator %s --epochs %s --lr %s --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "
