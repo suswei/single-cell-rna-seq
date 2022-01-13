@@ -106,18 +106,18 @@ def obj1_train_test(trainer_vae):
     trainer_vae.cal_loss = True
     trainer_vae.cal_adv_loss = False
 
-    obj1_minibatch_list_train, obj1_minibatch_list_test = [], []
+    obj1_idealibatch_list_train, obj1_idealibatch_list_test = [], []
     for tensors_list in trainer_vae.train_set:
         loss, _, _ = trainer_vae.two_loss(tensors_list)
-        obj1_minibatch_list_train.append(loss.item())
+        obj1_idealibatch_list_train.append(loss.item())
 
-    obj1_train = sum(obj1_minibatch_list_train) / len(obj1_minibatch_list_train)
+    obj1_train = sum(obj1_idealibatch_list_train) / len(obj1_idealibatch_list_train)
 
     for tensors_list in trainer_vae.test_set:
         loss, _, _ = trainer_vae.two_loss(tensors_list)
-        obj1_minibatch_list_test.append(loss.item())
+        obj1_idealibatch_list_test.append(loss.item())
 
-    obj1_test = sum(obj1_minibatch_list_test) / len(obj1_minibatch_list_test)
+    obj1_test = sum(obj1_idealibatch_list_test) / len(obj1_idealibatch_list_test)
 
     return obj1_train, obj1_test
 
@@ -210,21 +210,6 @@ def MMD_NN_train_test(trainer_vae, obj2_type, args):
         estimator_test = sum(NN_test_list)/len(NN_test_list)
 
     return estimator_train, estimator_test
-
-def draw_diagnosis_plot(list1,  list2, name1, name2, title, path):
-    plt.figure()
-    plt.subplot(211)
-    plt.plot(np.arange(0, len(list1), 1), list1)
-    plt.title('{}'.format(title), fontsize=5)
-    plt.ylabel('{}'.format(name1))
-
-    plt.subplot(212)
-    plt.plot(np.arange(0, len(list2), 1), list2)
-    plt.ylabel('{}'.format(name2))
-    plt.xlabel('epochs * minibatches')
-
-    plt.savefig("{}.png".format(path))
-    plt.close()
 
 def main( ):
 
@@ -319,9 +304,8 @@ def main( ):
     parser.add_argument('--pre_adv_lr', type=float, default=5e-5,
                         help='learning rate in MINE pre-training and adversarial training')
 
-    #to get min and max for obj1 and obj2 to standardize
-    parser.add_argument('--standardize', action='store_true', default=False,
-                        help='whether to get min and max value for obj1 and obj2 to standardize')
+    parser.add_argument('--ideal_nadir', action='store_true', default=False,
+                        help='whether to get min and max value across pareto optimal points for the normalization of obj1 and obj2')
 
     #for paretoMTL
 
@@ -349,20 +333,20 @@ def main( ):
     parser.add_argument('--pref_idx', type=int, default=0,
                         help='which subproblem')
 
-    parser.add_argument('--std_paretoMTL', action='store_true', default=False,
-                        help='whether to standardize the two objectives')
+    parser.add_argument('--paretoMTL', action='store_true', default=False,
+                        help='whether to use paretoMTL method')
 
-    parser.add_argument('--obj1_max', type=float, default=20000,
-                        help='maximum value for objective 1')
+    parser.add_argument('--obj1_nadir', type=float, default=20000,
+                        help='maximum value for objective 1 across all pareto optimal points')
 
-    parser.add_argument('--obj1_min', type=float, default=12000,
-                        help='minimum value for objective 1')
+    parser.add_argument('--obj1_ideal', type=float, default=12000,
+                        help='minimum value for objective 1 across all pareto optimal points')
 
-    parser.add_argument('--obj2_max', type=float, default=0.4,
-                        help='maximum value for objective 2')
+    parser.add_argument('--obj2_nadir', type=float, default=0.4,
+                        help='maximum value for objective 2 across all pareto optimal points')
 
-    parser.add_argument('--obj2_min', type=float, default=-0.1,
-                        help='minimum value for objective 2')
+    parser.add_argument('--obj2_ideal', type=float, default=-0.1,
+                        help='minimum value for objective 2 across all pareto optimal points')
 
     parser.add_argument('--n_samples_tsne', type=int, default=1500,
                         help='the number of samples for tsne plot')
@@ -459,12 +443,14 @@ def main( ):
     np.random.seed(1011)
     desired_seeds = np.random.randint(0, 2 ** 32, size=(1, args.MCs), dtype=np.uint32)
 
-    if args.pre_train == True:
+    if args.pre_train:
         #index = 0
         index = args.taskid
-    elif args.regularize == True:
+    elif args.regularize:
         index = args.taskid // args.weights_total
-    else:
+    elif args.ideal_nadir:
+        index = 0
+    elif args.paretoMTL:
         index = args.taskid//args.npref
 
     args.desired_seed = int(desired_seeds[0, index])
@@ -507,7 +493,7 @@ def main( ):
     trainer_vae = construct_trainer_vae(gene_dataset, args)
 
     if args.pre_train == True:
-        trainer_vae.pretrain_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
+        trainer_vae.pretrain_idealnadir_regularize_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
                         pre_adv_epochs=args.pre_adv_epochs, pre_adv_lr=args.pre_adv_lr, path=args.save_path)
 
         if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
@@ -518,36 +504,79 @@ def main( ):
         obj1_train, obj1_test = obj1_train_test(trainer_vae)
         print(obj1_train, obj1_test)
 
-    elif args.standardize == True:
-        obj1_minibatch_list, obj2_minibatch_list = trainer_vae.pretrain_paretoMTL(
-            path=args.save_path, standardize=args.standardize, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs,
-            adv_epochs=args.adv_epochs, n_tasks=args.n_tasks, npref=args.npref, pref_type=args.pref_type, pref_idx=args.pref_idx)
+    elif args.ideal_nadir== True:
+        trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, taskid=args.taskid, weight=args.weight,
+            ideal_nadir=args.ideal_nadir, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs, adv_epochs=args.adv_epochs)
 
-        obj1_max = max(obj1_minibatch_list)
-        obj1_min = min(obj1_minibatch_list)
-        print('obj1_max: {}, obj1_min: {}'.format(obj1_max, obj1_min))
+        if trainer_vae.adv_estimator == 'MINE':
+            obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
+        elif trainer_vae.adv_estimator == 'stdMMD':
+            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD', args)
 
-        obj2_max = max(obj2_minibatch_list)
-        obj2_min = min(obj2_minibatch_list)
-        print('obj2_max: {}, obj2_min: {}'.format(obj2_max, obj2_min))
+        if args.weight == 1:
+            obj1_train, obj1_test = obj1_train_test(trainer_vae)
+            obj1_ideal = obj1_train
 
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD', args)
-        print('obj2_train: {}, obj2_test: {}'.format(obj2_train, obj2_test))
+            obj2_nadir = obj2_train
+
+            print('obj1_ideal: {}, obj2_nadir: {}'.format(obj1_ideal, obj2_nadir))
+
+        elif args.weight == 0:
+
+            obj2_ideal = obj2_train
+
+            if torch.cuda.device_count() > 1:
+                trainer_vae.model = torch.nn.DataParallel(trainer_vae.model)
+            trainer_vae.model.to(trainer_vae.device)
+
+            for q in trainer_vae.model.z_encoder.parameters():
+                q.requires_grad = False
+            for q in trainer_vae.model.l_encoder.parameters():
+                q.requires_grad = False
+
+            params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
+            trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
+
+            obj1_train_list = []
+            trainer_vae.cal_loss = True
+            trainer_vae.cal_adv_loss = False
+            for epoch in range(args.epochs):
+                trainer_vae.model.train()
+                for tensors_list in trainer_vae.data_loaders_loop():
+                    loss, _, _ = trainer_vae.two_loss(*tensors_list)
+                    trainer_vae.optimizer.zero_grad()
+                    loss.backward()
+                    trainer_vae.optimizer.step()
+
+                if epoch % 10 == 0:
+                    obj1_train_eval= trainer_vae.obj1_obj2_eval(type='obj1')
+                    obj1_train_list.append(obj1_train_eval)
+
+            args.path = './result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder)
+            if not os.path.exists('./result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder)):
+                os.makedirs('./result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder))
+
+            trainer_vae.diagnosis_plot(obj1_train_list, args.path, 'obj1')
+
+            obj1_train, obj1_test = obj1_train_test(trainer_vae)
+            obj1_nadir = obj1_train
+
+        print('obj1_nadir: {}, obj2_ideal: {}'.format(obj1_nadir, obj2_ideal))
 
     else:
         if args.regularize == True:
-            trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
+            trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
             regularize=args.regularize, weight=args.weight, epochs = args.epochs, adv_epochs = args.adv_epochs,
-            obj1_max=args.obj1_max, obj1_min = args.obj1_min, obj2_max = args.obj2_max, obj2_min = args.obj2_min,
+            obj1_nadir=args.obj1_nadir, obj1_ideal = args.obj1_ideal, obj2_nadir = args.obj2_nadir, obj2_ideal = args.obj2_ideal,
             taskid=args.taskid)
 
             method = 'regularize{}'.format(args.adv_estimator)
             if args.adv_estimator in ['MMD','stdMMD']:
                 method = 'regularizeMMD'
 
-        elif args.std_paretoMTL == True:
-            _, _ = trainer_vae.pretrain_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, std_paretoMTL=args.std_paretoMTL,
-                obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
+        elif args.paretoMTL == True:
+            _, _ = trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, paretoMTL=args.paretoMTL,
+                obj1_nadir=args.obj1_nadir, obj1_ideal=args.obj1_ideal, obj2_nadir=args.obj2_nadir, obj2_ideal=args.obj2_ideal, epochs = args.epochs,
                 adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_type=args.pref_type, pref_idx = args.pref_idx, taskid=args.taskid)
 
             method = 'pareto{}'.format(args.adv_estimator)
