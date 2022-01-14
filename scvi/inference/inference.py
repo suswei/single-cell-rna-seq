@@ -67,47 +67,31 @@ class UnsupervisedTrainer(Trainer):
     def two_loss(self, tensors):
 
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
+        reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
 
-        if self.cal_loss == True and self.cal_adv_loss == False:
-            #for when model is vae_MI
-            reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
+        if self.cal_loss:
             loss = torch.mean(reconst_loss + self.kl_weight*kl_divergence)
 
-        elif self.cal_loss == False and self.cal_adv_loss == True:
-            x_ = sample_batch
-            if torch.cuda.device_count() > 1:
-                log_variational = self.model.module.log_variational
-            else:
-                log_variational = self.model.log_variational
-            if log_variational == True:
-                x_ = torch.log(1 + x_)
-
-            if torch.cuda.device_count() > 1:
-                qz_m, qz_v, z = self.model.module.z_encoder(x_, None)
-            else:
-                qz_m, qz_v, z = self.model.z_encoder(x_, None)
-
-            sample1, sample2= self.adv_load_minibatch(z, batch_index)
-            adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
-
-        elif self.cal_loss == True and self.cal_adv_loss == True:
-            reconst_loss, kl_divergence, qz_m, qz_v, z = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
-            loss = torch.mean(reconst_loss + self.kl_weight * kl_divergence)
+        if self.cal_adv_loss:
 
             if self.adv_estimator == 'MINE':
                 sample1, sample2 = self.adv_load_minibatch(z, batch_index)
                 adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
+
             elif self.adv_estimator in ['MMD','stdMMD']:
-                reference_batch = 0
-                for i in range(self.gene_dataset.n_batches -1):
-                    compare_batch = i + 1
-                    sample1, sample2 = self.adv_load_minibatch(z, batch_index, reference_batch, compare_batch)
+                for onebatch_index in range(self.gene_dataset.n_batches):
+                    sample1, sample2 = self.adv_load_minibatch(z, batch_index, float(onebatch_index), self.gene_dataset.n_batches)
                     adv_loss_one, obj2_minibatch_one = self.adv_loss(sample1, sample2)
-                    if i == 0:
+                    if self.gene_dataset.n_batches==2:
                         adv_loss_tensor = adv_loss_one.reshape(1,1)
+                        break
                     else:
-                        adv_loss_tensor = torch.cat([adv_loss_tensor, adv_loss_one.reshape(1,1)],dim=1)
-                adv_loss = torch.max(adv_loss_tensor)
+                        if onebatch_index==0:
+                            adv_loss_tensor = adv_loss_one.reshape(1, 1)
+                        else:
+                            adv_loss_tensor = torch.cat([adv_loss_tensor, adv_loss_one.reshape(1,1)],dim=1)
+
+                adv_loss = torch.sum(adv_loss_tensor)
                 obj2_minibatch = adv_loss
 
             if self.epoch >= 0:
@@ -126,7 +110,7 @@ class UnsupervisedTrainer(Trainer):
         elif self.cal_loss == True and self.cal_adv_loss == True:
             return loss, adv_loss, obj2_minibatch
 
-    def adv_load_minibatch(self, z, batch_index, reference_batch:float=0, compare_batch: float=1):
+    def adv_load_minibatch(self, z, batch_index, onebatch_index:float=0, n_batches: int=2):
 
         if torch.cuda.is_available():
             batch_dataframe = pd.DataFrame.from_dict({'batch': np.ndarray.tolist(batch_index.cpu().numpy().ravel())})
@@ -150,9 +134,14 @@ class UnsupervisedTrainer(Trainer):
                 z_mean = torch.mean(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
                 z_std = torch.std(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
                 z = (z - z_mean)/z_std #element by element
-            z_reference_batch = z[(batch_index_copy[:, 0] == reference_batch).nonzero().squeeze(1)]
-            z_compare_batch = z[(batch_index_copy[:, 0] == compare_batch).nonzero().squeeze(1)]
-            return z_reference_batch, z_compare_batch
+
+            sample1 = z[(batch_index_copy[:, 0] == onebatch_index).nonzero().squeeze(1)]
+            if n_batches == 2:
+                sample2 = z[(batch_index_copy[:, 0] == onebatch_index + 1).nonzero().squeeze(1)]
+            else:
+                sample2 = z
+
+            return sample1, sample2
 
     def adv_loss(self, sample1, sample2):
         if self.adv_estimator == 'MINE':

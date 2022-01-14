@@ -23,10 +23,10 @@ def main(taskid):
         'adv_activation_fun': ['ELU'],
         'lr': [1e-4],
         'adv_lr': [5e-5],
-        'obj1_nadir': [19664], #
-        'obj1_ideal': [11513], #
-        'obj2_nadir': [0.693], #
-        'obj2_ideal': [-0.1], #
+        'obj1_nadir': [15807], #
+        'obj1_ideal': [15010], #
+        'obj2_nadir': [0.376], #
+        'obj2_ideal': [0], #
         'epochs': [150], #
         'adv_epochs': [1],
         'n_tasks': [2],

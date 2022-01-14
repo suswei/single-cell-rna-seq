@@ -17,11 +17,10 @@ from scvi.inference import UnsupervisedTrainer
 from scvi.models.modules import MINE_Net, Nearest_Neighbor_Estimate, MMD_loss
 from scipy import sparse
 import pickle
-import matplotlib.pyplot as plt
 
 def construct_trainer_vae(gene_dataset, args):
 
-    vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * args.use_batches,n_labels=gene_dataset.n_labels,
+    vae_MI = VAE_MI(gene_dataset.nb_genes, n_batches=gene_dataset.n_batches * args.use_batches,n_labels=gene_dataset.n_labels,
                     n_hidden=args.n_hidden, n_latent=args.n_latent, n_layers_encoder=args.n_layers_encoder,
                     n_layers_decoder=args.n_layers_decoder,dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss)
 
@@ -42,7 +41,43 @@ def construct_trainer_vae(gene_dataset, args):
 
     return trainer_vae
 
-def sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference_batch: int=0, compare_batch:int=1):
+def decoder_training(trainer_vae, args):
+    if torch.cuda.device_count() > 1:
+        trainer_vae.model = torch.nn.DataParallel(trainer_vae.model)
+    trainer_vae.model.to(trainer_vae.device)
+
+    for q in trainer_vae.model.z_encoder.parameters():
+        q.requires_grad = False
+    for q in trainer_vae.model.l_encoder.parameters():
+        q.requires_grad = False
+
+    params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
+    trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
+
+    obj1_train_list = []
+    trainer_vae.cal_loss = True
+    trainer_vae.cal_adv_loss = False
+    for epoch in range(args.epochs):
+        trainer_vae.model.train()
+        for tensors_list in trainer_vae.data_loaders_loop():
+            loss, _, _ = trainer_vae.two_loss(*tensors_list)
+            trainer_vae.optimizer.zero_grad()
+            loss.backward()
+            trainer_vae.optimizer.step()
+
+        if epoch % 10 == 0:
+            obj1_train_eval = trainer_vae.obj1_obj2_eval(type='obj1')
+            obj1_train_list.append(obj1_train_eval)
+
+    args.path = './result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder)
+    if not os.path.exists('./result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder)):
+        os.makedirs('./result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder))
+
+    trainer_vae.diagnosis_plot(obj1_train_list, args.path, 'obj1')
+
+    return trainer_vae
+
+def sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, onebatch_index: int=0, n_batches: int=2):
     x_ = sample_batch
     if trainer_vae.model.log_variational:
         x_ = torch.log(1 + x_)
@@ -67,15 +102,19 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference
             z_mean = torch.mean(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
             z_std = torch.std(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
             z = (z - z_mean) / z_std  # element by element
-        z_reference_batch = z[(batch_index[:, 0] == reference_batch).nonzero().squeeze(1)]
-        z_compare_batch = z[(batch_index[:, 0] == compare_batch).nonzero().squeeze(1)]
-        return z_reference_batch, z_compare_batch, z, batch_dummy
+
+        sample1 = z[(batch_index[:, 0] == onebatch_index).nonzero().squeeze(1)]
+        if n_batches == 2:
+            sample2 = z[(batch_index[:, 0] == onebatch_index + 1).nonzero().squeeze(1)]
+        else:
+            sample2 = z
+        return sample1, sample2, z, batch_dummy
     elif obj2_type == 'NN':
         return None, None, z, None
 
-def sample1_sample2_all(trainer_vae, input_data, obj2_type, reference_batch: int=0, compare_batch:int=1):
+def sample1_sample2_all(trainer_vae, input_data, obj2_type, onebatch_index: int=0, n_batches: int=2):
     z_all = torch.empty(0, trainer_vae.model.n_latent).to(trainer_vae.device)
-    batch_dummy_all = torch.empty(0, trainer_vae.model.n_batch).to(trainer_vae.device)
+    batch_dummy_all = torch.empty(0, trainer_vae.model.n_batches).to(trainer_vae.device)
     batch_index_all = torch.empty(0, 1).type(torch.LongTensor).to(trainer_vae.device)
     z_reference_all = torch.empty(0, trainer_vae.model.n_latent).to(trainer_vae.device)
     z_compare_all = torch.empty(0, trainer_vae.model.n_latent).to(trainer_vae.device)
@@ -83,7 +122,7 @@ def sample1_sample2_all(trainer_vae, input_data, obj2_type, reference_batch: int
     for tensors_list in input_data:
         sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
 
-        sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference_batch, compare_batch)
+        sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, onebatch_index, n_batches)
         if obj2_type == 'MINE':
             z_all = torch.cat((z_all, z), 0)
             batch_dummy_all = torch.cat((batch_dummy_all, batch_dummy), 0)
@@ -134,7 +173,7 @@ def MINE_eval(trainer_vae, MINE_network, input_data):
     return MINE_estimator.item()
 
 def MINE_after_trainerVae(trainer_vae, args):
-    MINE_network = MINE_Net(input_dim=trainer_vae.model.n_latent + trainer_vae.model.n_batch, n_hidden=args.adv_n_hidden, n_layers=args.adv_n_layers,
+    MINE_network = MINE_Net(input_dim=trainer_vae.model.n_latent + trainer_vae.model.n_batches, n_hidden=args.adv_n_hidden, n_layers=args.adv_n_layers,
                             activation_fun=args.adv_activation_fun, unbiased_loss=args.unbiased_loss, initial=args.adv_w_initial)
 
     if torch.cuda.is_available():
@@ -171,29 +210,29 @@ def MINE_after_trainerVae(trainer_vae, args):
 
     return MINE_estimator_train, MINE_estimator_test
 
-def MMD_NN_train_test(trainer_vae, obj2_type, args):
+def MMD_NN_train_test(trainer_vae, obj2_type):
 
     if obj2_type in ['MMD','stdMMD']:
         MMD_loss_fun = MMD_loss()
-        reference_batch = 0
-        MMD_loss_train, MMD_loss_test = [], []
-        for i in range(trainer_vae.model.n_batch-1):
-            compare_batch = i + 1
+        estimator_train, estimator_test = 0, 0
+
+        for onebatch_index in range(trainer_vae.model.n_batches):
             MMD_loss_train_minibatch, MMD_loss_test_minibatch= [],[]
             for tensors_list in trainer_vae.train_set:
                 sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
-                z_reference_batch, z_compare_batch, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, reference_batch, compare_batch)
-                MMD_loss_train_minibatch += [MMD_loss_fun(z_reference_batch, z_compare_batch).item()]
+                sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, float(onebatch_index), trainer_vae.model.n_batches)
+                MMD_loss_train_minibatch += [MMD_loss_fun(sample1, sample2).item()]
             for tensors_list in trainer_vae.test_set:
                 sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list
-                z_reference_batch, z_compare_batch, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch,batch_index, obj2_type,reference_batch, compare_batch)
-                MMD_loss_test_minibatch += [MMD_loss_fun(z_reference_batch, z_compare_batch).item()]
+                sample1, sample2, z, batch_dummy = sample1_sample2(trainer_vae, sample_batch,batch_index, obj2_type,float(onebatch_index), trainer_vae.model.n_batches)
+                MMD_loss_test_minibatch += [MMD_loss_fun(sample1, sample2).item()]
 
-            MMD_loss_train += [sum(MMD_loss_train_minibatch)/len(MMD_loss_train_minibatch)]
-            MMD_loss_test += [sum(MMD_loss_test_minibatch) / len(MMD_loss_test_minibatch)]
+            estimator_train += sum(MMD_loss_train_minibatch)/len(MMD_loss_train_minibatch)
+            estimator_test += sum(MMD_loss_test_minibatch) / len(MMD_loss_test_minibatch)
 
-        estimator_train = max(MMD_loss_train)
-        estimator_test = max(MMD_loss_test)
+            if trainer_vae.model.n_batches == 2:
+                break
+
     elif obj2_type == 'NN':
         NN_train_list, NN_test_list = [], []
         for tensors_list in trainer_vae.train_set:
@@ -472,7 +511,7 @@ def main( ):
 
     '''
     # If train vae alone
-    vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
+    vae = VAE(gene_dataset.nb_genes, n_batches=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
               n_hidden=128, n_latent=10, n_layers_encoder=1, n_layers_decoder=1, dropout_rate=0.1, reconstruction_loss='zinb')
     # frequency controls how often the statistics in trainer_vae.model are evaluated by compute_metrics() function in trainer.py
     trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=args.train_size, seed=args.desired_seed, frequency=10, kl=1)
@@ -525,43 +564,11 @@ def main( ):
 
             obj2_ideal = obj2_train
 
-            if torch.cuda.device_count() > 1:
-                trainer_vae.model = torch.nn.DataParallel(trainer_vae.model)
-            trainer_vae.model.to(trainer_vae.device)
-
-            for q in trainer_vae.model.z_encoder.parameters():
-                q.requires_grad = False
-            for q in trainer_vae.model.l_encoder.parameters():
-                q.requires_grad = False
-
-            params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
-            trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
-
-            obj1_train_list = []
-            trainer_vae.cal_loss = True
-            trainer_vae.cal_adv_loss = False
-            for epoch in range(args.epochs):
-                trainer_vae.model.train()
-                for tensors_list in trainer_vae.data_loaders_loop():
-                    loss, _, _ = trainer_vae.two_loss(*tensors_list)
-                    trainer_vae.optimizer.zero_grad()
-                    loss.backward()
-                    trainer_vae.optimizer.step()
-
-                if epoch % 10 == 0:
-                    obj1_train_eval= trainer_vae.obj1_obj2_eval(type='obj1')
-                    obj1_train_list.append(obj1_train_eval)
-
-            args.path = './result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder)
-            if not os.path.exists('./result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder)):
-                os.makedirs('./result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder))
-
-            trainer_vae.diagnosis_plot(obj1_train_list, args.path, 'obj1')
-
+            trainer_vae = decoder_training(trainer_vae, args)
             obj1_train, obj1_test = obj1_train_test(trainer_vae)
             obj1_nadir = obj1_train
 
-        print('obj1_nadir: {}, obj2_ideal: {}'.format(obj1_nadir, obj2_ideal))
+            print('obj1_nadir: {}, obj2_ideal: {}'.format(obj1_nadir, obj2_ideal))
 
     else:
         if args.regularize == True:
@@ -569,6 +576,9 @@ def main( ):
             regularize=args.regularize, weight=args.weight, epochs = args.epochs, adv_epochs = args.adv_epochs,
             obj1_nadir=args.obj1_nadir, obj1_ideal = args.obj1_ideal, obj2_nadir = args.obj2_nadir, obj2_ideal = args.obj2_ideal,
             taskid=args.taskid)
+
+            if args.weight==0:
+                trainer_vae = decoder_training(trainer_vae, args)
 
             method = 'regularize{}'.format(args.adv_estimator)
             if args.adv_estimator in ['MMD','stdMMD']:

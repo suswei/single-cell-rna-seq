@@ -25,13 +25,13 @@ def main(taskid):
         'adv_epochs': [1],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'obj1_nadir': [19664],
-        'obj1_ideal': [11513],
-        'obj2_nadir': [0.693],
-        'obj2_ideal': [-0.1],
+        'obj1_nadir': [15807], #
+        'obj1_ideal': [15010], #
+        'obj2_nadir': [0.376], #
+        'obj2_ideal': [0], #
         'MC': list(range(20)),
-        'weights_total': [12],
-        'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(12)), [0, 1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11, 1])],
+        'weights_total': [10],
+        'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(12)), [0, 1/9, 2/9, 3/9, 4/9, 5/9, 6/9, 7/9, 8/9, 1])],
         'num_workers': [1]
     }
     keys, values = zip(*hyperparameter_config.items())
