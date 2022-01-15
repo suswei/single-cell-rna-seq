@@ -792,9 +792,9 @@ def unsupervised_clustering_accuracy(y, y_pred):
         if y_ in mapping:
             reward_matrix[mapping[y_pred_], mapping[y_]] += 1
     cost_matrix = reward_matrix.max() - reward_matrix
-    ind = linear_assignment(cost_matrix)
+    row_ind, col_ind = linear_assignment(cost_matrix)
+    ind = np.concatenate((row_ind.reshape(-1, 1), col_ind.reshape(-1, 1)), axis=1)
     return sum([reward_matrix[i, j] for i, j in ind]) * 1.0 / y_pred.size, ind
-
 
 def knn_purity(latent, label, n_neighbors=30):
     nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(latent)

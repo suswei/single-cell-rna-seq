@@ -94,13 +94,17 @@ class UnsupervisedTrainer(Trainer):
                 adv_loss = torch.sum(adv_loss_tensor)
                 obj2_minibatch = adv_loss
 
-            if self.epoch >= 0:
+        if self.epoch >= 0:
+            print('Epoch: {}'.format(self.epoch))
+            if self.cal_loss:
+                print('neg_ELBO: {}'.format(loss))
+            if self.cal_adv_loss:
                 NN_estimator = Nearest_Neighbor_Estimate(batch_index, z)
                 if len(self.batch_ratio)>0:
                     empirical_MI = EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index, self.batch_ratio.to(self.device), self.nsamples)
-                    print('Epoch: {}, neg_ELBO: {}, {}: {}, empirical_MI: {}, NN: {}.'.format(self.epoch, loss, self.adv_estimator, obj2_minibatch, empirical_MI, NN_estimator))
+                    print('{}: {}, empirical_MI: {}, NN: {}.'.format(self.adv_estimator, obj2_minibatch, empirical_MI, NN_estimator))
                 else:
-                    print('Epoch: {}, neg_ELBO: {}, {}: {}, NN: {}.'.format(self.epoch, loss, self.adv_estimator, obj2_minibatch, NN_estimator))
+                    print('{}: {}, NN: {}.'.format(self.adv_estimator, obj2_minibatch, NN_estimator))
 
         #objective 1 equals loss
         if self.cal_loss == True and self.cal_adv_loss == False:
