@@ -78,6 +78,7 @@ def decoder_training(trainer_vae, args):
     return trainer_vae
 
 def sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, onebatch_index: int=0, n_batch: int=2):
+
     x_ = sample_batch
     if trainer_vae.model.log_variational:
         x_ = torch.log(1 + x_)
@@ -140,23 +141,25 @@ def sample1_sample2_all(trainer_vae, input_data, obj2_type, onebatch_index: int=
     elif obj2_type == 'NN':
         return z_all, batch_index_all
 
-def obj1_train_test(trainer_vae):
+def obj1_train_test_eval(trainer_vae):
+
+    trainer_vae.model.eval()
 
     trainer_vae.cal_loss = True
     trainer_vae.cal_adv_loss = False
 
-    obj1_idealibatch_list_train, obj1_idealibatch_list_test = [], []
+    obj1_minibatch_list_train, obj1_minibatch_list_test = [], []
     for tensors_list in trainer_vae.train_set:
         loss, _, _ = trainer_vae.two_loss(tensors_list)
-        obj1_idealibatch_list_train.append(loss.item())
+        obj1_minibatch_list_train.append(loss.item())
 
-    obj1_train = sum(obj1_idealibatch_list_train) / len(obj1_idealibatch_list_train)
+    obj1_train = sum(obj1_minibatch_list_train) / len(obj1_minibatch_list_train)
 
     for tensors_list in trainer_vae.test_set:
         loss, _, _ = trainer_vae.two_loss(tensors_list)
-        obj1_idealibatch_list_test.append(loss.item())
+        obj1_minibatch_list_test.append(loss.item())
 
-    obj1_test = sum(obj1_idealibatch_list_test) / len(obj1_idealibatch_list_test)
+    obj1_test = sum(obj1_minibatch_list_test) / len(obj1_minibatch_list_test)
 
     return obj1_train, obj1_test
 
@@ -180,7 +183,8 @@ def MINE_after_trainerVae(trainer_vae, args):
         MINE_network.to(trainer_vae.device)
     MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=args.adv_lr)
 
-    for epoch in range(4):
+    for epoch in range(400):
+        trainer_vae.model.train()
         MINE_network.train()
         for tensors_list in trainer_vae.data_loaders_loop():
             sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors_list[0]
@@ -202,6 +206,7 @@ def MINE_after_trainerVae(trainer_vae, args):
             trainer_vae.optimizer.zero_grad()
 
     with torch.no_grad():
+        trainer_vae.model.eval()
         MINE_network.eval()
         MINE_estimator_train = MINE_eval(trainer_vae, MINE_network, trainer_vae.train_set)
         MINE_estimator_test = MINE_eval(trainer_vae, MINE_network, trainer_vae.test_set)
@@ -212,6 +217,7 @@ def MINE_after_trainerVae(trainer_vae, args):
 
 def MMD_NN_train_test(trainer_vae, obj2_type):
 
+    trainer_vae.model.eval()
     if obj2_type in ['MMD','stdMMD']:
         MMD_loss_fun = MMD_loss()
         estimator_train, estimator_test = 0, 0
@@ -540,7 +546,7 @@ def main( ):
             trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location='cpu'))
             trainer_vae.model.to(trainer_vae.device)
             trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels',save_name=args.save_path + '/tsne_batch_label_train')
-        obj1_train, obj1_test = obj1_train_test(trainer_vae)
+        obj1_train, obj1_test = obj1_train_test_eval(trainer_vae)
         print(obj1_train, obj1_test)
 
     elif args.ideal_nadir== True:
@@ -553,7 +559,7 @@ def main( ):
             obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD', args)
 
         if args.weight == 1:
-            obj1_train, obj1_test = obj1_train_test(trainer_vae)
+            obj1_train, obj1_test = obj1_train_test_eval(trainer_vae)
             obj1_ideal = obj1_train
 
             obj2_nadir = obj2_train
@@ -565,7 +571,7 @@ def main( ):
             obj2_ideal = obj2_train
 
             trainer_vae = decoder_training(trainer_vae, args)
-            obj1_train, obj1_test = obj1_train_test(trainer_vae)
+            obj1_train, obj1_test = obj1_train_test_eval(trainer_vae)
             obj1_nadir = obj1_train
 
             print('obj1_nadir: {}, obj2_ideal: {}'.format(obj1_nadir, obj2_ideal))
@@ -618,7 +624,7 @@ def main( ):
         trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
 
         #obj1 for the whole training and testing set
-        obj1_train, obj1_test = obj1_train_test(trainer_vae)
+        obj1_train, obj1_test = obj1_train_test_eval(trainer_vae)
 
         # obj2 for the whole training and testing set
         if trainer_vae.adv_estimator == 'MINE':
