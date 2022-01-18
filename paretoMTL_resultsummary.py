@@ -67,20 +67,18 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
         hypervolume_dict = {}
         percentage_dict = {}
         if pareto_front_x =='obj1':
-            obj1_max = dataframe.loc[:, ['obj1_train', 'obj1_test']].max(axis=0).max()
-            if pareto_front_y in ['obj2','NN']:
-                obj2_max = dataframe.loc[:,['{}_train'.format(pareto_front_y), '{}_test'.format(pareto_front_y)]].max(axis=0).max()
-            elif pareto_front_y == 'be':
-                obj2_max = dataframe.loc[:, ['be_train', 'be_test']].min(axis=0).min() * (-1)
-            ref_point = [obj1_max + 5, obj2_max + 0.01]
+            obj1_max = dataframe.loc[:, ['obj1_train_std', 'obj1_test_std']].max(axis=0).max()
+        else:
+            obj1_max = dataframe.loc[:, ['{}_train'.format(pareto_front_x), '{}_test'.format(pareto_front_x)]].min(axis=0).min() * (-1)
 
-        else :
-            obj1_max = dataframe.loc[:,['{}_train'.format(pareto_front_x), '{}_test'.format(pareto_front_x)]].min(axis=0).min() * (-1)
-            if pareto_front_y in ['obj2','NN']:
-                obj2_max = dataframe.loc[:, ['{}_train'.format(pareto_front_y), '{}_test'.format(pareto_front_y)]].max(axis=0).max()
-            elif pareto_front_y == 'be':
-                obj2_max = dataframe.loc[:, ['be_train', 'be_test']].min(axis=0).min() * (-1)
-            ref_point = [obj1_max + 0.01, obj2_max + 0.01]
+        if pareto_front_y == 'obj2':
+            obj2_max = dataframe.loc[:, ['obj2_train_std', 'obj2_test_std']].max(axis=0).max()
+        elif pareto_front_y == 'NN':
+            obj2_max = dataframe.loc[:, ['NN_train', 'NN_test']].max(axis=0).max()
+        elif pareto_front_y == 'be':
+            obj2_max = dataframe.loc[:, ['be_train', 'be_test']].min(axis=0).min() * (-1)
+
+        ref_point = [obj1_max + 0.01, obj2_max + 0.01]
 
     for MC in range(dataframe.MC.max()+1):
         dataframe_oneMC = dataframe[dataframe.MC.eq(MC)]
@@ -94,19 +92,17 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
 
             dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
 
-            if 'pareto' in method:
-                subset_string = method.replace('pareto', 'regularize')
-                if subset_string in methods_list:
-                    dataframe_oneMC_extreme = dataframe_oneMC[dataframe_oneMC.method.eq(subset_string) & dataframe_oneMC.nweight.isin([0,11])]
-                    if dataframe_oneMC_extreme.shape[0]>0:
-                        dataframe_oneMC_extreme.pref_idx = dataframe_oneMC_extreme.nweight
-                        dataframe_oneMC_oneMethod['pref_idx'] = dataframe_oneMC_oneMethod.apply(lambda row: row.pref_idx + 1, axis=1)
-                        dataframe_oneMC_oneMethod = pd.concat([dataframe_oneMC_extreme, dataframe_oneMC_oneMethod],axis=0).sort_values('pref_idx')
-
             for (j,type) in enumerate(['train', 'test']):
 
-                obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_x, type)].values.tolist()
-                obj2 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_y, type)].values.tolist()
+                if pareto_front_x == 'obj1':
+                    obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}_std'.format(pareto_front_x, type)].values.tolist()
+                else:
+                    obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_x, type)].values.tolist()
+
+                if pareto_front_y == 'obj2':
+                    obj2 = dataframe_oneMC_oneMethod.loc[:, '{}_{}_std'.format(pareto_front_y, type)].values.tolist()
+                else:
+                    obj2 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_y, type)].values.tolist()
 
                 if pareto_front_x == 'obj1' and pareto_front_y == 'be':
                     obj2 = [(-1) * k for k in obj2]
@@ -123,7 +119,7 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                 paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates, False, 'min')
                 pp = np.array(list(paretoPoints1))
                 #dp = np.array(list(dominatedPoints1))
-                            
+
                 if 'pareto' in method:
                     index_list = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:,'pref_idx'])]
                 else:
@@ -141,12 +137,7 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                     hv = hypervolume(inputPoints1)
                     hypervolume_dict.update({'{}_{}_MC{}'.format(method, type, MC): [hv.compute(ref_point)]})
 
-                    percentage_dict.update({'{}_{}_MC{}'.format(method, type, MC): [len(list(paretoPoints1))/12]})
-
-                if 'pareto' in method:
-                    index_list_Pareto = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'pref_idx'])]
-                else:
-                    index_list_Pareto = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'nweight'])]
+                    percentage_dict.update({'{}_{}_MC{}'.format(method, type, MC): [len(list(paretoPoints1))/10]})
 
                 if i == 0:
                     marker_symbol = 'circle'
@@ -158,20 +149,15 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                     marker_symbol = 'diamond'
 
                 if j == 0:
-                    marker_color = 'rgba(255, 25, 52, .9)'
+                    marker_color = 'rgba(255, 0, 0)'
                 elif j == 1:
-                    marker_color = 'rgba(0, 0, 255, .9)'
-
-                if pp.shape[0] > 0:
-                    fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), text=['{}'.format(i) for i in index_list_Pareto],
-                                             mode='markers+text', textfont_size=12, textposition='top center', marker_size=10,
-                                             marker_symbol=marker_symbol, marker_color='rgba(0, 0, 0, 0)', showlegend=False))
+                    marker_color = 'rgba(0, 0, 255)'
 
                 if pp.shape[0] > 0:
                     fig.add_trace(go.Scatter(x=pp[:, 0].tolist(), y=pp[:, 1].tolist(), mode='markers',
-                                   marker_size=10, marker_symbol=marker_symbol, name='{},{}'.format(method, type),
-                                   marker_color=marker_color, opacity=0.75, showlegend=True))
-
+                                             marker_size=[k*2+10 for k in index_list_Pareto], marker_symbol=marker_symbol,
+                                             name='{},{}'.format(method, type), marker_color=marker_color,
+                                             opacity=0.5, showlegend=True))
 
         fig.update_layout(
             width=600,
@@ -194,6 +180,8 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                 'xanchor': 'center',
                 'yanchor': 'top'},
             legend=dict(
+                x=0.55,
+                y=0.98,
                 font=dict(
                     family='Times New Roman',
                     size=20,
@@ -203,19 +191,19 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
         )
 
         if pareto_front_x == 'obj1':
-            xaxes_title = r'$\large \text{Loss }U_n(\phi, \theta)$'
-            xvalue_adjust = 50
+            xaxes_title = r'$\large \text{Loss }U_{n,std}(\phi, \theta)$'
+            xvalue_adjust = 0.005
         else:
             xaxes_title = 'negative {}'.format(pareto_front_x)
-            xvalue_adjust = 0.1
+            xvalue_adjust = 0.005
 
         if pareto_front_y == 'obj2':
-            yaxes_title = r'$\large \text{Batch effect }V_n(\phi)$'
+            yaxes_title = r'$\large \text{Batch effect }V_{n,std}(\phi)$'
         elif pareto_front_y == 'NN':
             yaxes_title = r'$\large \text{Batch effect }NN_n(\phi)$'
         else:
             yaxes_title = 'negative BE'
-        yvalue_adjust = 0.1
+        yvalue_adjust = 0.025
 
         fig.update_xaxes(tickfont=dict(size=20),title_text=xaxes_title,
                          title_font=dict(size=25, family='Times New Roman', color='black'),
@@ -249,22 +237,22 @@ def compare_hypervolume_percent(methods_list, hypervolume_dict, percentage_dict,
                 metric_std_list += [statistics.stdev(metric_oneMethod_oneType)]
 
             if type == 'train':
-                marker_color = 'rgba(255, 25, 52, .9)'
+                marker_color = 'rgba(255, 0, 0)'
             elif type == 'test':
-                marker_color = 'rgba(0, 0, 255, .9)'
+                marker_color = 'rgba(0, 0, 255)'
 
             fig.add_trace(go.Bar(x=methods_list,y=metric_mean_list,name='{}'.format(type),
                                  error_y= dict(type='data', array=metric_std_list, visible=True),
                                  marker_color=marker_color))
 
         if pareto_front_x == 'obj1' and pareto_front_y == 'obj2':
-            title_text = r'$\Large \text{loss }U_n \text{ vs } \text{loss} V_n$'
+            title_text = r'$\Large \text{loss }U_{n,std} \text{ vs } \text{loss} V_{n,std}$'
         elif pareto_front_x == 'obj1' and pareto_front_y == 'NN':
-            title_text = r'$\Large \text{loss }U_n \text{ vs } NN_n$'
+            title_text = r'$\Large \text{loss }U_{n,std} \text{ vs } NN_n$'
         elif pareto_front_x == 'obj1' and pareto_front_y == 'be':
-            title_text = r'$\Large \text{loss } U_n \text{ vs negative be}$'
+            title_text = r'$\Large \text{loss }U_{n,std} \text{ vs negative be}$'
         elif pareto_front_x != 'obj1' and pareto_front_y == 'obj2':
-            title_text = r'$\Large \text{{negative {} vs loss }} V_n$'.format(pareto_front_x)
+            title_text = r'$\Large \text{{negative {} vs loss }} V_{n,std}$'.format(pareto_front_x)
         elif pareto_front_x != 'obj1' and pareto_front_y == 'NN':
             title_text = r'$\Large \text{{negative {} vs NN_n}}$'.format(pareto_front_x)
         elif pareto_front_x != 'obj1' and pareto_front_y == 'be':
@@ -299,17 +287,26 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
     for MC in range(dataframe.MC.max() + 1):
         dataframe_oneMC = dataframe[dataframe.MC.eq(MC)]
 
-        for (i, type) in enumerate(['train', 'test']):
-            image_save_path = save_path
-            fig = go.Figure()
-            obj1_all, obj2_all = [], []
-            for (j, method) in enumerate(methods_list):
-                image_save_path = image_save_path + '{}_'.format(method)
+        fig = go.Figure()
+        obj1_all, obj2_all = [], []
+        image_save_path = save_path
 
-                dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
+        for (i, method) in enumerate(methods_list):
+            image_save_path = image_save_path + '{}_'.format(method)
 
-                obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_x, type)].values.tolist()
-                obj2 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_y, type)].values.tolist()
+            dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
+
+            for (j,type) in enumerate(['train', 'test']):
+
+                if pareto_front_x == 'obj1':
+                    obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}_std'.format(pareto_front_x, type)].values.tolist()
+                else:
+                    obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_x, type)].values.tolist()
+
+                if pareto_front_y == 'obj2':
+                    obj2 = dataframe_oneMC_oneMethod.loc[:, '{}_{}_std'.format(pareto_front_y, type)].values.tolist()
+                else:
+                    obj2 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_y, type)].values.tolist()
 
                 if pareto_front_x == 'obj1' and pareto_front_y == 'be':
                     obj2 = [(-1) * k for k in obj2]
@@ -326,84 +323,86 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
                 inputPoints1 = np.array(list(inputPoints1))
 
                 if 'pareto' in method:
-                    index_list_Pareto = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'pref_idx'])]
+                    index_list_input = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'pref_idx'])]
                 else:
-                    index_list_Pareto = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'nweight'])]
+                    index_list_input = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'nweight'])]
+
+                if i == 0:
+                    marker_symbol = 'circle'
+                elif i == 1:
+                    marker_symbol = 'cross'
+                elif i == 2:
+                    marker_symbol = 'triangle-up'
+                elif i == 3:
+                    marker_symbol = 'diamond'
 
                 if j == 0:
-                    marker_symbol = 'circle'
                     marker_color = 'rgba(255, 0, 0)'
                 elif j == 1:
-                    marker_symbol = 'cross'
-                    marker_color = 'rgb(0,255,0)'
-                elif j == 2:
-                    marker_symbol = 'triangle-up'
                     marker_color = 'rgba(0, 0, 255)'
-                elif j == 3:
-                    marker_symbol = 'diamond'
-                    marker_color = 'rgb(0,255,255)'
+
 
                 if inputPoints1.shape[0] > 0:
                     fig.add_trace(go.Scatter(x=inputPoints1[:, 0].tolist(), y=inputPoints1[:, 1].tolist(), mode='markers',
-                                             marker_size=[k*2+10 for k in index_list_Pareto], marker_symbol=marker_symbol,
+                                             marker_size=[k*2+10 for k in index_list_input], marker_symbol=marker_symbol,
                                              name='{},{}'.format(method, type), marker_color=marker_color,
                                              opacity=0.5, showlegend=True))
 
-            fig.update_layout(
-                width=600,
-                height=400,
-                margin=dict(
-                    l=80,
-                    r=90,
-                    b=70,
-                    t=50,
-                    pad=1
-                ),
-                font=dict(color='black', family='Times New Roman'),
-                title={
-                    'text': 'all input points',
-                    'font': {
-                        'size': 25
-                    },
-                    'y': 0.94,
-                    'x': 0.42,
-                    'xanchor': 'center',
-                    'yanchor': 'top'},
-                legend=dict(
-                    x=0.5,
-                    y=0.8,
-                    font=dict(
-                        family='Times New Roman',
-                        size=20,
-                        color='black'
-                    )
+        fig.update_layout(
+            width=600,
+            height=400,
+            margin=dict(
+                l=80,
+                r=90,
+                b=70,
+                t=50,
+                pad=1
+            ),
+            font=dict(color='black', family='Times New Roman'),
+            title={
+                'text': 'all Pareto candidates',
+                'font': {
+                    'size': 25
+                },
+                'y': 0.94,
+                'x': 0.42,
+                'xanchor': 'center',
+                'yanchor': 'top'},
+            legend=dict(
+                x=0.55,
+                y=0.98,
+                font=dict(
+                    family='Times New Roman',
+                    size=20,
+                    color='black'
                 )
             )
+        )
 
-            if pareto_front_x == 'obj1':
-                xaxes_title = r'$\large \text{Loss }U_n(\phi, \theta)$'
-                xvalue_adjust = 100
-            else:
-                xaxes_title = 'negative {}'.format(pareto_front_x)
-                xvalue_adjust = 0.1
+        if pareto_front_x == 'obj1':
+            xaxes_title = r'$\large \text{Loss }U_{n,std}(\phi, \theta)$'
+            xvalue_adjust = 0.005
+        else:
+            xaxes_title = 'negative {}'.format(pareto_front_x)
+            xvalue_adjust = 0.005
 
-            if pareto_front_y == 'obj2':
-                yaxes_title = r'$\large \text{Batch effect }V_n(\phi)$'
-            elif pareto_front_y == 'NN':
-                yaxes_title = r'$\large \text{Batch effect }NN_n(\phi)$'
-            else:
-                yaxes_title = 'negative BE'
-            yvalue_adjust = 0.1
+        if pareto_front_y == 'obj2':
+            yaxes_title = r'$\large \text{Batch effect }V_{n,std}(\phi)$'
+        elif pareto_front_y == 'NN':
+            yaxes_title = r'$\large \text{Batch effect }NN_n(\phi)$'
+        else:
+            yaxes_title = 'negative BE'
+        yvalue_adjust = 0.025
 
-            fig.update_xaxes(tickfont=dict(size=20), title_text=xaxes_title,
-                             title_font=dict(size=25, family='Times New Roman', color='black'),
-                             range=[min(obj1_all) - xvalue_adjust, max(obj1_all) + xvalue_adjust],
-                             autorange=False)  # tick0=15200,dtick=100
-            fig.update_yaxes(tickfont=dict(size=20), title_text=yaxes_title,
-                             title_font=dict(size=25, family='Times New Roman', color='black'),
-                             range=[min(obj2_all) - yvalue_adjust, max(obj2_all) + yvalue_adjust], autorange=False)
+        fig.update_xaxes(tickfont=dict(size=20), title_text=xaxes_title,
+                         title_font=dict(size=25, family='Times New Roman', color='black'),
+                         range=[min(obj1_all) - xvalue_adjust, max(obj1_all) + xvalue_adjust],
+                         autorange=False)  # tick0=15200,dtick=100
+        fig.update_yaxes(tickfont=dict(size=20), title_text=yaxes_title,
+                         title_font=dict(size=25, family='Times New Roman', color='black'),
+                         range=[min(obj2_all) - yvalue_adjust, max(obj2_all) + yvalue_adjust], autorange=False)
 
-            fig.write_image(image_save_path + '{}_{}_MC{}_{}_allInputPoints.png'.format(pareto_front_x, pareto_front_y, MC, type))
+        fig.write_image(image_save_path + '{}_{}_MC{}_allInputPoints.png'.format(pareto_front_x, pareto_front_y, MC))
 
 def cell_type_composition(dataset_name, change_composition, save_path):
     if dataset_name == 'tabula_muris':
@@ -502,7 +501,7 @@ def main( ):
         if 'regularize' in method:
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),
-                'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(12)), [0, 1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11, 1])]
+                'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(12)), [0, 1/9, 2/9, 3/9, 4/9, 5/9, 6/9, 7/9, 8/9, 1])]
             }
         else:
             hyperparameter_config = {
@@ -530,9 +529,9 @@ def main( ):
                 if 'obj2_minibatch_list' in results.keys():
                     del results['obj2_minibatch_list']
                 if 'regularize' in method:
-                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'MC', 'nweight'])}
+                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'MC', 'nweight','obj1_min','obj1_max','obj2_min','obj2_max'])}
                 else:
-                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator','MC', 'pref_idx'])}
+                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator','MC', 'pref_idx','obj1_min','obj1_max','obj2_min','obj2_max'])}
                 results_config.update({'method': [method]})
                 results_config.update(results)
 
@@ -565,6 +564,13 @@ def main( ):
         if args.diagnosis == True and initial_frame==True:
             cv2.destroyAllWindows()
             video.release()
+
+
+    results_config_total['obj1_train_std']=results_config_total.apply(lambda row: (row.obj1_train - row.obj1_min)/ (row.obj1_max - row.obj1_min), axis=1)
+    results_config_total['obj1_test_std'] = results_config_total.apply(lambda row: (row.obj1_test - row.obj1_min) / (row.obj1_max - row.obj1_min), axis=1)
+    results_config_total['obj2_train_std']=results_config_total.apply(lambda row: (row.obj2_train - row.obj2_min)/ (row.obj2_max - row.obj2_min), axis=1)
+    results_config_total['obj2_test_std'] = results_config_total.apply(lambda row: (row.obj2_test - row.obj2_min) / (row.obj2_max - row.obj2_min), axis=1)
+
     '''
     hypervolume_dict, percentage_dict = draw_pareto_front(dataframe=results_config_total, methods_list=args.methods_list,
                                        pareto_front_x=args.pareto_front_x, pareto_front_y=args.pareto_front_y,

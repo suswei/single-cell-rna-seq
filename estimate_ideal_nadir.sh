@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="paretoMTL_stdMINE"
+#SBATCH --job-name="estimate_ideal_nadir"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
@@ -10,7 +10,7 @@
 #SBATCH --mem 7400
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=1-6:0:00
+#SBATCH --time=3-6:0:00
 
 # Batch arrays
 #SBATCH --array=0-1
