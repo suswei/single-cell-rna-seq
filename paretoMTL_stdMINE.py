@@ -21,11 +21,11 @@ def main(taskid):
         'adv_n_hidden': [128], #128
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'lr': [1e-4],
+        'lr': [1e-3],
         'adv_lr': [5e-5],
-        'obj1_nadir': [15807], #
-        'obj1_ideal': [15010], #
-        'obj2_nadir': [0.376], #
+        'obj1_nadir': [15531], #
+        'obj1_ideal': [14777], #
+        'obj2_nadir': [0.428], #
         'obj2_ideal': [0], #
         'epochs': [150], #
         'adv_epochs': [1],

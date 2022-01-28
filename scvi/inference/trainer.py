@@ -399,10 +399,13 @@ class Trainer:
 
                 loss_total_train_list.append(loss_total_train)
 
-        if self.adv_estimator == 'MINE':
-            string = 'regularizeMINE'
+        if ideal_nadir:
+            string = 'ideal_nadir'
         else:
-            string = 'regularizeMMD'
+            if self.adv_estimator == 'MINE':
+                string = 'regularizeMINE'
+            else:
+                string = 'regularizeMMD'
         path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(string, taskid)
         self.diagnosis_plot(loss_total_train_list, path, 'train_totalloss')
 

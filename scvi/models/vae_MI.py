@@ -12,7 +12,6 @@ from scvi.models.utils import one_hot
 
 torch.backends.cudnn.benchmark = True
 
-
 # VAE model
 class VAE_MI(nn.Module):
     r"""Variational auto-encoder model.

@@ -25,10 +25,10 @@ def main(taskid):
         'adv_epochs': [1],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'obj1_nadir': [15807], #
-        'obj1_ideal': [15010], #
-        'obj2_nadir': [0.376], #
-        'obj2_ideal': [0], #
+        'obj1_nadir': [15531],  #
+        'obj1_ideal': [14777],  #
+        'obj2_nadir': [0.428],  #
+        'obj2_ideal': [0],  #
         'MC': list(range(20)),
         'weights_total': [10],
         'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(12)), [0, 1/9, 2/9, 3/9, 4/9, 5/9, 6/9, 7/9, 8/9, 1])],
