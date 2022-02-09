@@ -94,7 +94,7 @@ class UnsupervisedTrainer(Trainer):
                 adv_loss = torch.sum(adv_loss_tensor)
                 obj2_minibatch = adv_loss
 
-        if self.epoch >= 0:
+        if self.epoch % 10 == 0:
             print('Epoch: {}'.format(self.epoch))
             if self.cal_loss:
                 print('neg_ELBO: {}'.format(loss))

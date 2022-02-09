@@ -582,10 +582,10 @@ def main( ):
             regularize=args.regularize, weight=args.weight, epochs = args.epochs, adv_epochs = args.adv_epochs,
             obj1_nadir=args.obj1_nadir, obj1_ideal = args.obj1_ideal, obj2_nadir = args.obj2_nadir, obj2_ideal = args.obj2_ideal,
             taskid=args.taskid)
-
+            '''
             if args.weight==0:
                 trainer_vae = decoder_training(trainer_vae, args)
-
+            '''
             method = 'regularize{}'.format(args.adv_estimator)
             if args.adv_estimator in ['MMD','stdMMD']:
                 method = 'regularizeMMD'

@@ -335,14 +335,26 @@ class Trainer:
                                 self.adv_optimizer.step()
 
                     if weight == 0:
+                        self.cal_loss = True
+                        self.cal_adv_loss = False
+                    else:
+                        self.cal_loss = True
+                        self.cal_adv_loss = True
+                    '''
+                    if weight == 0:
                         self.cal_loss = False
                         self.cal_adv_loss = True
                     else:
                         self.cal_loss = True
                         self.cal_adv_loss = True
-
+                    '''
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
+                if weight == 0:
+                    regularize_loss = obj1_minibatch
+                else:
+                    regularize_loss = obj1_minibatch + weight * obj2_minibatch
+                '''
                 if ideal_nadir :
                     if weight == 1:
                         regularize_loss = obj1_minibatch
@@ -358,7 +370,7 @@ class Trainer:
                     else:
                         regularize_loss = weight*(obj1_minibatch - obj1_ideal)/(obj1_nadir - obj1_ideal) + (1- weight)*(obj2_minibatch - obj2_ideal)/(obj2_nadir - obj2_ideal)
                         print('epoch: {}, obj1_minibatch: {}, obj2_minibatch: {}'.format(self.epoch, obj1_minibatch.data, obj2_minibatch.data))
-
+                '''
                 self.optimizer.zero_grad()
                 if self.adv_estimator == 'MINE':
                     self.adv_optimizer.zero_grad()
@@ -375,7 +387,15 @@ class Trainer:
                             print(torch.isnan(param.grad).any())
 
             if self.epoch % 10 == 0:
+                if weight == 0:
+                    obj1_train_eval = self.obj1_obj2_eval(type='obj1')
+                    loss_total_train = obj1_train_eval
+                else:
+                    obj1_train_eval = self.obj1_obj2_eval(type='obj1')
+                    obj2_train_eval = self.obj1_obj2_eval(type='obj2')
+                    loss_total_train = obj1_train_eval + weight * obj2_train_eval
 
+                '''
                 if ideal_nadir:
                     if weight == 1:
                         obj1_train_eval= self.obj1_obj2_eval(type='obj1')
@@ -396,7 +416,7 @@ class Trainer:
                         obj1_train_eval = self.obj1_obj2_eval(type='obj1')
                         obj2_train_eval = self.obj1_obj2_eval(type='obj2')
                         loss_total_train = weight*(obj1_train_eval - obj1_ideal)/(obj1_nadir - obj1_ideal) + (1- weight)*(obj2_train_eval - obj2_ideal)/(obj2_nadir - obj2_ideal)
-
+                '''
                 loss_total_train_list.append(loss_total_train)
 
         if ideal_nadir:

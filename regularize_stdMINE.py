@@ -31,7 +31,7 @@ def main(taskid):
         'obj2_ideal': [0],  #
         'MC': list(range(20)),
         'weights_total': [10],
-        'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(12)), [0, 1/9, 2/9, 3/9, 4/9, 5/9, 6/9, 7/9, 8/9, 1])],
+        'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(10)), [0, 10, 50, 100, 500, 1000, 2000, 3000, 5000, 10000])],
         'num_workers': [1]
     }
     keys, values = zip(*hyperparameter_config.items())
