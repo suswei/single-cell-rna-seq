@@ -14,47 +14,47 @@ import argparse
 import statistics
 import cv2
 
-def simple_cull(inputPoints, doidealates, return_index: bool=False, ideal_nadir: str='ideal'):
+def simple_cull(inputPoints, dominates, return_index: bool=False, min_max: str='min'):
     paretoPoints = set()
     candidateRowNr = 0
-    doidealatedPoints = set()
+    dominatedPoints = set()
     while True:
         candidateRow = inputPoints[candidateRowNr]
         inputPoints.remove(candidateRow)
         rowNr = 0
-        nonDoidealated = True
+        nonDominated = True
         while len(inputPoints) != 0 and rowNr < len(inputPoints):
             row = inputPoints[rowNr]
-            if doidealates(candidateRow, row, return_index, ideal_nadir):
+            if dominates(candidateRow, row, return_index, min_max):
                 # If it is worse on all features remove the row from the array
                 inputPoints.remove(row)
-                doidealatedPoints.add(tuple(row))
-            elif doidealates(row, candidateRow, return_index, ideal_nadir):
-                nonDoidealated = False
-                doidealatedPoints.add(tuple(candidateRow))
+                dominatedPoints.add(tuple(row))
+            elif dominates(row, candidateRow, return_index, min_max):
+                nonDominated = False
+                dominatedPoints.add(tuple(candidateRow))
                 rowNr += 1
             else:
                 rowNr += 1
 
-        if nonDoidealated:
-            # add the non-doidealated point to the Pareto frontier
+        if nonDominated:
+            # add the non-dominated point to the Pareto frontier
             paretoPoints.add(tuple(candidateRow))
 
         if len(inputPoints) == 0:
             break
-    return paretoPoints, doidealatedPoints
+    return paretoPoints, dominatedPoints
 
-def doidealates(row, candidateRow, return_index, ideal_nadir):
-    #check if row doidealates candidateRow
+def dominates(row, candidateRow, return_index, min_max):
+    #check if row dominates candidateRow
     if return_index == True:
-        if ideal_nadir == 'ideal':
+        if min_max == 'min':
             return sum([row[x + 1] <= candidateRow[x + 1] for x in range(len(row)-1)]) == len(row) - 1
-        elif ideal_nadir == 'nadir':
+        elif min_max == 'max':
             return sum([row[x + 1] >= candidateRow[x + 1] for x in range(len(row)-1)]) == len(row) - 1
     else:
-        if ideal_nadir == 'ideal':
+        if min_max == 'min':
             return sum([row[x] <= candidateRow[x] for x in range(len(row))]) == len(row)
-        elif ideal_nadir == 'nadir':
+        elif min_max == 'max':
             return sum([row[x] >= candidateRow[x] for x in range(len(row))]) == len(row)
 
 def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, cal_metric, save_path):
@@ -67,18 +67,18 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
         hypervolume_dict = {}
         percentage_dict = {}
         if pareto_front_x =='obj1':
-            obj1_nadir = dataframe.loc[:, ['obj1_train_std', 'obj1_test_std']].max(axis=0).max()
+            obj1_max = dataframe.loc[:, ['obj1_train_std', 'obj1_test_std']].max(axis=0).max()
         else:
-            obj1_nadir = dataframe.loc[:, ['{}_train'.format(pareto_front_x), '{}_test'.format(pareto_front_x)]].min(axis=0).min() * (-1)
+            obj1_max = dataframe.loc[:, ['{}_train'.format(pareto_front_x), '{}_test'.format(pareto_front_x)]].min(axis=0).min() * (-1)
 
         if pareto_front_y == 'obj2':
-            obj2_nadir = dataframe.loc[:, ['obj2_train_std', 'obj2_test_std']].max(axis=0).max()
+            obj2_max = dataframe.loc[:, ['obj2_train_std', 'obj2_test_std']].max(axis=0).max()
         elif pareto_front_y == 'NN':
-            obj2_nadir = dataframe.loc[:, ['NN_train', 'NN_test']].max(axis=0).max()
+            obj2_max = dataframe.loc[:, ['NN_train', 'NN_test']].max(axis=0).max()
         elif pareto_front_y == 'be':
-            obj2_nadir = dataframe.loc[:, ['be_train', 'be_test']].min(axis=0).min() * (-1)
+            obj2_max = dataframe.loc[:, ['be_train', 'be_test']].min(axis=0).min() * (-1)
 
-        ref_point = [obj1_nadir + 0.01, obj2_nadir + 0.01]
+        ref_point = [obj1_max + 0.01, obj2_max + 0.01]
 
     for MC in range(dataframe.MC.max()+1):
         dataframe_oneMC = dataframe[dataframe.MC.eq(MC)]
@@ -116,9 +116,9 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                 obj2_all += obj2
 
                 inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
-                paretoPoints1, doidealatedPoints1 = simple_cull(inputPoints1, doidealates, False, 'ideal')
+                paretoPoints1, dominatedPoints1 = simple_cull(inputPoints1, dominates, False, 'min')
                 pp = np.array(list(paretoPoints1))
-                #dp = np.array(list(doidealatedPoints1))
+                #dp = np.array(list(dominatedPoints1))
 
                 if 'pareto' in method:
                     index_list = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:,'pref_idx'])]
@@ -133,7 +133,7 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
                             index_list_Pareto += [index]
 
                 if cal_metric:
-                    # when hypervolume is calculated, the rectangles of doidealated points will be covered by those of non-doidealated points
+                    # when hypervolume is calculated, the rectangles of dominated points will be covered by those of non-dominated points
                     hv = hypervolume(inputPoints1)
                     hypervolume_dict.update({'{}_{}_MC{}'.format(method, type, MC): [hv.compute(ref_point)]})
 
@@ -171,7 +171,7 @@ def draw_pareto_front(dataframe, methods_list, pareto_front_x, pareto_front_y, c
             ),
             font=dict(color='black', family='Times New Roman'),
             title={
-                'text': 'non-doidealated points',
+                'text': 'non-dominated points',
                 'font': {
                     'size': 25
                 },
@@ -316,16 +316,26 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
                     obj1 = [(-1) * k for k in obj1]
                     obj2 = [(-1) * k for k in obj2]
 
+                if 'regularize' in method:
+                    obj1 = obj1[1:-1]
+                    obj2 = obj2[1:-1]
+
                 obj1_all += obj1
                 obj2_all += obj2
 
-                inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
-                inputPoints1 = np.array(list(inputPoints1))
+                if 'pareto' in method:
+                    inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
+                    inputPoints1 = np.array(list(inputPoints1))
+                else:
+                    inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
+                    inputPoints1 = np.array(list(inputPoints1))
 
                 if 'pareto' in method:
                     index_list_input = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'pref_idx'])]
                 else:
                     index_list_input = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'nweight'])]
+                    index_list_input = index_list_input[1:-1]
+                    index_list_input = [int(k)-1 for k in index_list_input]
 
                 if i == 0:
                     marker_symbol = 'circle'
@@ -343,7 +353,7 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
 
                 if inputPoints1.shape[0] > 0:
                     fig.add_trace(go.Scatter(x=inputPoints1[:, 0].tolist(), y=inputPoints1[:, 1].tolist(), mode='markers',
-                                             marker_size=[k*2+10 for k in index_list_input], marker_symbol=marker_symbol,
+                                             marker_size=[k*1+10 for k in index_list_input], marker_symbol=marker_symbol,
                                              name='{},{}'.format(method, type), marker_color=marker_color,
                                              opacity=0.5, showlegend=True))
 
@@ -475,13 +485,13 @@ def main( ):
                         help='xaxis value') #asw, ari, uca, nmi,obj1
 
     parser.add_argument('--pareto_front_y', type=str, default='obj2',
-                        help='yaxis value') #obj2 (idealE or stdMMD), NN, be
+                        help='yaxis value') #obj2 (MINE or stdMMD), NN, be
 
-    parser.add_argument('--methods_list', type=str, default='paretoidealE,paretoMMD',
+    parser.add_argument('--methods_list', type=str, default='paretoMINE,paretoMMD',
                         help='list of methods')
 
     parser.add_argument('--cal_metric', action='store_true', default=False,
-                        help='whether to calculate hypervolume and percentage of non-doidealated points')
+                        help='whether to calculate hypervolume and percentage of non-dominated points')
 
     parser.add_argument('--diagnosis', action='store_true', default=False,
                         help='whether to visualize diagnosis plot')
@@ -523,10 +533,10 @@ def main( ):
                 config = pickle.load(open(config_path, "rb"))
                 results = pickle.load(open(results_path, "rb"))
 
-                if 'obj1_idealibatch_list' in results.keys():
-                    del results['obj1_idealibatch_list']
-                if 'obj2_idealibatch_list' in results.keys():
-                    del results['obj2_idealibatch_list']
+                if 'obj1_minibatch_list' in results.keys():
+                    del results['obj1_minibatch_list']
+                if 'obj2_minibatch_list' in results.keys():
+                    del results['obj2_minibatch_list']
                 if 'regularize' in method:
                     results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'MC', 'nweight','obj1_ideal','obj1_nadir','obj2_ideal','obj2_nadir'])}
                 else:

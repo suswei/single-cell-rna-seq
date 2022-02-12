@@ -302,11 +302,30 @@ class Trainer:
             self.adv_optimizer = torch.optim.Adam(self.adv_model.parameters(), lr=adv_lr)
             # self.adv_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.adv_optimizer, milestones=[30], gamma=0.5)
 
-    def regularize_fun(self, ideal_nadir: bool=False, epochs: int=150, adv_epochs: int=1,
-                       weight: float=0, obj1_nadir: float=20000, obj1_ideal: float=12000,
-                       obj2_nadir: float=0.6, obj2_ideal: float=0, path: str='./', taskid: int=0):
+    def adv_model_train(self, one_epoch: bool=False, adv_epochs: int=0):
+        if one_epoch:
+            for adv_tensors_list in self.data_loaders_loop():
+                _, adv_loss, _ = self.two_loss(*adv_tensors_list)
+                self.adv_optimizer.zero_grad()
+                self.optimizer.zero_grad()
+                adv_loss.backward()
+                self.adv_optimizer.step()
+        else:
+            self.cal_loss = False
+            self.cal_adv_loss = True
+            for adv_epoch in range(adv_epochs):
+                for adv_tensors_list in self.data_loaders_loop():
+                    _, adv_loss, _ = self.two_loss(*adv_tensors_list)
+                    self.adv_optimizer.zero_grad()
+                    self.optimizer.zero_grad()
+                    adv_loss.backward()
+                    self.adv_optimizer.step()
 
-        loss_total_train_list, loss_total_test_list = [], []
+    def regularize_fun(self, ideal_nadir: bool=False, epochs: int=150, adv_epochs: int=1,
+                       weight: float=0, obj1_max: float=20000, obj1_min: float=12000,
+                       obj2_max: float=0.6, obj2_min: float=0, path: str='./', taskid: int=0):
+
+        loss_total_train_list, minibatch_loss_list = [], []
 
         for self.epoch in range(epochs):
             self.model.train()
@@ -318,66 +337,41 @@ class Trainer:
 
                 minibatch_index += 1
 
-                if weight == 1:
+                if ideal_nadir==True and weight == 0:
+                    if self.adv_estimator == 'MINE':
+                        self.adv_model_train(adv_epochs=adv_epochs)
+                    else:
+                        self.cal_loss = False
+                        self.cal_adv_loss = True
+                elif ideal_nadir == True and weight == 1:
                     self.cal_loss = True
                     self.cal_adv_loss = False
-
                 else:
                     if self.adv_estimator == 'MINE':
-                        self.cal_loss = False
-                        self.cal_adv_loss = True
-                        for adv_epoch in range(adv_epochs):
-                            for adv_tensors_list in self.data_loaders_loop():
-                                _, adv_loss, _ = self.two_loss(*adv_tensors_list)
-                                self.adv_optimizer.zero_grad()
-                                self.optimizer.zero_grad()
-                                adv_loss.backward()
-                                self.adv_optimizer.step()
+                        self.adv_model_train(adv_epochs=adv_epochs)
+                    self.cal_loss = True
+                    self.cal_adv_loss = True
 
-                    if weight == 0:
-                        self.cal_loss = True
-                        self.cal_adv_loss = False
-                    else:
-                        self.cal_loss = True
-                        self.cal_adv_loss = True
-                    '''
-                    if weight == 0:
-                        self.cal_loss = False
-                        self.cal_adv_loss = True
-                    else:
-                        self.cal_loss = True
-                        self.cal_adv_loss = True
-                    '''
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                if weight == 0:
-                    regularize_loss = obj1_minibatch
+                if ideal_nadir == True and weight == 0:
+                    loss = obj2_minibatch
+                    minibatch_loss_list.append(obj2_minibatch.data)
+                elif ideal_nadir == True and weight == 1:
+                    loss = obj1_minibatch
+                    minibatch_loss_list.append(obj1_minibatch.data)
                 else:
-                    regularize_loss = obj1_minibatch + weight * obj2_minibatch
-                '''
-                if ideal_nadir :
-                    if weight == 1:
-                        regularize_loss = obj1_minibatch
-                    elif weight == 0:
-                        regularize_loss = obj2_minibatch
-                else:
-                    if weight == 1:
-                        regularize_loss = weight * (obj1_minibatch - obj1_ideal) / (obj1_nadir - obj1_ideal)
-                        print('epoch: {}, obj1_minibatch: {}'.format(self.epoch, obj1_minibatch.data))
-                    elif weight == 0:
-                        regularize_loss = (1 - weight) * (obj2_minibatch - obj2_ideal) / (obj2_nadir - obj2_ideal)
-                        print('epoch: {}, obj2_minibatch: {}'.format(self.epoch, obj2_minibatch.data))
-                    else:
-                        regularize_loss = weight*(obj1_minibatch - obj1_ideal)/(obj1_nadir - obj1_ideal) + (1- weight)*(obj2_minibatch - obj2_ideal)/(obj2_nadir - obj2_ideal)
-                        print('epoch: {}, obj1_minibatch: {}, obj2_minibatch: {}'.format(self.epoch, obj1_minibatch.data, obj2_minibatch.data))
-                '''
+                    loss = weight*(obj1_minibatch - obj1_min)/(obj1_max - obj1_min) + (1- weight)*(obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
+                    print('epoch: {}, obj1_minibatch: {}, obj2_minibatch: {}'.format(self.epoch, obj1_minibatch.data, obj2_minibatch.data))
+
                 self.optimizer.zero_grad()
                 if self.adv_estimator == 'MINE':
                     self.adv_optimizer.zero_grad()
 
-                regularize_loss.backward()
+                loss.backward()
                 self.optimizer.step()
 
+                #dignosis why the loss becomes NaN when adv_estimator is stdMMD
                 if self.adv_estimator == 'stdMMD':
                     for param in self.model.parameters():
                         print('epoch: {}, minibatch: {}, is there NaN in weights of the neural network?'.format(self.epoch,minibatch_index))
@@ -385,54 +379,37 @@ class Trainer:
                         if param.grad is not None:
                             print('epoch: {}, minibatch: {}, is there NaN in the gradients?'.format(self.epoch, minibatch_index))
                             print(torch.isnan(param.grad).any())
-
+            #evaluate
             if self.epoch % 10 == 0:
-                if weight == 0:
-                    obj1_train_eval = self.obj1_obj2_eval(type='obj1')
+                if ideal_nadir == True and weight == 0:
+                    obj2_train_eval = self.obj1_obj2_eval(type='obj2')
+                    loss_total_train = obj2_train_eval
+                elif ideal_nadir == True and weight == 1:
+                    obj1_train_eval= self.obj1_obj2_eval(type='obj1')
                     loss_total_train = obj1_train_eval
                 else:
                     obj1_train_eval = self.obj1_obj2_eval(type='obj1')
                     obj2_train_eval = self.obj1_obj2_eval(type='obj2')
-                    loss_total_train = obj1_train_eval + weight * obj2_train_eval
+                    loss_total_train = weight*(obj1_train_eval - obj1_min)/(obj1_max - obj1_min) + (1- weight)*(obj2_train_eval - obj2_min)/(obj2_max - obj2_min)
 
-                '''
-                if ideal_nadir:
-                    if weight == 1:
-                        obj1_train_eval= self.obj1_obj2_eval(type='obj1')
-                        loss_total_train = obj1_train_eval
-
-                    elif weight == 0:
-                        obj2_train_eval = self.obj1_obj2_eval(type='obj2')
-                        loss_total_train = obj2_train_eval
-
-                else:
-                    if weight == 1:
-                        obj1_train_eval = self.obj1_obj2_eval(type='obj1')
-                        loss_total_train = weight * (obj1_train_eval - obj1_ideal) / (obj1_nadir - obj1_ideal)
-                    elif weight == 0:
-                        obj2_train_eval = self.obj1_obj2_eval(type='obj2')
-                        loss_total_train = (1 - weight) * (obj2_train_eval - obj2_ideal) / (obj2_nadir - obj2_ideal)
-                    else:
-                        obj1_train_eval = self.obj1_obj2_eval(type='obj1')
-                        obj2_train_eval = self.obj1_obj2_eval(type='obj2')
-                        loss_total_train = weight*(obj1_train_eval - obj1_ideal)/(obj1_nadir - obj1_ideal) + (1- weight)*(obj2_train_eval - obj2_ideal)/(obj2_nadir - obj2_ideal)
-                '''
                 loss_total_train_list.append(loss_total_train)
 
         if ideal_nadir:
             string = 'ideal_nadir'
+        elif self.adv_estimator == 'MINE':
+            string = 'regularizeMINE'
         else:
-            if self.adv_estimator == 'MINE':
-                string = 'regularizeMINE'
-            else:
-                string = 'regularizeMMD'
+            string = 'regularizeMMD'
         path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(string, taskid)
         self.diagnosis_plot(loss_total_train_list, path, 'train_totalloss')
+
+        if ideal_nadir:
+            return minibatch_loss_list
 
     def pretrain_idealnadir_regularize_paretoMTL(self, pre_train: bool=False, pre_epochs: int=200, pre_lr: float=1e-3, eps: float = 0.01,
         pre_adv_epochs: int=400, pre_adv_lr: float=5e-5, path: str='None', lr: float=1e-3, adv_lr: float=5e-5, ideal_nadir: bool=False,
         paretoMTL: bool = False, n_tasks: int=2, npref: int=10, pref_type: str='even', pref_idx: int=0, taskid: int=0, epochs: int=150, adv_epochs: int=1,
-        obj1_nadir: float = 20000, obj1_ideal: float = 12000, obj2_nadir: float = 0.6, obj2_ideal: float = 0, regularize: bool=False, weight: float=1/11):
+        obj1_max: float = 20000, obj1_min: float = 12000, obj2_max: float = 0.6, obj2_min: float = 0, regularize: bool=False, weight: float=1/11):
 
         if pre_train == True:
 
@@ -478,12 +455,7 @@ class Trainer:
                 self.cal_adv_loss = True
                 for pre_adv_epoch in range(pre_adv_epochs):
                     self.adv_model.train()
-                    for adv_tensors_list in self.data_loaders_loop():
-                        _, adv_loss, _ = self.two_loss(*adv_tensors_list)
-                        self.adv_optimizer.zero_grad()
-                        self.optimizer.zero_grad()
-                        adv_loss.backward()
-                        self.adv_optimizer.step()
+                    self.adv_model_train(True)
                     if pre_adv_epoch % 10 == 0:
                         train_eval, test_eval = self.obj1_obj2_eval(type='obj2')
                         obj2_train_list.append(train_eval)
@@ -500,20 +472,21 @@ class Trainer:
 
             if ideal_nadir :
 
-                self.regularize_fun(ideal_nadir=ideal_nadir, epochs=epochs, adv_epochs=adv_epochs, weight=weight, path=path, taskid=taskid)
+                minibatch_loss_list = self.regularize_fun(ideal_nadir=ideal_nadir, epochs=epochs, adv_epochs=adv_epochs, weight=weight, path=path, taskid=taskid)
+                return minibatch_loss_list
 
             elif regularize :
 
-                self.regularize_fun(epochs=epochs, adv_epochs=adv_epochs, weight=weight, obj1_nadir=obj1_nadir, obj1_ideal=obj1_ideal,
-                                    obj2_nadir=obj2_nadir, obj2_ideal=obj2_ideal, path=path, taskid=taskid)
+                self.regularize_fun(epochs=epochs, adv_epochs=adv_epochs, weight=weight, obj1_max=obj1_max, obj1_min=obj1_min,
+                                    obj2_max=obj2_max, obj2_min=obj2_min, path=path, taskid=taskid)
 
             elif paretoMTL :
 
-                self.paretoMTL(obj1_nadir=obj1_nadir, obj1_ideal=obj1_ideal, obj2_nadir=obj2_nadir, obj2_ideal=obj2_ideal,
+                self.paretoMTL(obj1_max=obj1_max, obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min,
                                epochs=epochs, adv_epochs=adv_epochs, n_tasks=n_tasks, npref=npref, pref_type=pref_type,
                                pref_idx=pref_idx, path=path, taskid=taskid)
 
-    def paretoMTL(self, obj1_nadir: float=20000, obj1_ideal: float=12000, obj2_nadir: float=0.6, obj2_ideal: float=0,
+    def paretoMTL(self, obj1_max: float=20000, obj1_min: float=12000, obj2_max: float=0.6, obj2_min: float=0,
                   epochs: int=50, adv_epochs: int=1, n_tasks: int=2, npref: int=10, pref_type: str='even', pref_idx: int=0, path: str='.', taskid: int=0):
 
         ref_vec = torch.FloatTensor(circle_points([1], [npref], pref_type)[0]).to(self.device)
@@ -532,22 +505,14 @@ class Trainer:
             for tensors_list in self.data_loaders_loop():
 
                 if self.adv_estimator == 'MINE':
-                    self.cal_loss = False
-                    self.cal_adv_loss = True
-                    for adv_epoch in range(adv_epochs):
-                        for adv_tensors_list in self.data_loaders_loop():
-                            _, adv_loss, _ = self.two_loss(*adv_tensors_list)
-                            self.adv_optimizer.zero_grad()
-                            self.optimizer.zero_grad()
-                            adv_loss.backward()
-                            self.adv_optimizer.step()
+                    self.adv_model_train(adv_epochs=adv_epochs)
 
                 self.cal_loss = True
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                obj1 = (obj1_minibatch - obj1_ideal)/(obj1_nadir - obj1_ideal)
-                obj2 = (obj2_minibatch - obj2_ideal)/(obj2_nadir - obj2_ideal)
+                obj1 = (obj1_minibatch - obj1_min)/(obj1_max - obj1_min)
+                obj2 = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
 
                 # calculate the weights
                 grads, losses_vec = self.paretoMTL_param(n_tasks, obj1, obj2)
@@ -566,8 +531,8 @@ class Trainer:
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                obj1 = (obj1_minibatch - obj1_ideal) / (obj1_nadir - obj1_ideal)
-                obj2 = (obj2_minibatch - obj2_ideal) / (obj2_nadir - obj2_ideal)
+                obj1 = (obj1_minibatch - obj1_min) / (obj1_max - obj1_min)
+                obj2 = (obj2_minibatch - obj2_min) / (obj2_max - obj2_min)
 
                 for i in range(n_tasks):
                     if i == 0:
@@ -600,22 +565,14 @@ class Trainer:
             for tensors_list in self.data_loaders_loop():
 
                 if self.adv_estimator == 'MINE':
-                    self.cal_loss = False
-                    self.cal_adv_loss = True
-                    for adv_epoch in range(adv_epochs):
-                        for adv_tensors_list in self.data_loaders_loop():
-                            _, adv_loss, _ = self.two_loss(*adv_tensors_list)
-                            self.adv_optimizer.zero_grad()
-                            self.optimizer.zero_grad()
-                            adv_loss.backward()
-                            self.adv_optimizer.step()
+                    self.adv_model_train(adv_epochs=adv_epochs)
 
                 self.cal_loss = True
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                obj1 = (obj1_minibatch - obj1_ideal)/(obj1_nadir - obj1_ideal)
-                obj2 = (obj2_minibatch - obj2_ideal)/(obj2_nadir - obj2_ideal)
+                obj1 = (obj1_minibatch - obj1_min)/(obj1_max - obj1_min)
+                obj2 = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
 
                 # calculate the weights
                 grads, losses_vec = self.paretoMTL_param(n_tasks, obj1, obj2)
@@ -630,8 +587,8 @@ class Trainer:
                 self.cal_adv_loss = True
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                obj1 = (obj1_minibatch - obj1_ideal)/(obj1_nadir - obj1_ideal)
-                obj2 = (obj2_minibatch - obj2_ideal)/(obj2_nadir - obj2_ideal)
+                obj1 = (obj1_minibatch - obj1_min)/(obj1_max - obj1_min)
+                obj2 = (obj2_minibatch - obj2_min)/(obj2_max - obj2_min)
 
                 for i in range(n_tasks):
                     if i == 0:
@@ -653,9 +610,9 @@ class Trainer:
 
                 for i in range(n_tasks):
                     if i == 0:
-                        loss_total_train = weight_vec[i] * (obj1_train_eval - obj1_ideal)/(obj1_nadir - obj1_ideal)
+                        loss_total_train = weight_vec[i] * (obj1_train_eval - obj1_min)/(obj1_max - obj1_min)
                     else:
-                        loss_total_train = loss_total_train + weight_vec[i] * (obj2_train_eval - obj2_ideal)/(obj2_nadir - obj2_ideal)
+                        loss_total_train = loss_total_train + weight_vec[i] * (obj2_train_eval - obj2_min)/(obj2_max - obj2_min)
 
                 loss_total_train_list.append(loss_total_train)
 
