@@ -183,7 +183,7 @@ def MINE_after_trainerVae(trainer_vae, args):
         MINE_network.to(trainer_vae.device)
     MINE_optimizer = optim.Adam(MINE_network.parameters(), lr=args.adv_lr)
 
-    for epoch in range(1):
+    for epoch in range(400):
         trainer_vae.model.train()
         MINE_network.train()
         for tensors_list in trainer_vae.data_loaders_loop():
@@ -552,7 +552,7 @@ def main( ):
     elif args.ideal_nadir== True:
         minibatch_loss_list = trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, taskid=args.taskid, weight=args.weight,
             ideal_nadir=args.ideal_nadir, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs, adv_epochs=args.adv_epochs)
-        print(minibatch_loss_list)
+
         if args.weight == 0:
             print('obj2_min: {}, obj2_max: {}'.format(min(minibatch_loss_list), max(minibatch_loss_list)))
             trainer_vae = decoder_training(trainer_vae, args)

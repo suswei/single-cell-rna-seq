@@ -10,7 +10,7 @@
 #SBATCH --mem 5000
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=2-10:0:00
+#SBATCH --time=2-20:0:00
 
 # Batch arrays
 #SBATCH --array=0-1

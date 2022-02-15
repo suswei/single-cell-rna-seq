@@ -23,10 +23,10 @@ def main(taskid):
         'adv_activation_fun': ['ELU'],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'obj1_nadir': [15531], #
-        'obj1_ideal': [14777], #
-        'obj2_nadir': [0.428], #
-        'obj2_ideal': [0], #
+        'obj1_max': [],  #
+        'obj1_min': [],  #
+        'obj2_max': [],  #
+        'obj2_min': [],
         'epochs': [150], #
         'adv_epochs': [1],
         'n_tasks': [2],
@@ -43,12 +43,12 @@ def main(taskid):
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
-              "--lr %s --adv_lr %s  --obj1_nadir %s --obj1_ideal %s --obj2_nadir %s --obj2_ideal %s --epochs %s --adv_epochs %s "
+              "--lr %s --adv_lr %s  --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s --epochs %s --adv_epochs %s "
               "--n_tasks %s --MC %s --npref %s --pref_idx %s --num_workers %s"
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['adv_n_hidden'],
-                 temp['adv_n_layers'], temp['adv_activation_fun'], temp['lr'], temp['adv_lr'], temp['obj1_nadir'],
-                 temp['obj1_ideal'], temp['obj2_nadir'], temp['obj2_ideal'], temp['epochs'], temp['adv_epochs'], temp['n_tasks'],
+                 temp['adv_n_layers'], temp['adv_activation_fun'], temp['lr'], temp['adv_lr'], temp['obj1_max'],
+                 temp['obj1_min'], temp['obj2_max'], temp['obj2_min'], temp['epochs'], temp['adv_epochs'], temp['n_tasks'],
                  temp['MC'], temp['npref_prefidx']['npref'], temp['npref_prefidx']['pref_idx'], temp['num_workers'])
               )
 
