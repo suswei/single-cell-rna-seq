@@ -510,7 +510,7 @@ def main( ):
         if 'regularize' in method:
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),
-                'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(10)), [0, 1/9, 2/9, 3/9, 4/9, 5/9, 6/9, 7/9, 8/9, 1])]
+                'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(10)), [1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11])]
             }
         else:
             hyperparameter_config = {
