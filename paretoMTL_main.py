@@ -381,17 +381,17 @@ def main( ):
     parser.add_argument('--paretoMTL', action='store_true', default=False,
                         help='whether to use paretoMTL method')
 
-    parser.add_argument('--obj1_nadir', type=float, default=20000,
-                        help='maximum value for objective 1 across all pareto optimal points')
+    parser.add_argument('--obj1_max', type=float, default=20000,
+                        help='maximum value for objective 1 across minibatches')
 
-    parser.add_argument('--obj1_ideal', type=float, default=12000,
-                        help='minimum value for objective 1 across all pareto optimal points')
+    parser.add_argument('--obj1_min', type=float, default=12000,
+                        help='minimum value for objective 1 across minibatches')
 
-    parser.add_argument('--obj2_nadir', type=float, default=0.4,
-                        help='maximum value for objective 2 across all pareto optimal points')
+    parser.add_argument('--obj2_max', type=float, default=0.4,
+                        help='maximum value for objective 2 across minibatches')
 
-    parser.add_argument('--obj2_ideal', type=float, default=-0.1,
-                        help='minimum value for objective 2 across all pareto optimal points')
+    parser.add_argument('--obj2_min', type=float, default=-0.1,
+                        help='minimum value for objective 2 across minibatches')
 
     parser.add_argument('--n_samples_tsne', type=int, default=1500,
                         help='the number of samples for tsne plot')
@@ -563,7 +563,7 @@ def main( ):
         if args.regularize == True:
             trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
             regularize=args.regularize, weight=args.weight, epochs = args.epochs, adv_epochs = args.adv_epochs,
-            obj1_nadir=args.obj1_nadir, obj1_ideal = args.obj1_ideal, obj2_nadir = args.obj2_nadir, obj2_ideal = args.obj2_ideal,
+            obj1_max=args.obj1_max, obj1_min = args.obj1_min, obj2_max = args.obj2_max, obj2_min = args.obj2_min,
             taskid=args.taskid)
 
             method = 'regularize{}'.format(args.adv_estimator)
@@ -572,7 +572,7 @@ def main( ):
 
         elif args.paretoMTL == True:
             trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, paretoMTL=args.paretoMTL,
-            obj1_nadir=args.obj1_nadir, obj1_ideal=args.obj1_ideal, obj2_nadir=args.obj2_nadir, obj2_ideal=args.obj2_ideal, epochs = args.epochs,
+            obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
             adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_type=args.pref_type, pref_idx = args.pref_idx, taskid=args.taskid)
 
             method = 'pareto{}'.format(args.adv_estimator)
