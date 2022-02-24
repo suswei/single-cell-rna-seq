@@ -497,7 +497,7 @@ def main( ):
     elif args.regularize:
         index = args.taskid // args.weights_total
     elif args.ideal_nadir:
-        index = 0
+        index = args.taskid // 2
     elif args.paretoMTL:
         index = args.taskid//args.npref
 

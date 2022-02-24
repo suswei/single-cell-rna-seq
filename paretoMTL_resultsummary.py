@@ -296,7 +296,7 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
 
             dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
 
-            for type in ['train','test']:
+            for type in ['train']:
 
                 if pareto_front_x == 'obj1':
                     obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}_std'.format(pareto_front_x, type)].values.tolist()
@@ -487,7 +487,7 @@ def main( ):
     parser.add_argument('--pareto_front_y', type=str, default='obj2',
                         help='yaxis value') #obj2 (MINE or stdMMD), NN, be
 
-    parser.add_argument('--methods_list', type=str, default='paretoMMD_lr0001_epochs250_medianbandwidth,paretoMMD_lr00004_epochs400_medianbandwidth',
+    parser.add_argument('--methods_list', type=str, default='paretoMINE,regularizeMINE',
                         help='list of methods')
 
     parser.add_argument('--cal_metric', action='store_true', default=False,
@@ -510,7 +510,7 @@ def main( ):
         if 'regularize' in method:
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),
-                'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(12)), [0, 1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11, 1])]
+                'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(10)), [1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11])]
             }
         else:
             hyperparameter_config = {

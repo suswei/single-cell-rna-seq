@@ -17,14 +17,15 @@ def main(taskid):
         'n_hidden': [128],
         'n_latent': [10],
         'batch_size': [128],
-        'adv_estimator': ['stdMMD'], #
+        'adv_estimator': ['MINE'], #stdMMD
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'lr': [4e-4], #
+        'lr': [1e-3], #4e-4
         'adv_lr': [5e-5],
-        'epochs': [400], #
+        'epochs': [150], #400
         'adv_epochs': [1],
+        'MC': list(range(10)),
         'weight': [0,1],
         'num_workers': [1]
     }
@@ -37,11 +38,11 @@ def main(taskid):
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
-              "--lr %s --adv_lr %s --epochs %s --adv_epochs %s --weight %s --num_workers %s"
+              "--lr %s --adv_lr %s --epochs %s --adv_epochs %s --MC %s --weight %s --num_workers %s"
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
                  temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['adv_n_hidden'],
                  temp['adv_n_layers'], temp['adv_activation_fun'], temp['lr'], temp['adv_lr'], temp['epochs'],
-                 temp['adv_epochs'],temp['weight'], temp['num_workers'])
+                 temp['adv_epochs'], temp['MC'], temp['weight'], temp['num_workers'])
               )
 
 if __name__ == "__main__":
