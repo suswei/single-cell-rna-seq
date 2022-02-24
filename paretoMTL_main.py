@@ -69,9 +69,12 @@ def decoder_training(trainer_vae, args):
             obj1_train_eval = trainer_vae.obj1_obj2_eval(type='obj1')
             obj1_train_list.append(obj1_train_eval)
 
-    args.path = './result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder)
-    if not os.path.exists('./result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder)):
-        os.makedirs('./result/{}/{}/ideal_nadir'.format(args.dataset_name, args.confounder))
+    string = 'ideal_nadir_{}'.format(args.adv_estimator)
+    if args.adv_estimator in ['MMD', 'stdMMD']:
+        string = 'ideal_nadir_MMD'
+    args.path = './result/{}/{}/{}'.format(args.dataset_name, args.confounder,string)
+    if not os.path.exists('./result/{}/{}/{}'.format(args.dataset_name, args.confounder, string)):
+        os.makedirs('./result/{}/{}/{}'.format(args.dataset_name, args.confounder,string))
 
     trainer_vae.diagnosis_plot(obj1_train_list, args.path, 'obj1')
 
@@ -558,7 +561,10 @@ def main( ):
             trainer_vae = decoder_training(trainer_vae, args)
         elif args.weight == 1:
             print('obj1_min: {}, obj1_max: {}'.format(min(minibatch_loss_list), max(minibatch_loss_list)))
-        method='ideal_nadir'
+
+        method='ideal_nadir_{}'.format(args.adv_estimator)
+        if args.adv_estimator in ['MMD', 'stdMMD']:
+            method = 'ideal_nadir_MMD'
     else:
         if args.regularize == True:
             trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,

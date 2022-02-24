@@ -395,7 +395,9 @@ class Trainer:
                 loss_total_train_list.append(loss_total_train)
 
         if ideal_nadir:
-            string = 'ideal_nadir'
+            string = 'ideal_nadir_{}'.format(self.adv_estimator)
+            if self.adv_estimator in ['MMD', 'stdMMD']:
+                string = 'ideal_nadir_MMD'
         elif self.adv_estimator == 'MINE':
             string = 'regularizeMINE'
         else:

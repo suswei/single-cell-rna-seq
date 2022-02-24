@@ -296,7 +296,7 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
 
             dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
 
-            for type in ['train', 'test']:
+            for type in ['train','test']:
 
                 if pareto_front_x == 'obj1':
                     obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}_std'.format(pareto_front_x, type)].values.tolist()
@@ -355,7 +355,7 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
                     fig.add_trace(go.Scatter(x=inputPoints1[:, 0].tolist(), y=inputPoints1[:, 1].tolist(), mode='markers',
                                              marker_size=[k*1+10 for k in index_list_input], marker_symbol=marker_symbol,
                                              name='{},{}'.format(method, type), marker_color=marker_color,
-                                             opacity=0.5, showlegend=True))
+                                             opacity=0.5, showlegend=False))
 
         fig.update_layout(
             width=600,
@@ -478,16 +478,16 @@ def main( ):
     parser.add_argument('--confounder', type=str, default='batch',
                         help='name of confounder')
 
-    parser.add_argument('--MCs', type=int, default=20,
+    parser.add_argument('--MCs', type=int, default=5,
                         help='number of Monte Carlos')
 
-    parser.add_argument('--pareto_front_x', type=str, default='asw',
+    parser.add_argument('--pareto_front_x', type=str, default='obj1',
                         help='xaxis value') #asw, ari, uca, nmi,obj1
 
     parser.add_argument('--pareto_front_y', type=str, default='obj2',
                         help='yaxis value') #obj2 (MINE or stdMMD), NN, be
 
-    parser.add_argument('--methods_list', type=str, default='paretoMINE,paretoMMD',
+    parser.add_argument('--methods_list', type=str, default='paretoMMD_lr0001_epochs250_medianbandwidth,paretoMMD_lr00004_epochs400_medianbandwidth',
                         help='list of methods')
 
     parser.add_argument('--cal_metric', action='store_true', default=False,
@@ -506,11 +506,11 @@ def main( ):
     args.methods_list = args.methods_list.split(',')
 
     for method in args.methods_list:
-        dir_path = './result/{}/{}/{}'.format(args.dataset, args.confounder, method)
+        dir_path = './result/{}2/{}/{}'.format(args.dataset, args.confounder, method)
         if 'regularize' in method:
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),
-                'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(10)), [1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11])]
+                'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(12)), [0, 1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11, 1])]
             }
         else:
             hyperparameter_config = {
@@ -538,9 +538,9 @@ def main( ):
                 if 'obj2_minibatch_list' in results.keys():
                     del results['obj2_minibatch_list']
                 if 'regularize' in method:
-                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'MC', 'nweight','obj1_ideal','obj1_nadir','obj2_ideal','obj2_nadir'])}
+                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'MC', 'nweight','obj1_min','obj1_max','obj2_min','obj2_max'])}
                 else:
-                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator','MC', 'pref_idx','obj1_ideal','obj1_nadir','obj2_ideal','obj2_nadir'])}
+                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator','MC', 'pref_idx','obj1_min','obj1_max','obj2_min','obj2_max'])}
                 results_config.update({'method': [method]})
                 results_config.update(results)
 
@@ -574,10 +574,10 @@ def main( ):
             cv2.destroyAllWindows()
             video.release()
 
-    results_config_total['obj1_train_std']=results_config_total.apply(lambda row: (row.obj1_train - row.obj1_ideal)/ (row.obj1_nadir - row.obj1_ideal), axis=1)
-    results_config_total['obj1_test_std'] = results_config_total.apply(lambda row: (row.obj1_test - row.obj1_ideal) / (row.obj1_nadir - row.obj1_ideal), axis=1)
-    results_config_total['obj2_train_std']=results_config_total.apply(lambda row: (row.obj2_train - row.obj2_ideal)/ (row.obj2_nadir - row.obj2_ideal), axis=1)
-    results_config_total['obj2_test_std'] = results_config_total.apply(lambda row: (row.obj2_test - row.obj2_ideal) / (row.obj2_nadir - row.obj2_ideal), axis=1)
+    results_config_total['obj1_train_std']=results_config_total.apply(lambda row: (row.obj1_train - row.obj1_min)/ (row.obj1_max - row.obj1_min), axis=1)
+    results_config_total['obj1_test_std'] = results_config_total.apply(lambda row: (row.obj1_test - row.obj1_min) / (row.obj1_max - row.obj1_min), axis=1)
+    results_config_total['obj2_train_std']=results_config_total.apply(lambda row: (row.obj2_train - row.obj2_min)/ (row.obj2_max - row.obj2_min), axis=1)
+    results_config_total['obj2_test_std'] = results_config_total.apply(lambda row: (row.obj2_test - row.obj2_min) / (row.obj2_max - row.obj2_min), axis=1)
 
     '''
     hypervolume_dict, percentage_dict = draw_pareto_front(dataframe=results_config_total, methods_list=args.methods_list,

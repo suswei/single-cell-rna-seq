@@ -17,13 +17,13 @@ def main(taskid):
         'n_hidden': [128],
         'n_latent': [10],
         'batch_size': [128],
-        'adv_estimator': ['MINE'],
+        'adv_estimator': ['stdMMD'], #
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'lr': [1e-3],
+        'lr': [4e-4], #
         'adv_lr': [5e-5],
-        'epochs': [150], #
+        'epochs': [400], #
         'adv_epochs': [1],
         'weight': [0,1],
         'num_workers': [1]

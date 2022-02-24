@@ -389,7 +389,7 @@ class MMD_loss(nn.Module):
 
         x1x1 = self.K(x1, x1, gamma=self.bandwidth(d1))
         x2x2 = self.K(x2, x2, gamma=self.bandwidth(d2))
-        x1x2 = self.K(x1, x2, gamma=self.bandwidth(d1))
+        x1x2 = self.K(x1, x2, gamma=self.bandwidth(d1)) #in our case d1=d2
 
         return torch.sqrt(torch.mean(x1x1) - 2 * torch.mean(x1x2) + torch.mean(x2x2))
 
