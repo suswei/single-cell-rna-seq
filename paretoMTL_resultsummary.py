@@ -506,7 +506,7 @@ def main( ):
     args.methods_list = args.methods_list.split(',')
 
     for method in args.methods_list:
-        dir_path = './result/{}2/{}/{}'.format(args.dataset, args.confounder, method)
+        dir_path = './result/{}/{}/{}'.format(args.dataset, args.confounder, method)
         if 'regularize' in method:
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),

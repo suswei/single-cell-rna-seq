@@ -616,9 +616,9 @@ def main( ):
     if trainer_vae.adv_estimator == 'MINE':
         obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
     elif trainer_vae.adv_estimator == 'MMD':
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
+        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD')
     elif trainer_vae.adv_estimator == 'stdMMD':
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD', args)
+        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD')
 
     NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN')
 
