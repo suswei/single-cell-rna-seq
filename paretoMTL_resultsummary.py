@@ -277,15 +277,33 @@ def compare_hypervolume_percent(methods_list, hypervolume_dict, percentage_dict,
             img_save_path = img_save_path + '{}_'.format(method)
         fig.write_image(img_save_path + '{}_{}_{}.png'.format(pareto_front_x, pareto_front_y, metric))
 
-def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, save_path):
+def objective_list(objective_name, train_test, data_frame):
+    if objective_name in ['obj1','obj2']:
+        obj_list = data_frame.loc[:, '{}_{}_std'.format(objective_name, train_test)].values.tolist()
+    else:
+        obj_list = data_frame.loc[:, '{}_{}'.format(objective_name, train_test)].values.tolist()
+    return obj_list
 
+def draw_all_ParetoCandidates(dataframe_dict, methods_list, pareto_front_x, pareto_front_y, draw_ideal_nadir, save_path):
+
+    results_config_AllMethods = dataframe_dict['results_config_AllMethods']
+
+    '''
     #check any rows that contain infinity value
-    subset_dataframe = dataframe[(dataframe == np.inf).any(axis=1)]
-    if subset_dataframe.shape[0] > 0:
-        dataframe = pd.concat([dataframe, subset_dataframe]).drop_duplicates(keep=False)
+    subset_results_config_AllMethods = results_config_AllMethods[(results_config_AllMethods == np.inf).any(axis=1)]
+    if subset_results_config_AllMethods.shape[0] > 0:
+        results_config_AllMethods= pd.concat([results_config_AllMethods, subset_results_config_AllMethods]).drop_duplicates(keep=False)
+    '''
 
-    for MC in range(dataframe.MC.max() + 1):
-        dataframe_oneMC = dataframe[dataframe.MC.eq(MC)]
+    if any('MINE' in s for s in methods_list):
+        results_config_IdealNadirMINE = dataframe_dict['results_config_IdealNadirMINE']
+        results_config_IdealNadirMINE.sort_values(['MC', 'index'],ascending=[True, True], inplace=True)
+    if any('MMD' in s for s in methods_list):
+        results_config_IdealNadirMMD = dataframe_dict['results_config_IdealNadirMMD']
+        results_config_IdealNadirMMD.sort_values(['MC', 'index'], ascending=[True, True], inplace=True)
+
+    for MC in range(results_config_AllMethods.MC.max() + 1):
+        results_config_oneMC_AllMethods = results_config_AllMethods[results_config_AllMethods.MC.eq(MC)]
 
         fig = go.Figure()
         obj1_all, obj2_all = [], []
@@ -294,19 +312,35 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
         for (i, method) in enumerate(methods_list):
             image_save_path = image_save_path + '{}_'.format(method)
 
-            dataframe_oneMC_oneMethod = dataframe_oneMC[dataframe_oneMC.method.eq(method)]
+            results_config_oneMC_oneMethod = results_config_oneMC_AllMethods[results_config_oneMC_AllMethods.method.eq(method)]
+            if draw_ideal_nadir:
+                if 'MINE' in method:
+                    results_config_IdealNadirMINE_oneMC = results_config_IdealNadirMINE[results_config_IdealNadirMINE.MC.eq(MC)]
+                elif 'MMD' in method:
+                    results_config_IdealNadirMMD_oneMC = results_config_IdealNadirMMD[results_config_IdealNadirMMD.MC.eq(MC)]
+                    print('results_config_IdealNadirMMD_oneMC: {}'.format(results_config_IdealNadirMMD_oneMC))
 
-            for type in ['train']:
+            for train_test in ['train','test']:
 
-                if pareto_front_x == 'obj1':
-                    obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}_std'.format(pareto_front_x, type)].values.tolist()
-                else:
-                    obj1 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_x, type)].values.tolist()
+                obj1_list = objective_list(pareto_front_x, train_test, results_config_oneMC_oneMethod)
+                obj2_list = objective_list(pareto_front_y, train_test, results_config_oneMC_oneMethod)
 
-                if pareto_front_y == 'obj2':
-                    obj2 = dataframe_oneMC_oneMethod.loc[:, '{}_{}_std'.format(pareto_front_y, type)].values.tolist()
-                else:
-                    obj2 = dataframe_oneMC_oneMethod.loc[:, '{}_{}'.format(pareto_front_y, type)].values.tolist()
+                if draw_ideal_nadir:
+                    if 'MINE' in method:
+                        obj1_first_last = objective_list(pareto_front_x, train_test, results_config_IdealNadirMINE_oneMC)
+                        obj2_first_last = objective_list(pareto_front_y, train_test, results_config_IdealNadirMINE_oneMC)
+                    elif 'MMD' in method:
+                        obj1_first_last = objective_list(pareto_front_x, train_test, results_config_IdealNadirMMD_oneMC)
+                        obj2_first_last = objective_list(pareto_front_y, train_test, results_config_IdealNadirMMD_oneMC)
+                        print('MMD, obj1_first_last: {}'.format(obj1_first_last))
+                        print('MMD, obj2_first_last: {}'.format(obj2_first_last))
+
+                    obj1 = [obj1_first_last[0]] + obj1_list + [obj1_first_last[-1]]
+                    obj2 = [obj2_first_last[0]] + obj2_list + [obj2_first_last[-1]]
+
+                    if 'MMD' in method:
+                        print('obj1: {}'.format(obj1))
+                        print('obj2: {}'.format(obj2))
 
                 if pareto_front_x == 'obj1' and pareto_front_y == 'be':
                     obj2 = [(-1) * k for k in obj2]
@@ -316,26 +350,13 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
                     obj1 = [(-1) * k for k in obj1]
                     obj2 = [(-1) * k for k in obj2]
 
-                if 'regularize' in method:
-                    obj1 = obj1[1:-1]
-                    obj2 = obj2[1:-1]
-
                 obj1_all += obj1
                 obj2_all += obj2
 
-                if 'pareto' in method:
-                    inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
-                    inputPoints1 = np.array(list(inputPoints1))
-                else:
-                    inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
-                    inputPoints1 = np.array(list(inputPoints1))
+                inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
+                inputPoints1 = np.array(list(inputPoints1))
 
-                if 'pareto' in method:
-                    index_list_input = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'pref_idx'])]
-                else:
-                    index_list_input = [int(k) for k in list(dataframe_oneMC_oneMethod.loc[:, 'nweight'])]
-                    index_list_input = index_list_input[1:-1]
-                    index_list_input = [int(k)-1 for k in index_list_input]
+                index_list = [0] + [int(k) for k in list(results_config_oneMC_oneMethod.loc[:, 'index'])] + [11]
 
                 if i == 0:
                     marker_symbol = 'circle'
@@ -346,16 +367,16 @@ def draw_inputPoints(dataframe, methods_list, pareto_front_x, pareto_front_y, sa
                 elif i == 3:
                     marker_symbol = 'diamond'
 
-                if type == 'train':
+                if train_test == 'train':
                     marker_color = 'rgba(255, 25, 52, .9)'
                 else:
                     marker_color = 'rgba(0, 0, 255, .9)'
 
                 if inputPoints1.shape[0] > 0:
                     fig.add_trace(go.Scatter(x=inputPoints1[:, 0].tolist(), y=inputPoints1[:, 1].tolist(), mode='markers',
-                                             marker_size=[k*1+10 for k in index_list_input], marker_symbol=marker_symbol,
-                                             name='{},{}'.format(method, type), marker_color=marker_color,
-                                             opacity=0.5, showlegend=False))
+                                             marker_size=[k*1+10 for k in index_list], marker_symbol=marker_symbol,
+                                             name='{},{}'.format(method, train_test), marker_color=marker_color,
+                                             opacity=0.5, showlegend=True))
 
         fig.update_layout(
             width=600,
@@ -468,6 +489,116 @@ def cell_type_composition(dataset_name, change_composition, save_path):
     compare_percentage = dataset1_percentage.merge(dataset2_percentage, how='outer', left_on='cell_type', right_on='cell_type')
     print(compare_percentage.fillna(0))
 
+def std_obj1_obj2(dataframe):
+    dataframe['obj1_train_std']=dataframe.apply(lambda row: (row.obj1_train - row.obj1_min)/ (row.obj1_max - row.obj1_min), axis=1)
+    dataframe['obj1_test_std'] = dataframe.apply(lambda row: (row.obj1_test - row.obj1_min) / (row.obj1_max - row.obj1_min), axis=1)
+    dataframe['obj2_train_std']=dataframe.apply(lambda row: (row.obj2_train - row.obj2_min)/ (row.obj2_max - row.obj2_min), axis=1)
+    dataframe['obj2_test_std'] = dataframe.apply(lambda row: (row.obj2_test - row.obj2_min) / (row.obj2_max - row.obj2_min), axis=1)
+    return dataframe
+
+def load_result(dir_path, hyperparameter_config, method):
+
+    keys, values = zip(*hyperparameter_config.items())
+    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+    for i in range(len(hyperparameter_experiments)):
+
+        config_path = dir_path + '/taskid{}/config.pkl'.format(i)
+        results_path = dir_path + '/taskid{}/results.pkl'.format(i)
+
+        if os.path.isfile(config_path) and os.path.isfile(results_path):
+            config = pickle.load(open(config_path, "rb"))
+            results = pickle.load(open(results_path, "rb"))
+
+            if 'regularize' in method:
+                config_keys = ['adv_estimator', 'MC', 'nweight', 'obj1_min', 'obj1_max', 'obj2_min', 'obj2_max']
+            elif 'pareto' in method:
+                config_keys = ['adv_estimator', 'MC', 'pref_idx', 'obj1_min', 'obj1_max', 'obj2_min', 'obj2_max']
+            elif 'ideal_nadir' in method:
+                config_keys = ['adv_estimator', 'MC', 'weight']
+
+            results_config = {key: [value] for key, value in config.items() if key in tuple(config_keys)}
+            results_config.update({'method': [method]})
+            results_config.update(results)
+
+            if i == 0:
+                results_config_total = pd.DataFrame.from_dict(results_config)
+            else:
+                results_config_total = pd.concat([results_config_total, pd.DataFrame.from_dict(results_config)], axis=0)
+        else:
+            print('method:{},taskid{}'.format(method, i))
+
+    if 'regularize' in method:
+        results_config_total_std = std_obj1_obj2(results_config_total)
+        results_config_total_std.rename(columns={'nweight': 'index'}, inplace=True)
+        return results_config_total_std
+    elif 'pareto' in method:
+        results_config_total_std = std_obj1_obj2(results_config_total)
+        results_config_total_std.rename(columns={'pref_idx': 'index'}, inplace=True)
+        return results_config_total_std
+    else:
+        return results_config_total
+
+def load_result_IdealNadir(adv_estimator, MCs, dir_path, methods_list):
+    method = 'ideal_nadir_{}'.format(adv_estimator)
+    new_dir_path = dir_path + '/{}'.format(method)
+    hyperparameter_config = {
+        'MC': list(range(MCs)),
+        'weight': [0, 1]
+    }
+    results_config_IdealNadir = load_result(new_dir_path, hyperparameter_config, method)
+
+    min_max_method = [k for k in methods_list if adv_estimator in k][0]
+    min_max_config_path = dir_path + '/{}/taskid0/config.pkl'.format(min_max_method)
+    min_max_config = pickle.load(open(min_max_config_path, "rb"))
+
+    results_config_IdealNadir['obj1_max'] = min_max_config['obj1_max']
+    results_config_IdealNadir['obj1_min'] = min_max_config['obj1_min']
+    results_config_IdealNadir['obj2_max'] = min_max_config['obj2_max']
+    results_config_IdealNadir['obj2_min'] = min_max_config['obj2_min']
+
+    results_config_IdealNadir_std = std_obj1_obj2(results_config_IdealNadir)
+
+    results_config_IdealNadir_std['index'] = results_config_IdealNadir_std.apply(lambda row: int(row.weight * 11), axis=1)
+
+    print('results_config_total_std shape: {},{}'.format(results_config_IdealNadir_std.shape[0],results_config_IdealNadir_std.shape[1]))
+    print('columns are: {}'.format(results_config_IdealNadir_std.columns))
+    print('obj1_max: {}'.format(set(results_config_IdealNadir_std.loc[:,'obj1_max'])))
+    print('obj2_min: {}'.format(set(results_config_IdealNadir_std.loc[:, 'obj2_min'])))
+
+    return results_config_IdealNadir_std
+
+def diagnosis(dir_path, hyperparameter_config, method):
+
+    keys, values = zip(*hyperparameter_config.items())
+    hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+    initial_frame = False
+
+    for i in range(len(hyperparameter_experiments)):
+        diagnosis_img_path = dir_path + '/taskid{}/train_totalloss.png'.format(i)
+
+        if os.path.isfile(diagnosis_img_path) and initial_frame == False:
+            frame = cv2.imread(dir_path + '/taskid0/train_totalloss.png')
+            height, width, layers = frame.shape
+            video = cv2.VideoWriter(dir_path + '/diagnosis_video.avi', 0, 1, (width, height))
+            initial_frame = True
+        elif os.path.isfile(diagnosis_img_path) and initial_frame == True:
+            img = cv2.imread(diagnosis_img_path)
+            if 'pareto' in method:
+                cv2.putText(img, 'MC:{}, pref_idx: {}'.format(hyperparameter_experiments[i]['MC'],
+                            hyperparameter_experiments[i]['npref_prefidx']['pref_idx']), (10, 40), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 0), 2)
+            else:
+                cv2.putText(img, 'MC:{}, weight_idx: {}'.format(hyperparameter_experiments[i]['MC'],
+                            hyperparameter_experiments[i]['nweight_weight']['n_weight']), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+            video.write(img)
+        else:
+            continue
+
+    if initial_frame == True:
+        cv2.destroyAllWindows()
+        video.release()
+
 def main( ):
 
     parser = argparse.ArgumentParser(description='resultsummary')
@@ -478,7 +609,7 @@ def main( ):
     parser.add_argument('--confounder', type=str, default='batch',
                         help='name of confounder')
 
-    parser.add_argument('--MCs', type=int, default=5,
+    parser.add_argument('--MCs', type=int, default=10,
                         help='number of Monte Carlos')
 
     parser.add_argument('--pareto_front_x', type=str, default='obj1',
@@ -496,7 +627,10 @@ def main( ):
     parser.add_argument('--diagnosis', action='store_true', default=False,
                         help='whether to visualize diagnosis plot')
 
-    parser.add_argument('--draw_all_inputPoints', action='store_true', default=False,
+    parser.add_argument('--draw_ideal_nadir', action='store_true', default=False,
+                        help='whether to draw all input points or not')
+
+    parser.add_argument('--draw_all_ParetoCandidates', action='store_true', default=False,
                         help='whether to draw all input points or not')
 
     parser.add_argument("--mode", default='client')
@@ -512,72 +646,33 @@ def main( ):
                 'MC': list(range(args.MCs)),
                 'nweight_weight': [{'n_weight': n, 'weight': i} for n, i in zip(list(range(10)), [1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11])]
             }
-        else:
+        elif 'pareto' in method:
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),
                 'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10] * 10, list(range(10)))]
             }
 
-        keys, values = zip(*hyperparameter_config.items())
-        hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
+        results_config_onemethod = load_result(dir_path, hyperparameter_config, method)
+        if method == args.methods_list[0]:
+            results_config_AllMethods = results_config_onemethod
+        else:
+            results_config_AllMethods = pd.concat([results_config_AllMethods, results_config_onemethod], axis=0)
 
-        if args.diagnosis == True:
-            initial_frame = False
+    dataframe_dict = {'results_config_AllMethods': results_config_AllMethods}
+    if args.draw_ideal_nadir:
+        dir_path = './result/{}/{}'.format(args.dataset, args.confounder)
+        if any('MINE' in s for s in args.methods_list):
+            results_config_IdealNadirMINE = load_result_IdealNadir('MINE', 10, dir_path, args.methods_list)
+            dataframe_dict.update({'results_config_IdealNadirMINE': results_config_IdealNadirMINE})
 
-        for i in range(len(hyperparameter_experiments)):
+        if any('MMD' in s for s in args.methods_list):
+            results_config_IdealNadirMMD = load_result_IdealNadir('MMD', 10, dir_path, args.methods_list)
+            dataframe_dict.update({'results_config_IdealNadirMMD': results_config_IdealNadirMMD})
 
-            config_path = dir_path + '/taskid{}/config.pkl'.format(i)
-            results_path = dir_path + '/taskid{}/results.pkl'.format(i)
-
-            if os.path.isfile(config_path) and os.path.isfile(results_path):
-                config = pickle.load(open(config_path, "rb"))
-                results = pickle.load(open(results_path, "rb"))
-
-                if 'obj1_minibatch_list' in results.keys():
-                    del results['obj1_minibatch_list']
-                if 'obj2_minibatch_list' in results.keys():
-                    del results['obj2_minibatch_list']
-                if 'regularize' in method:
-                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator', 'MC', 'nweight','obj1_min','obj1_max','obj2_min','obj2_max'])}
-                else:
-                    results_config = {key: [value] for key, value in config.items() if key in tuple(['adv_estimator','MC', 'pref_idx','obj1_min','obj1_max','obj2_min','obj2_max'])}
-                results_config.update({'method': [method]})
-                results_config.update(results)
-
-                if method == args.methods_list[0] and i == 0:
-                    results_config_total = pd.DataFrame.from_dict(results_config)
-                else:
-                    results_config_total = pd.concat([results_config_total, pd.DataFrame.from_dict(results_config)], axis=0)
-            else:
-                print('method:{},taskid{}'.format(method, i))
-
-            diagnosis_img_path = dir_path + '/taskid{}/train_totalloss.png'.format(i)
-            if args.diagnosis == True:
-                if os.path.isfile(diagnosis_img_path) and initial_frame==False:
-                    frame = cv2.imread(dir_path + '/taskid0/train_totalloss.png')
-                    height, width, layers = frame.shape
-                    video = cv2.VideoWriter(dir_path + '/diagnosis_video.avi', 0, 1, (width, height))
-                    initial_frame = True
-                elif os.path.isfile(diagnosis_img_path) and initial_frame==True:
-                    img = cv2.imread(diagnosis_img_path)
-                    if 'pareto' in method:
-                        cv2.putText(img, 'MC:{}, pref_idx: {}'.format(hyperparameter_experiments[i]['MC'],
-                                    hyperparameter_experiments[i]['npref_prefidx']['pref_idx']),(10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                    else:
-                        cv2.putText(img, 'MC:{}, weight_idx: {}'.format(hyperparameter_experiments[i]['MC'],
-                                    hyperparameter_experiments[i]['nweight_weight']['n_weight']),(10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                    video.write(img)
-                else:
-                    continue
-
-        if args.diagnosis == True and initial_frame==True:
-            cv2.destroyAllWindows()
-            video.release()
-
-    results_config_total['obj1_train_std']=results_config_total.apply(lambda row: (row.obj1_train - row.obj1_min)/ (row.obj1_max - row.obj1_min), axis=1)
-    results_config_total['obj1_test_std'] = results_config_total.apply(lambda row: (row.obj1_test - row.obj1_min) / (row.obj1_max - row.obj1_min), axis=1)
-    results_config_total['obj2_train_std']=results_config_total.apply(lambda row: (row.obj2_train - row.obj2_min)/ (row.obj2_max - row.obj2_min), axis=1)
-    results_config_total['obj2_test_std'] = results_config_total.apply(lambda row: (row.obj2_test - row.obj2_min) / (row.obj2_max - row.obj2_min), axis=1)
+    if args.draw_all_ParetoCandidates:
+        draw_all_ParetoCandidates(dataframe=dataframe_dict, methods_list=args.methods_list,
+                         pareto_front_x=args.pareto_front_x, pareto_front_y=args.pareto_front_y,
+                         draw_ideal_nadir=args.draw_ideal_nadir, save_path=dir_path + '/')
 
     '''
     hypervolume_dict, percentage_dict = draw_pareto_front(dataframe=results_config_total, methods_list=args.methods_list,
@@ -587,10 +682,6 @@ def main( ):
         compare_hypervolume_percent(methods_list=args.methods_list, hypervolume_dict=hypervolume_dict, percentage_dict=percentage_dict,
                                pareto_front_x=args.pareto_front_x, pareto_front_y=args.pareto_front_y, save_path=os.path.dirname(dir_path)+'/')
     '''
-    if args.draw_all_inputPoints == True:
-        draw_inputPoints(dataframe=results_config_total, methods_list=args.methods_list,
-                         pareto_front_x=args.pareto_front_x, pareto_front_y=args.pareto_front_y,
-                         save_path=os.path.dirname(dir_path)+'/')
 
 # Run the actual program
 if __name__ == "__main__":

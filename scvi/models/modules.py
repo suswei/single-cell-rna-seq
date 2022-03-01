@@ -355,13 +355,44 @@ class MMD_loss(nn.Module):
 
 import torch.nn as nn
 import numpy as np
-from scipy.special import gamma
+
 """
 Return the mmd score between a pair of observations
 Notes:
 Reimplementation in pytorch of the Information Constraints on Auto-Encoding Variational Bayes
 https://github.com/romain-lopez/HCV/blob/master/scVI/scVI.py
 """
+
+class MMD_loss(nn.Module):
+    def __init__(self, bandwidths):
+        super(MMD_loss, self).__init__()
+        self.bandwidths = bandwidths
+        return
+    def K(self,x1, x2, gamma=1.):
+        x1_expand = x1.unsqueeze(0).expand(int(x2.size(0)), int(x1.size(0)), int(x1.size(1)))
+        x2_expand = x2.unsqueeze(1).expand(int(x2.size(0)), int(x1.size(0)), int(x2.size(1)))
+        dist_table = x1_expand - x2_expand
+
+        return torch.transpose(torch.exp(-gamma * ((dist_table ** 2).sum(2))),0,1)
+
+    def forward(self, x1, x2):
+        bandwidths = 1. / (2 * (np.array(self.bandwidths) ** 2))
+
+        d1 = x1.size()[1]
+        d2 = x2.size()[1]
+
+        # possibly mixture of kernels
+        x1x1, x1x2, x2x2 = 0, 0, 0
+        for bandwidth in bandwidths:
+            x1x1 += self.K(x1, x1, gamma=np.sqrt(d1) * bandwidth) / len(bandwidths)
+            x2x2 += self.K(x2, x2, gamma=np.sqrt(d2) * bandwidth) / len(bandwidths)
+            x1x2 += self.K(x1, x2, gamma=np.sqrt(d1) * bandwidth) / len(bandwidths)
+
+        return torch.sqrt(torch.mean(x1x1) - 2 * torch.mean(x1x2) + torch.mean(x2x2))
+'''
+import torch.nn as nn
+import numpy as np
+from scipy.special import gamma
 
 class MMD_loss(nn.Module):
     def __init__(self):
@@ -392,7 +423,7 @@ class MMD_loss(nn.Module):
         x1x2 = self.K(x1, x2, gamma=self.bandwidth(d1)) #in our case d1=d2
 
         return torch.sqrt(torch.mean(x1x1) - 2 * torch.mean(x1x2) + torch.mean(x2x2))
-
+'''
 def EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index, batch_ratio, nsamples):
     # nsamples_z: the number of z taken from the aggregated posterior distribution of z
     # qz_v is the variance or covariance matrix for z

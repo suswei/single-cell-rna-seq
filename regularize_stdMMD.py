@@ -18,8 +18,9 @@ def main(taskid):
         'n_latent': [10],
         'batch_size': [128],
         'adv_estimator': ['stdMMD'],
-        'epochs': [400],
-        'lr': [4e-4],
+        'MMD_bandwidths': ['1,2,5,8,10'],
+        'epochs': [250],
+        'lr': [1e-3],
         'obj1_max': [19629],
         'obj1_min': [11146],
         'obj2_max': [0.32],
@@ -37,10 +38,10 @@ def main(taskid):
     os.system("python3 paretoMTL_main.py --regularize --use_batches --MCs 20 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s  --batch_size %s "
-              "--adv_estimator %s --epochs %s --lr %s --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "
+              "--adv_estimator %s --MMD_bandwidths %s --epochs %s --lr %s --obj1_max %s --obj1_min %s --obj2_max %s --obj2_min %s "
               "--MC %s --weights_total %s --nweight %s --weight %s --num_workers %s "
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
-                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'],
+                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['MMD_bandwidths'],
                  temp['epochs'], temp['lr'], temp['obj1_max'], temp['obj1_min'], temp['obj2_max'], temp['obj2_min'],
                  temp['MC'], temp['weights_total'], temp['nweight_weight']['nweight'], temp['nweight_weight']['weight'], temp['num_workers'])
               )

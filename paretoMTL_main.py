@@ -32,8 +32,9 @@ def construct_trainer_vae(gene_dataset, args):
                       adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
     elif args.adv_estimator in ['MMD','stdMMD']:
+        args.MMD_bandwidths = [float(k) for k in args.MMD_bandwidths.split(',')]
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
-                      seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+                      seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, MMD_bandwidths = args.MMD_bandwidths, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
 
     # TODO: it is better to be controled by self.on_epoch_begin(), it should be modified later
@@ -218,11 +219,11 @@ def MINE_after_trainerVae(trainer_vae, args):
 
     return MINE_estimator_train, MINE_estimator_test
 
-def MMD_NN_train_test(trainer_vae, obj2_type):
+def MMD_NN_train_test(trainer_vae, obj2_type, args):
 
     trainer_vae.model.eval()
     if obj2_type in ['MMD','stdMMD']:
-        MMD_loss_fun = MMD_loss()
+        MMD_loss_fun = MMD_loss(args.MMD_bandwidths)
         estimator_train, estimator_test = 0, 0
 
         for onebatch_index in range(trainer_vae.model.n_batch):
@@ -237,7 +238,7 @@ def MMD_NN_train_test(trainer_vae, obj2_type):
                 MMD_loss_test_minibatch += [MMD_loss_fun(sample1, sample2).item()]
 
             estimator_train += sum(MMD_loss_train_minibatch)/len(MMD_loss_train_minibatch)
-            estimator_test += sum(MMD_loss_test_minibatch) / len(MMD_loss_test_minibatch)
+            estimator_test += sum(MMD_loss_test_minibatch)/len(MMD_loss_test_minibatch)
 
             if trainer_vae.model.n_batch == 2:
                 break
@@ -335,6 +336,9 @@ def main( ):
 
     parser.add_argument('--MMD_kernel_num', type=int, default=15,
                         help='the number of kernels to get MMD')
+
+    parser.add_argument('--MMD_bandwidths', type=str, default='1,2,5,8,10',
+                        help='the list of bandwidths')
 
     #for pre_train
     parser.add_argument('--pre_train', action='store_true', default=False,
@@ -616,11 +620,11 @@ def main( ):
     if trainer_vae.adv_estimator == 'MINE':
         obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
     elif trainer_vae.adv_estimator == 'MMD':
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD')
+        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
     elif trainer_vae.adv_estimator == 'stdMMD':
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD')
+        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD', args)
 
-    NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN')
+    NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
 
     asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
     be_train = trainer_vae.train_set.entropy_batch_mixing()
