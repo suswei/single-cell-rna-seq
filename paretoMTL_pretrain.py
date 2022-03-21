@@ -10,13 +10,13 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # conf_estimator means estimator for confounding effect, it could be 'MINE', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
     hyperparameter_config = {
-        'dataset_name': ['tabula_muris'],
+        'dataset_name': ['macaque_retina'],
         'confounder': ['batch'],
         'n_layers_encoder': [2], #2
         'n_layers_decoder': [2], #2
         'n_hidden': [128], #128
         'n_latent': [10], #10,50
-        'batch_size': [128], #4 GPUs
+        'batch_size': [512], #4 GPUs
         'adv_estimator': ['MINE'], #stdMMD
         'adv_n_hidden': [128], #128
         'adv_n_layers': [10],
@@ -26,7 +26,7 @@ def main(taskid):
         'pre_lr': [1e-3],
         'pre_adv_lr': [5e-5],
         'MC': list(range(20)),
-        'num_workers': [1] #4
+        'num_workers': [4] #4
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]

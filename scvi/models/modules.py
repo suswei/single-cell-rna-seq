@@ -316,42 +316,6 @@ def Nearest_Neighbor_Estimate(discrete, continuous, k:int = 3):
     constant = torch.digamma(torch.tensor([continuous.size(0)]).type(torch.FloatTensor)) + torch.digamma(torch.tensor([k]).type(torch.FloatTensor))
     NN_estimator = constant - torch.mean(torch.digamma(number_same_category.type(torch.FloatTensor))) -  torch.mean(torch.digamma(number_samecategory_d.type(torch.FloatTensor)))
     return NN_estimator.item()
-'''
-#code is referred to https://github.com/ZongxianLee/MMD_Loss.Pytorch/blob/master/mmd_loss.py
-import torch.nn as nn
-class MMD_loss(nn.Module):
-    def __init__(self, kernel_mul = 2.0, kernel_num = 5):
-        super(MMD_loss, self).__init__()
-        self.kernel_num = kernel_num
-        self.kernel_mul = kernel_mul
-        self.fix_sigma = None
-        return
-    def guassian_kernel(self, source, target):
-        n_samples = int(source.size()[0])+int(target.size()[0])
-        total = torch.cat([source, target], dim=0)
-
-        total0 = total.unsqueeze(0).expand(int(total.size(0)), int(total.size(0)), int(total.size(1)))
-        total1 = total.unsqueeze(1).expand(int(total.size(0)), int(total.size(0)), int(total.size(1)))
-        L2_distance = ((total0-total1)**2).sum(2)
-        if self.fix_sigma:
-            bandwidth = self.fix_sigma
-        else:
-            bandwidth = torch.median(L2_distance.data)
-        bandwidth /= self.kernel_mul ** (self.kernel_num // 2)
-        bandwidth_list = [bandwidth * (self.kernel_mul**i) for i in range(self.kernel_num)]
-        kernel_val = [torch.exp(-L2_distance / bandwidth_temp) for bandwidth_temp in bandwidth_list]
-        return sum(kernel_val)
-
-    def forward(self, source, target):
-        batch_size = int(source.size()[0])
-        kernels = self.guassian_kernel(source, target)
-        XX = kernels[:batch_size, :batch_size]
-        YY = kernels[batch_size:, batch_size:]
-        XY = kernels[:batch_size, batch_size:]
-        YX = kernels[batch_size:, :batch_size]
-        loss = torch.sqrt(torch.mean(XX) + torch.mean(YY) - torch.mean(XY) - torch.mean(YX))
-        return loss
-'''
 
 import torch.nn as nn
 import numpy as np
@@ -389,41 +353,7 @@ class MMD_loss(nn.Module):
             x1x2 += self.K(x1, x2, gamma=np.sqrt(d1) * bandwidth) / len(bandwidths)
 
         return torch.sqrt(torch.mean(x1x1) - 2 * torch.mean(x1x2) + torch.mean(x2x2))
-'''
-import torch.nn as nn
-import numpy as np
-from scipy.special import gamma
 
-class MMD_loss(nn.Module):
-    def __init__(self):
-        super(MMD_loss, self).__init__()
-        return
-    def bandwidth(self, d):
-        """
-        in the case of Gaussian random variables and the use of a RBF kernel,
-        this can be used to select the bandwidth according to the median heuristic
-        """
-        gz = 2 * gamma(0.5 * (d + 1)) / gamma(0.5 * d)
-        return 1. / (2. * gz ** 2)
-
-    def K(self,x1, x2, gamma=1.):
-        x1_expand = x1.unsqueeze(0).expand(int(x2.size(0)), int(x1.size(0)), int(x1.size(1)))
-        x2_expand = x2.unsqueeze(1).expand(int(x2.size(0)), int(x1.size(0)), int(x2.size(1)))
-        dist_table = x1_expand - x2_expand
-
-        return torch.transpose(torch.exp(-gamma * ((dist_table ** 2).sum(2))),0,1)
-
-    def forward(self, x1, x2):
-
-        d1 = x1.size()[1]
-        d2 = x2.size()[1]
-
-        x1x1 = self.K(x1, x1, gamma=self.bandwidth(d1))
-        x2x2 = self.K(x2, x2, gamma=self.bandwidth(d2))
-        x1x2 = self.K(x1, x2, gamma=self.bandwidth(d1)) #in our case d1=d2
-
-        return torch.sqrt(torch.mean(x1x1) - 2 * torch.mean(x1x2) + torch.mean(x2x2))
-'''
 def EmpiricalMI_From_Aggregated_Posterior(qz_m, qz_v, batch_index, batch_ratio, nsamples):
     # nsamples_z: the number of z taken from the aggregated posterior distribution of z
     # qz_v is the variance or covariance matrix for z
