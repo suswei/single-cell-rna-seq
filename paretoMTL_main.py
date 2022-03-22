@@ -555,107 +555,107 @@ def main( ):
             trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels',save_name=args.save_path + '/tsne_batch_label_train')
         obj1_train, obj1_test = obj1_train_test_eval(trainer_vae)
         print(obj1_train, obj1_test)
-
-    elif args.ideal_nadir== True:
-        minibatch_loss_list = trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, taskid=args.taskid, weight=args.weight,
-            ideal_nadir=args.ideal_nadir, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs, adv_epochs=args.adv_epochs)
-
-        if args.weight == 0:
-            print('obj2_min: {}, obj2_max: {}'.format(min(minibatch_loss_list), max(minibatch_loss_list)))
-            trainer_vae = decoder_training(trainer_vae, args)
-        elif args.weight == 1:
-            print('obj1_min: {}, obj1_max: {}'.format(min(minibatch_loss_list), max(minibatch_loss_list)))
-
-        method='ideal_nadir_{}'.format(args.adv_estimator)
-        if args.adv_estimator in ['MMD', 'stdMMD']:
-            method = 'ideal_nadir_MMD'
     else:
-        if args.regularize == True:
-            trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
-            regularize=args.regularize, weight=args.weight, epochs = args.epochs, adv_epochs = args.adv_epochs,
-            obj1_max=args.obj1_max, obj1_min = args.obj1_min, obj2_max = args.obj2_max, obj2_min = args.obj2_min,
-            taskid=args.taskid)
+        if args.ideal_nadir== True:
+            minibatch_loss_list = trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, taskid=args.taskid, weight=args.weight,
+                ideal_nadir=args.ideal_nadir, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs, adv_epochs=args.adv_epochs)
 
-            method = 'regularize{}'.format(args.adv_estimator)
-            if args.adv_estimator in ['MMD','stdMMD']:
-                method = 'regularizeMMD'
+            if args.weight == 0:
+                print('obj2_min: {}, obj2_max: {}'.format(min(minibatch_loss_list), max(minibatch_loss_list)))
+                trainer_vae = decoder_training(trainer_vae, args)
+            elif args.weight == 1:
+                print('obj1_min: {}, obj1_max: {}'.format(min(minibatch_loss_list), max(minibatch_loss_list)))
 
-        elif args.paretoMTL == True:
-            trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, paretoMTL=args.paretoMTL,
-            obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
-            adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_type=args.pref_type, pref_idx = args.pref_idx, taskid=args.taskid)
+            method='ideal_nadir_{}'.format(args.adv_estimator)
+            if args.adv_estimator in ['MMD', 'stdMMD']:
+                method = 'ideal_nadir_MMD'
+        else:
+            if args.regularize == True:
+                trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
+                regularize=args.regularize, weight=args.weight, epochs = args.epochs, adv_epochs = args.adv_epochs,
+                obj1_max=args.obj1_max, obj1_min = args.obj1_min, obj2_max = args.obj2_max, obj2_min = args.obj2_min,
+                taskid=args.taskid)
 
-            method = 'pareto{}'.format(args.adv_estimator)
-            if args.adv_estimator in ['MMD','stdMMD']:
-                method = 'paretoMMD'
+                method = 'regularize{}'.format(args.adv_estimator)
+                if args.adv_estimator in ['MMD','stdMMD']:
+                    method = 'regularizeMMD'
 
-    args.save_path = './result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)
-    if not os.path.exists('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)):
-        os.makedirs('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,method, args.taskid))
+            elif args.paretoMTL == True:
+                trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, paretoMTL=args.paretoMTL,
+                obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
+                adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_type=args.pref_type, pref_idx = args.pref_idx, taskid=args.taskid)
 
-    if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
-        torch.save(trainer_vae.model.module.state_dict(), args.save_path + '/vae.pkl')
-        if args.adv_estimator == 'MINE':
-            torch.save(trainer_vae.adv_model.module.state_dict(), args.save_path + '/MINE.pkl')
+                method = 'pareto{}'.format(args.adv_estimator)
+                if args.adv_estimator in ['MMD','stdMMD']:
+                    method = 'paretoMMD'
 
-        trainer_vae = construct_trainer_vae(gene_dataset, args)
-        trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location='cpu'))
-        os.remove(args.save_path + '/vae.pkl')
-        if args.adv_estimator == 'MINE':
-            trainer_vae.adv_model.load_state_dict(torch.load(args.save_path + '/MINE.pkl', map_location='cpu'))
-            os.remove(args.save_path + '/MINE.pkl')
+        args.save_path = './result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)
+        if not os.path.exists('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)):
+            os.makedirs('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,method, args.taskid))
 
-    if torch.cuda.is_available():
-        trainer_vae.model.to(trainer_vae.device)
-    params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
-    trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
+        if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
+            torch.save(trainer_vae.model.module.state_dict(), args.save_path + '/vae.pkl')
+            if args.adv_estimator == 'MINE':
+                torch.save(trainer_vae.adv_model.module.state_dict(), args.save_path + '/MINE.pkl')
 
-    trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
-    trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
+            trainer_vae = construct_trainer_vae(gene_dataset, args)
+            trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location='cpu'))
+            os.remove(args.save_path + '/vae.pkl')
+            if args.adv_estimator == 'MINE':
+                trainer_vae.adv_model.load_state_dict(torch.load(args.save_path + '/MINE.pkl', map_location='cpu'))
+                os.remove(args.save_path + '/MINE.pkl')
 
-    #obj1 for the whole training and testing set
-    obj1_train, obj1_test = obj1_train_test_eval(trainer_vae)
+        if torch.cuda.is_available():
+            trainer_vae.model.to(trainer_vae.device)
+        params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
+        trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
 
-    # obj2 for the whole training and testing set
-    if trainer_vae.adv_estimator == 'MINE':
-        obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
-    elif trainer_vae.adv_estimator == 'MMD':
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
-    elif trainer_vae.adv_estimator == 'stdMMD':
-        obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD', args)
+        trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
+        trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
 
-    NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
+        #obj1 for the whole training and testing set
+        obj1_train, obj1_test = obj1_train_test_eval(trainer_vae)
 
-    asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
-    be_train = trainer_vae.train_set.entropy_batch_mixing()
+        # obj2 for the whole training and testing set
+        if trainer_vae.adv_estimator == 'MINE':
+            obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
+        elif trainer_vae.adv_estimator == 'MMD':
+            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
+        elif trainer_vae.adv_estimator == 'stdMMD':
+            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD', args)
 
-    asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
-    be_test = trainer_vae.test_set.entropy_batch_mixing()
+        NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
 
-    results_dict = {'obj1_train': [obj1_train],
-                    'obj2_train': [obj2_train],
-                    'NN_train': [NN_train],
-                    'obj1_test': [obj1_test],
-                    'obj2_test': [obj2_test],
-                    'NN_test': [NN_test],
-                    'asw_train': [asw_train],
-                    'nmi_train': [nmi_train],
-                    'ari_train': [ari_train],
-                    'uca_train': [uca_train],
-                    'be_train': [be_train],
-                    'asw_test': [asw_test],
-                    'nmi_test': [nmi_test],
-                    'ari_test': [ari_test],
-                    'uca_test': [uca_test],
-                    'be_test': [be_test]}
+        asw_train, nmi_train, ari_train, uca_train = trainer_vae.train_set.clustering_scores()
+        be_train = trainer_vae.train_set.entropy_batch_mixing()
 
-    args_dict = vars(args)
-    with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
-        pickle.dump(args_dict, f)
+        asw_test, nmi_test, ari_test, uca_test = trainer_vae.test_set.clustering_scores()
+        be_test = trainer_vae.test_set.entropy_batch_mixing()
 
-    with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
-        pickle.dump(results_dict, f)
-    print(results_dict)
+        results_dict = {'obj1_train': [obj1_train],
+                        'obj2_train': [obj2_train],
+                        'NN_train': [NN_train],
+                        'obj1_test': [obj1_test],
+                        'obj2_test': [obj2_test],
+                        'NN_test': [NN_test],
+                        'asw_train': [asw_train],
+                        'nmi_train': [nmi_train],
+                        'ari_train': [ari_train],
+                        'uca_train': [uca_train],
+                        'be_train': [be_train],
+                        'asw_test': [asw_test],
+                        'nmi_test': [nmi_test],
+                        'ari_test': [ari_test],
+                        'uca_test': [uca_test],
+                        'be_test': [be_test]}
+
+        args_dict = vars(args)
+        with open('{}/config.pkl'.format(args.save_path), 'wb') as f:
+            pickle.dump(args_dict, f)
+
+        with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
+            pickle.dump(results_dict, f)
+        print(results_dict)
 
 # Run the actual program
 if __name__ == "__main__":

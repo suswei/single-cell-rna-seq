@@ -259,7 +259,7 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
                 else:
                     y_jitter = points[:, 1].tolist()
                 fig.add_trace(go.Scatter(x=points[:, 0].tolist(), y=y_jitter, mode='markers',
-                                         marker_size=[k * 1 + 10 for k in index_list], marker_symbol=marker_symbol,
+                                         marker_size=[k * 3 + 10 for k in index_list], marker_symbol=marker_symbol,
                                          name='{},{}'.format(method, train_test), marker_color=marker_color,
                                          opacity=0.7, showlegend=True))
 
@@ -308,7 +308,7 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
         xaxes_title = r'$\large \text{Loss }U_{n,std}(\phi, \theta)$'
     else:
         xaxes_title = 'negative {}'.format(xaxis)
-    xvalue_adjust = 0.005
+    xvalue_adjust = 0.01
 
     if yaxis == 'obj2':
         yaxes_title = r'$\large \text{Batch effect }V_{n,std}(\phi)$'
@@ -316,7 +316,7 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
         yaxes_title = r'$\large \text{Batch effect }NN_n(\phi)$'
     else:
         yaxes_title = 'negative BE'
-    yvalue_adjust = 0.025
+    yvalue_adjust = 0.05
 
     fig.update_xaxes(tickfont=dict(size=20), title_text=xaxes_title,
                      title_font=dict(size=25, family='Times New Roman', color='black'),
