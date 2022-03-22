@@ -438,7 +438,7 @@ class Trainer:
                     loss.backward()
                     self.optimizer.step()
                 if pre_epoch % 10 == 0:
-                    train_eval, test_eval = self.obj1_obj2_eval(type='obj1')
+                    train_eval = self.obj1_obj2_eval(type='obj1')
                     obj1_train_list.append(train_eval)
 
             self.diagnosis_plot(obj1_train_list[1:], path, 'obj1')
@@ -462,7 +462,7 @@ class Trainer:
                     self.adv_model.train()
                     self.adv_model_train(True)
                     if pre_adv_epoch % 10 == 0:
-                        train_eval, test_eval = self.obj1_obj2_eval(type='obj2')
+                        train_eval = self.obj1_obj2_eval(type='obj2')
                         obj2_train_list.append(train_eval)
 
                 self.diagnosis_plot(obj2_train_list[1:], path, 'obj2')
