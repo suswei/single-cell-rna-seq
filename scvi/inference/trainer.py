@@ -257,8 +257,10 @@ class Trainer:
 
             minibatch_train_eval = []
             for tensors_list in self.train_set:
+                print('tensors_list: {}'.format(tensors_list))
                 if type == 'obj1':
                     minibatch, _, _ = self.two_loss(tensors_list)
+                    print('evaluate obj1:{}'.format(minibatch))
                 elif type == 'obj2':
                     _, _, minibatch = self.two_loss(tensors_list)
                 minibatch_train_eval.append(minibatch.data)
@@ -431,6 +433,7 @@ class Trainer:
                 self.model.train()
                 for tensors_list in self.data_loaders_loop():
                     loss, _, _ = self.two_loss(*tensors_list)
+                    print('training loss: {}'.format(loss))
                     self.optimizer.zero_grad()
                     loss.backward()
                     self.optimizer.step()

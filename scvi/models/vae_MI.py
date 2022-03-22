@@ -158,20 +158,14 @@ class VAE_MI(nn.Module):
 
     def inference(self, x, batch_index=None, y=None, n_samples=1):
         x_ = x
-        if torch.cuda.device_count() > 1:
-           if self.module.log_variational:
-               x_ = torch.log(1 + x_)
-        else:
-            if self.log_variational:
-                x_ = torch.log(1 + x_)
+
+        if self.log_variational:
+            x_ = torch.log(1 + x_)
 
         # Sampling
-        if torch.cuda.device_count() > 1:
-            qz_m, qz_v, z = self.module.z_encoder(x_, y)
-            ql_m, ql_v, library = self.module.l_encoder(x_)
-        else:
-            qz_m, qz_v, z = self.z_encoder(x_, y)
-            ql_m, ql_v, library = self.l_encoder(x_)
+
+        qz_m, qz_v, z = self.z_encoder(x_, y)
+        ql_m, ql_v, library = self.l_encoder(x_)
 
         if n_samples > 1:
             qz_m = qz_m.unsqueeze(0).expand((n_samples, qz_m.size(0), qz_m.size(1)))
@@ -181,10 +175,8 @@ class VAE_MI(nn.Module):
             ql_v = ql_v.unsqueeze(0).expand((n_samples, ql_v.size(0), ql_v.size(1)))
             library = Normal(ql_m, ql_v.sqrt()).sample()
 
-        if torch.cuda.device_count() > 1:
-            px_scale, px_r, px_rate, px_dropout = self.module.decoder(self.dispersion, z, library, batch_index, y)
-        else:
-            px_scale, px_r, px_rate, px_dropout = self.decoder(self.dispersion, z, library, batch_index, y)
+
+        px_scale, px_r, px_rate, px_dropout = self.decoder(self.dispersion, z, library, batch_index, y)
 
         if self.dispersion == "gene-label":
             px_r = F.linear(one_hot(y, self.n_labels), self.px_r)  # px_r gets transposed - last dimension is nb genes

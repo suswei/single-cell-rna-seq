@@ -254,13 +254,17 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
             points = points_dict[key]
             index_list = index_dict[key]
             if points.shape[0] > 0:
-                fig.add_trace(go.Scatter(x=points[:, 0].tolist(), y=points[:, 1].tolist(), mode='markers',
+                if train_test == 'test':
+                    y_jitter = [k+0.01 for k in points[:, 1].tolist()]
+                else:
+                    y_jitter = points[:, 1].tolist()
+                fig.add_trace(go.Scatter(x=points[:, 0].tolist(), y=y_jitter, mode='markers',
                                          marker_size=[k * 1 + 10 for k in index_list], marker_symbol=marker_symbol,
                                          name='{},{}'.format(method, train_test), marker_color=marker_color,
                                          opacity=0.7, showlegend=True))
 
             obj1_all += list(points[:, 0])
-            obj2_all += list(points[:, 1])
+            obj2_all += y_jitter
 
     if ParetoCandidates_ParetoPoints == 'ParetoCandidates':
         title_text = 'all Pareto candidates'
