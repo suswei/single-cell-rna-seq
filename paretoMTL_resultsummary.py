@@ -259,7 +259,7 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
                 else:
                     y_jitter = points[:, 1].tolist()
                 fig.add_trace(go.Scatter(x=points[:, 0].tolist(), y=y_jitter, mode='markers',
-                                         marker_size=[k * 3 + 10 for k in index_list], marker_symbol=marker_symbol,
+                                         marker_size=[k * 1 + 10 for k in index_list], marker_symbol=marker_symbol,
                                          name='{},{}'.format(method, train_test), marker_color=marker_color,
                                          opacity=0.7, showlegend=True))
 
@@ -270,7 +270,7 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
         title_text = 'all Pareto candidates'
         save_path_text = 'candidates'
     elif ParetoCandidates_ParetoPoints == 'ParetoPoints':
-        title_text = 'non dominated points'
+        title_text = 'non-dominated points'
         save_path_text = 'paretopoints'
 
     fig.update_layout(
@@ -294,7 +294,7 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
             'xanchor': 'center',
             'yanchor': 'top'},
         legend=dict(
-            x=0.5,
+            x=0.56,
             y=0.98,
             font=dict(
                 family='Times New Roman',

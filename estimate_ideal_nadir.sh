@@ -6,11 +6,14 @@
 #SBATCH -p physical
 
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem 5000
+#SBATCH --cpus-per-task=8
+
+#SBATCH --partition=gpgpu
+#SBATCH --qos=gpgpuresplat
+#SBATCH --gres=gpu:p100:4
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=2-20:0:00
+#SBATCH --time=0-20:0:00
 
 # Batch arrays
 #SBATCH --array=0-19
@@ -38,5 +41,6 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
+module load fosscuda/2019b
 python3 estimate_ideal_nadir.py ${SLURM_ARRAY_TASK_ID}
 
