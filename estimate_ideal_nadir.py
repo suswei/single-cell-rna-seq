@@ -17,13 +17,13 @@ def main(taskid):
         'n_hidden': [128],
         'n_latent': [10],
         'batch_size': [512], #4 GPUs
-        'adv_estimator': ['MINE'], #stdMMD 'MMD_bandwidths': ['1,2,5,8,10'],
+        'adv_estimator': ['MINE'], #stdMMD 'MMD_bandwidths': ['1,2,5,8,10'], temp['MMD_bandwidths'],
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'lr': [1e-3], #4e-4
+        'lr': [1e-3],
         'adv_lr': [5e-5],
-        'epochs': [150], #250
+        'epochs': [15], #250
         'adv_epochs': [1],
         'MC': list(range(10)),
         'weight': [0,1],
@@ -40,7 +40,7 @@ def main(taskid):
               "--adv_estimator %s --MMD_bandwidths %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
               "--lr %s --adv_lr %s --epochs %s --adv_epochs %s --MC %s --weight %s --num_workers %s"
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
-                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['MMD_bandwidths'],
+                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'],
                  temp['adv_n_hidden'], temp['adv_n_layers'], temp['adv_activation_fun'], temp['lr'], temp['adv_lr'], temp['epochs'],
                  temp['adv_epochs'], temp['MC'], temp['weight'], temp['num_workers'])
               )
