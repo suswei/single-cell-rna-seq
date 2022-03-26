@@ -23,7 +23,7 @@ def main(taskid):
         'adv_activation_fun': ['ELU'],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'epochs': [15], #250
+        'epochs': [150], #250
         'adv_epochs': [1],
         'MC': list(range(10)),
         'weight': [0,1],
