@@ -47,10 +47,16 @@ def decoder_training(trainer_vae, args):
         trainer_vae.model = torch.nn.DataParallel(trainer_vae.model)
     trainer_vae.model.to(trainer_vae.device)
 
-    for q in trainer_vae.model.z_encoder.parameters():
-        q.requires_grad = False
-    for q in trainer_vae.model.l_encoder.parameters():
-        q.requires_grad = False
+    if torch.cuda.device_count() > 1:
+        for q in trainer_vae.model.module.z_encoder.parameters():
+            q.requires_grad = False
+        for q in trainer_vae.model.module.l_encoder.parameters():
+            q.requires_grad = False
+    else:
+        for q in trainer_vae.model.z_encoder.parameters():
+            q.requires_grad = False
+        for q in trainer_vae.model.l_encoder.parameters():
+            q.requires_grad = False
 
     params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
     trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
