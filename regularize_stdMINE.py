@@ -10,29 +10,29 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # conf_estimator means estimator for confounding effect, it is 'MMD' for cross validation
     hyperparameter_config = {
-        'dataset_name': ['tabula_muris'],
+        'dataset_name': ['macaque_retina'],#
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10],
-        'batch_size': [128],
+        'batch_size': [512], #4 GPUs
         'adv_estimator': ['MINE'],
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'epochs': [150],
+        'epochs': [150],#
         'adv_epochs': [1],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'obj1_max': [19382],  #
-        'obj1_min': [11526],  #
-        'obj2_max': [0.595],  #
-        'obj2_min': [-0.06],
+        'obj1_max': [3341],  #
+        'obj1_min': [3025],  #
+        'obj2_max': [0.168],  #
+        'obj2_min': [-0.029],  #
         'MC': list(range(20)),
         'weights_total': [10],
         'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(10)), [1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11])],
-        'num_workers': [1]
+        'num_workers': [4] #
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]

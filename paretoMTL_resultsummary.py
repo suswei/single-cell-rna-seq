@@ -308,7 +308,7 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
         xaxes_title = r'$\large \text{Loss }U_{n,std}(\phi, \theta)$'
     else:
         xaxes_title = 'negative {}'.format(xaxis)
-    xvalue_adjust = 0.01
+    xvalue_adjust = 0.02
 
     if yaxis == 'obj2':
         yaxes_title = r'$\large \text{Batch effect }V_{n,std}(\phi)$'
