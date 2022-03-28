@@ -16,12 +16,12 @@ def main(taskid):
         'n_layers_decoder': [2], #2
         'n_hidden': [128], #128
         'n_latent': [10], #10,50
-        'batch_size': [512], #4 GPUs
+        'batch_size': [256], #2 GPUs
         'adv_estimator': ['MINE'], #stdMMD
         'adv_n_hidden': [128], #128
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'pre_epochs': [200], #150
+        'pre_epochs': [400], #150
         'pre_adv_epochs': [400],
         'pre_lr': [1e-3],
         'pre_adv_lr': [5e-5],

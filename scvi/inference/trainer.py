@@ -255,7 +255,7 @@ class Trainer:
                 self.cal_loss = False
                 self.cal_adv_loss = True
 
-            minibatch_train_eval = []
+            minibatch_train_eval, minibatch_test_eval = [], []
             for tensors_list in self.train_set:
                 if type == 'obj1':
                     minibatch, _, _ = self.two_loss(tensors_list)
@@ -263,17 +263,26 @@ class Trainer:
                     _, _, minibatch = self.two_loss(tensors_list)
                 minibatch_train_eval.append(minibatch.data)
 
+            for tensors_list in self.test_set:
+                if type == 'obj1':
+                    minibatch, _, _ = self.two_loss(tensors_list)
+                elif type == 'obj2':
+                    _, _, minibatch = self.two_loss(tensors_list)
+                minibatch_test_eval.append(minibatch.data)
+
         train_eval = sum(minibatch_train_eval) / len(minibatch_train_eval)
+        test_eval = sum(minibatch_test_eval) / len(minibatch_test_eval)
 
-        return train_eval
+        return train_eval, test_eval
 
-    def diagnosis_plot(self, list1, path, png_name):
+    def diagnosis_plot(self, list1, list2, path, png_name):
         plt.figure()
         plt.plot(np.arange(0, len(list1), 1), list1, label='train')
+        plt.plot(np.arange(0, len(list2), 1), list2, label='test')
         plt.legend()
         plt.xticks(list(range(0, len(list1), 1)), [k*10 for k in list(range(0, len(list1), 1))])
         plt.xlabel("epochs")
-        plt.title('train loss, adv_estimator: {}'.format(self.adv_estimator), fontsize=10)
+        plt.title('train loss, train vs test, adv_estimator: {}'.format(self.adv_estimator), fontsize=10)
 
         if not os.path.exists(path):
             os.makedirs(path)
@@ -325,7 +334,7 @@ class Trainer:
                        weight: float=0, obj1_max: float=20000, obj1_min: float=12000,
                        obj2_max: float=0.6, obj2_min: float=0, path: str='./', taskid: int=0):
 
-        loss_total_train_list, minibatch_loss_list = [], []
+        loss_total_train_list, loss_total_test_list, minibatch_loss_list = [], [], []
 
         for self.epoch in range(epochs):
             self.model.train()
@@ -382,17 +391,21 @@ class Trainer:
             #evaluate
             if self.epoch % 10 == 0:
                 if ideal_nadir == True and weight == 0:
-                    obj2_train_eval = self.obj1_obj2_eval(type='obj2')
+                    obj2_train_eval, obj2_test_eval = self.obj1_obj2_eval(type='obj2')
                     loss_total_train = obj2_train_eval
+                    loss_total_test = obj2_test_eval
                 elif ideal_nadir == True and weight == 1:
-                    obj1_train_eval= self.obj1_obj2_eval(type='obj1')
+                    obj1_train_eval, obj1_test_eval= self.obj1_obj2_eval(type='obj1')
                     loss_total_train = obj1_train_eval
+                    loss_total_test = obj1_test_eval
                 else:
-                    obj1_train_eval = self.obj1_obj2_eval(type='obj1')
-                    obj2_train_eval = self.obj1_obj2_eval(type='obj2')
+                    obj1_train_eval, obj1_test_eval = self.obj1_obj2_eval(type='obj1')
+                    obj2_train_eval, obj2_test_eval = self.obj1_obj2_eval(type='obj2')
                     loss_total_train = weight*(obj1_train_eval - obj1_min)/(obj1_max - obj1_min) + (1- weight)*(obj2_train_eval - obj2_min)/(obj2_max - obj2_min)
+                    loss_total_test = weight * (obj1_test_eval - obj1_min) / (obj1_max - obj1_min) + (1 - weight) * (obj2_test_eval - obj2_min) / (obj2_max - obj2_min)
 
                 loss_total_train_list.append(loss_total_train)
+                loss_total_test_list.append(loss_total_test)
 
         if ideal_nadir:
             string = 'ideal_nadir_{}'.format(self.adv_estimator)
@@ -403,7 +416,7 @@ class Trainer:
         else:
             string = 'regularizeMMD'
         path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(string, taskid)
-        self.diagnosis_plot(loss_total_train_list, path, 'train_totalloss')
+        self.diagnosis_plot(loss_total_train_list, loss_total_test_list, path, 'train_test_totalloss')
 
         if ideal_nadir:
             return minibatch_loss_list
@@ -415,7 +428,7 @@ class Trainer:
 
         if pre_train == True:
 
-            obj1_train_list, obj2_train_list = [], []
+            obj1_train_list, obj2_train_list, obj1_test_list, obj2_test_list = [], [], [], []
 
             if torch.cuda.device_count() > 1:
                 self.model = torch.nn.DataParallel(self.model)
@@ -436,10 +449,11 @@ class Trainer:
                     loss.backward()
                     self.optimizer.step()
                 if pre_epoch % 10 == 0:
-                    train_eval = self.obj1_obj2_eval(type='obj1')
+                    train_eval, test_eval = self.obj1_obj2_eval(type='obj1')
                     obj1_train_list.append(train_eval)
+                    obj1_test_list.append(test_eval)
 
-            self.diagnosis_plot(obj1_train_list[1:], path, 'obj1')
+            self.diagnosis_plot(obj1_train_list[1:], obj1_test_list[1:], path, 'obj1')
 
             if torch.cuda.device_count() > 1:
                 torch.save(self.model.module.state_dict(), path + '/vae.pkl')
@@ -460,10 +474,11 @@ class Trainer:
                     self.adv_model.train()
                     self.adv_model_train(True)
                     if pre_adv_epoch % 10 == 0:
-                        train_eval = self.obj1_obj2_eval(type='obj2')
+                        train_eval, test_eval = self.obj1_obj2_eval(type='obj2')
                         obj2_train_list.append(train_eval)
+                        obj2_test_list.append(test_eval)
 
-                self.diagnosis_plot(obj2_train_list[1:], path, 'obj2')
+                self.diagnosis_plot(obj2_train_list[1:], obj2_test_list[1:], path, 'obj2')
 
                 if torch.cuda.device_count() > 1:
                     torch.save(self.adv_model.module.state_dict(), path + '/MINE.pkl')
@@ -494,7 +509,7 @@ class Trainer:
 
         ref_vec = torch.FloatTensor(circle_points([1], [npref], pref_type)[0]).to(self.device)
 
-        loss_total_train_list = []
+        loss_total_train_list, loss_total_test_list = [],[]
         # run until the initial solution is found when flag==True
         # usually can be found with a few steps
 
@@ -608,16 +623,19 @@ class Trainer:
 
             # diagnosis
             if self.epoch % 10 == 0:
-                obj1_train_eval = self.obj1_obj2_eval(type='obj1')
-                obj2_train_eval = self.obj1_obj2_eval(type='obj2')
+                obj1_train_eval, obj1_test_eval = self.obj1_obj2_eval(type='obj1')
+                obj2_train_eval, obj2_test_eval = self.obj1_obj2_eval(type='obj2')
 
                 for i in range(n_tasks):
                     if i == 0:
                         loss_total_train = weight_vec[i] * (obj1_train_eval - obj1_min)/(obj1_max - obj1_min)
+                        loss_total_test = weight_vec[i] * (obj1_test_eval - obj1_min) / (obj1_max - obj1_min)
                     else:
                         loss_total_train = loss_total_train + weight_vec[i] * (obj2_train_eval - obj2_min)/(obj2_max - obj2_min)
+                        loss_total_test = loss_total_test + weight_vec[i] * (obj2_test_eval - obj2_min) / (obj2_max - obj2_min)
 
                 loss_total_train_list.append(loss_total_train)
+                loss_total_test_list.append(loss_total_test)
 
         if self.adv_estimator == 'MINE':
             string = 'paretoMINE'
@@ -625,7 +643,7 @@ class Trainer:
             string = 'paretoMMD'
 
         path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(string, taskid)
-        self.diagnosis_plot(loss_total_train_list, path, 'train_totalloss')
+        self.diagnosis_plot(loss_total_train_list, loss_total_test_list, path, 'train_test_totalloss')
 
     def paretoMTL_param(self, n_tasks, obj1, obj2):
 

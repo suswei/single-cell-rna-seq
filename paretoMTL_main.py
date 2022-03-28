@@ -60,7 +60,7 @@ def decoder_training(trainer_vae, args):
     params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
     trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
 
-    obj1_train_list = []
+    obj1_train_list,obj1_test_list = [],[]
     trainer_vae.cal_loss = True
     trainer_vae.cal_adv_loss = False
     for epoch in range(args.epochs):
@@ -72,8 +72,9 @@ def decoder_training(trainer_vae, args):
             trainer_vae.optimizer.step()
 
         if epoch % 10 == 0:
-            obj1_train_eval = trainer_vae.obj1_obj2_eval(type='obj1')
+            obj1_train_eval,obj1_test_eval = trainer_vae.obj1_obj2_eval(type='obj1')
             obj1_train_list.append(obj1_train_eval)
+            obj1_test_list.append(obj1_test_eval)
 
     string = 'ideal_nadir_{}'.format(args.adv_estimator)
     if args.adv_estimator in ['MMD', 'stdMMD']:
@@ -82,7 +83,7 @@ def decoder_training(trainer_vae, args):
     if not os.path.exists('./result/{}/{}/{}'.format(args.dataset_name, args.confounder, string)):
         os.makedirs('./result/{}/{}/{}'.format(args.dataset_name, args.confounder,string))
 
-    trainer_vae.diagnosis_plot(obj1_train_list, args.path, 'obj1')
+    trainer_vae.diagnosis_plot(obj1_train_list, obj1_test_list, args.path, 'obj1')
 
     return trainer_vae
 
