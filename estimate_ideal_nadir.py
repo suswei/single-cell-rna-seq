@@ -16,14 +16,14 @@ def main(taskid):
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10],
-        'batch_size': [512], #4 GPUs
+        'batch_size': [256], #2 GPUs
         'adv_estimator': ['MINE'], #stdMMD 'MMD_bandwidths': ['1,2,5,8,10'], --MMD_bandwidths %s, temp['MMD_bandwidths'],
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'epochs': [250], #250
+        'epochs': [150], #250
         'adv_epochs': [1],
         'MC': list(range(10)),
         'weight': [0,1],
