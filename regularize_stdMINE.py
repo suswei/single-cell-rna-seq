@@ -16,7 +16,7 @@ def main(taskid):
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10],
-        'batch_size': [512], #4 GPUs
+        'batch_size': [256], #2 GPUs
         'adv_estimator': ['MINE'],
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
@@ -25,10 +25,10 @@ def main(taskid):
         'adv_epochs': [1],
         'lr': [1e-3],
         'adv_lr': [5e-5],
-        'obj1_max': [3341],  #
-        'obj1_min': [3025],  #
-        'obj2_max': [0.168],  #
-        'obj2_min': [-0.029],  #
+        'obj1_max': [3328],  #
+        'obj1_min': [3001],  #
+        'obj2_max': [0.152],  #
+        'obj2_min': [-0.023],  #
         'MC': list(range(20)),
         'weights_total': [10],
         'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(10)), [1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11])],
