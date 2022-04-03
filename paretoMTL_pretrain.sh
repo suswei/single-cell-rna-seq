@@ -6,17 +6,15 @@
 #SBATCH -p physical
 
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
+#SBATCH --mem 5000
 
-#SBATCH --partition=gpgpu
-#SBATCH --qos=gpgpuresplat
-#SBATCH --gres=gpu:p100:2
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=0-10:00:00
+#SBATCH --time=2-10:00:00
 
 # Batch arrays
-#SBATCH --array=0-19
+#SBATCH --array=0
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
@@ -41,7 +39,6 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-module load fosscuda/2019b
 python3 paretoMTL_pretrain.py ${SLURM_ARRAY_TASK_ID}
 
 

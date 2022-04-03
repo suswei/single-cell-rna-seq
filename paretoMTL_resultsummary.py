@@ -216,6 +216,7 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
                 ParetoCandidatesIndices_AllMethods.update({'{}_{}'.format(method, train_test): index_list})
             if ParetoCandidates_ParetoPoints == 'ParetoPoints':
                 ParetoPoints1, index_list_Pareto, hypervolume_value, percentage_value = pareto_front(inputPoints = inputPoints1, index_list = index_list, ReferencePoints = ReferencePoints)
+                print('MC:{}, method: {}, hypervolume: {}'.format(MC, method, hypervolume_value))
                 ParetoPoints_AllMethods.update({'{}_{}'.format(method, train_test): ParetoPoints1})
                 ParetoPointsIndices_AllMethods.update({'{}_{}'.format(method, train_test): index_list_Pareto})
                 hypervolume_AllMethods.update({'{}_{}'.format(method, train_test): [hypervolume_value]})
@@ -328,119 +329,6 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
 
     fig.write_image(save_path + '{}_{}_MC{}_{}.png'.format(xaxis, yaxis, MC, save_path_text))
 
-def compare_hypervolume_percent(methods_list, hypervolume_dict, percentage_dict, pareto_front_x, pareto_front_y, save_path):
-
-    for metric in ['hypervolume','percentage']:
-        if metric == 'hypervolume':
-            metric_dict = hypervolume_dict
-        else:
-            metric_dict = percentage_dict
-
-        fig = go.Figure()
-        for type in ['train', 'test']:
-            metric_mean_list, metric_std_list= [], []
-            for method in methods_list:
-                metric_oneMethod_oneType = [value[0] for key, value in metric_dict.items() if '{}_{}'.format(method,type) in key]
-
-                metric_mean_list += [statistics.mean(metric_oneMethod_oneType)]
-                metric_std_list += [statistics.stdev(metric_oneMethod_oneType)]
-
-            if type == 'train':
-                marker_color = 'rgba(255, 0, 0)'
-            elif type == 'test':
-                marker_color = 'rgba(0, 0, 255)'
-
-            fig.add_trace(go.Bar(x=methods_list,y=metric_mean_list,name='{}'.format(type),
-                                 error_y= dict(type='data', array=metric_std_list, visible=True),
-                                 marker_color=marker_color))
-
-        if pareto_front_x == 'obj1' and pareto_front_y == 'obj2':
-            title_text = r'$\Large \text{loss }U_{n,std} \text{ vs } \text{loss} V_{n,std}$'
-        elif pareto_front_x == 'obj1' and pareto_front_y == 'NN':
-            title_text = r'$\Large \text{loss }U_{n,std} \text{ vs } NN_n$'
-        elif pareto_front_x == 'obj1' and pareto_front_y == 'be':
-            title_text = r'$\Large \text{loss }U_{n,std} \text{ vs negative be}$'
-        elif pareto_front_x != 'obj1' and pareto_front_y == 'obj2':
-            title_text = r'$\Large \text{{negative {} vs loss }} V_{n,std}$'.format(pareto_front_x)
-        elif pareto_front_x != 'obj1' and pareto_front_y == 'NN':
-            title_text = r'$\Large \text{{negative {} vs NN_n}}$'.format(pareto_front_x)
-        elif pareto_front_x != 'obj1' and pareto_front_y == 'be':
-            title_text = r'$\Large \text{{negative {} vs negative be}}$'.format(pareto_front_x)
-
-        fig.update_layout(barmode='group',
-                          font_family="Times New Roman",
-                          title_font_family="Times New Roman",
-                          title={'text': title_text,
-                                 'y':0.85,
-                                 'x':0.5,
-                                 'xanchor': 'center',
-                                 'yanchor': 'top'},
-                          legend = dict(font = dict(family = "Times New Roman",
-                                                    size = 20)))
-        fig.update_xaxes(tickfont=dict(size=20, family='Times New Roman'))
-        fig.update_yaxes(tickfont=dict(size=20, family='Times New Roman'), title_text='{}'.format(metric),
-                         title_font=dict(size=20, family='Times New Roman', color='black'))
-
-        img_save_path = save_path
-        for method in methods_list:
-            img_save_path = img_save_path + '{}_'.format(method)
-        fig.write_image(img_save_path + '{}_{}_{}.png'.format(pareto_front_x, pareto_front_y, metric))
-
-def cell_type_composition(dataset_name, change_composition, save_path):
-    if dataset_name == 'tabula_muris':
-        dataset1 = TabulaMuris('facs', save_path=save_path)
-        dataset2 = TabulaMuris('droplet', save_path=save_path)
-        dataset1.subsample_genes(dataset1.nb_genes)
-        dataset2.subsample_genes(dataset2.nb_genes)
-        if change_composition == True:
-            dataset1_labels = dataset1.__dict__['labels']
-            dataset1_labels_df = pd.DataFrame.from_dict({'label': dataset1_labels[:, 0].tolist()})
-            dataset1_celltypes = dataset1.__dict__['cell_types']
-            dataset1_celltypes_df = pd.DataFrame.from_dict({'cell_type': dataset1_celltypes.tolist()})
-            dataset1_celltypes_df['label'] = pd.Series(np.array(list(range(dataset1_celltypes_df.shape[0]))),index=dataset1_celltypes_df.index)
-
-            delete_labels_celltypes = dataset1_celltypes_df[dataset1_celltypes_df.cell_type.isin(['granulocyte', 'nan', 'monocyte', 'hematopoietic precursor cell', 'granulocytopoietic cell'])]
-            dataset1.__dict__['_X'] = sparse.csr_matrix(dataset1.__dict__['_X'].toarray()[~dataset1_labels_df.label.isin(delete_labels_celltypes.loc[:, 'label'].values.tolist())])
-            for key in ['local_means', 'local_vars', 'batch_indices', 'labels']:
-                dataset1.__dict__[key] = dataset1.__dict__[key][~dataset1_labels_df.label.isin(delete_labels_celltypes.loc[:,'label'].values.tolist())]
-            dataset1.__dict__['n_labels'] = 18
-            dataset1.__dict__['cell_types'] = np.delete(dataset1.__dict__['cell_types'], delete_labels_celltypes.loc[:, 'label'].values.tolist())
-
-            dataset1_celltypes_new = dataset1.__dict__['cell_types']
-            dataset1_celltypes_df_new = pd.DataFrame.from_dict({'cell_type': dataset1_celltypes_new.tolist()})
-            dataset1_celltypes_df_new['label'] = pd.Series(np.array(list(range(dataset1_celltypes_df_new.shape[0]))),index=dataset1_celltypes_df_new.index)
-            label_change = dataset1_celltypes_df.merge(dataset1_celltypes_df_new, how='right', left_on='cell_type', right_on='cell_type').iloc[:, 1:]
-            label_change.columns = ['label','new_label']
-
-            dataset1_labels_new = dataset1.__dict__['labels']
-            dataset1_labels_df_new = pd.DataFrame.from_dict({'label': dataset1_labels_new[:, 0].tolist()})
-
-            dataset1.__dict__['labels'] = dataset1_labels_df_new.merge(label_change, how='left', left_on='label', right_on='label').loc[:,'new_label'].values.reshape(dataset1.__dict__['labels'].shape[0],1)
-
-    dataset1_labels = dataset1.__dict__['labels']
-    dataset2_labels = dataset2.__dict__['labels']
-    dataset1_celltypes = dataset1.__dict__['cell_types']
-    dataset2_celltypes = dataset2.__dict__['cell_types']
-
-    dataset1_labels_df = pd.DataFrame.from_dict({'label': dataset1_labels[:, 0].tolist()})
-    dataset1_celltypes_df = pd.DataFrame.from_dict({'cell_type': dataset1_celltypes.tolist()})
-    dataset2_labels_df = pd.DataFrame.from_dict({'label': dataset2_labels[:, 0].tolist()})
-    dataset2_celltypes_df = pd.DataFrame.from_dict({'cell_type': dataset2_celltypes.tolist()})
-
-    dataset1_celltypes_df['label'] = pd.Series(np.array(list(range(dataset1_celltypes_df.shape[0]))),index=dataset1_celltypes_df.index)
-    dataset2_celltypes_df['label'] = pd.Series(np.array(list(range(dataset2_celltypes_df.shape[0]))),index=dataset2_celltypes_df.index)
-
-    dataset1_labels_celltypes = dataset1_labels_df.merge(dataset1_celltypes_df, how='left', left_on='label',right_on='label')
-    dataset2_labels_celltypes = dataset2_labels_df.merge(dataset2_celltypes_df, how='left', left_on='label',right_on='label')
-
-    dataset1_percentage = (dataset1_labels_celltypes['cell_type'].value_counts(normalize=True) * 100).reset_index()
-    dataset2_percentage = (dataset2_labels_celltypes['cell_type'].value_counts(normalize=True) * 100).reset_index()
-    dataset1_percentage.columns = ['cell_type','percentage']
-    dataset2_percentage.columns = ['cell_type', 'percentage']
-
-    compare_percentage = dataset1_percentage.merge(dataset2_percentage, how='outer', left_on='cell_type', right_on='cell_type')
-    print(compare_percentage.fillna(0))
-
 def std_obj1_obj2(dataframe):
     dataframe['obj1_train_std']=dataframe.apply(lambda row: (row.obj1_train - row.obj1_min)/ (row.obj1_max - row.obj1_min), axis=1)
     dataframe['obj1_test_std'] = dataframe.apply(lambda row: (row.obj1_test - row.obj1_min) / (row.obj1_max - row.obj1_min), axis=1)
@@ -500,6 +388,8 @@ def load_result_IdealNadir(adv_estimator, MCs, dir_path, methods_list):
     }
     results_config_IdealNadir = load_result(new_dir_path, hyperparameter_config, method)
 
+    #results for two extreme points do not contain the max and min values of obj1 and obj2 for standardization
+    #read in such values for standardization
     min_max_method = [k for k in methods_list if adv_estimator in k][0]
     min_max_config_path = dir_path + '/{}/taskid0/config.pkl'.format(min_max_method)
     min_max_config = pickle.load(open(min_max_config_path, "rb"))
@@ -638,8 +528,8 @@ def main( ):
         if args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
             ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, hypervolume_AllMethods, percentage_AllMethods = CollectPoints_AllMethods(
                 dataframe_dict, MC, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.ParetoCandidates_ParetoPoints, ReferencePoints)
-            draw_scatter_plot(ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, args.methods_list, args.pareto_front_x, args.pareto_front_y,
-                              MC, dir_path, args.ParetoCandidates_ParetoPoints)
+            #draw_scatter_plot(ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, args.methods_list, args.pareto_front_x, args.pareto_front_y,
+            #                  MC, dir_path, args.ParetoCandidates_ParetoPoints)
 
             hypervolume_dataframe_oneMC = pd.DataFrame.from_dict(hypervolume_AllMethods)
             percentage_dataframe_oneMC = pd.DataFrame.from_dict(percentage_AllMethods)
@@ -654,11 +544,15 @@ def main( ):
     if args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
         hypervolume_dataframe_mean = hypervolume_dataframe.mean(axis=0).reset_index(name='mean')
         hypervolume_dataframe_std = hypervolume_dataframe.std(axis=0).reset_index(name='std')
-        hypervolume_mean_std = hypervolume_dataframe_mean.merge(hypervolume_dataframe_std, how='inner', on='index')
+        hypervolume_mean_std = hypervolume_dataframe_mean.merge(hypervolume_dataframe_std, how='inner', on='index').round(2)
 
         percentage_dataframe_mean = percentage_dataframe.mean(axis=0).reset_index(name='mean')
         percentage_dataframe_std = percentage_dataframe.std(axis=0).reset_index(name='std')
-        percentage_mean_std = percentage_dataframe_mean.merge(percentage_dataframe_std, how='inner', on='index')
+        percentage_mean_std = percentage_dataframe_mean.merge(percentage_dataframe_std, how='inner', on='index').round(2)
+
+        print('{}'.format(args.dataset))
+        print('{} versus {}'.format(args.pareto_front_x, args.pareto_front_y))
+        print(hypervolume_mean_std)
 
 # Run the actual program
 if __name__ == "__main__":

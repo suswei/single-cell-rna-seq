@@ -276,9 +276,6 @@ def main( ):
     parser.add_argument('--dataset_name', type=str, default='tabula_muris',
                         help='the name of the dataset')
 
-    parser.add_argument('--change_composition', action='store_true', default=False,
-                        help='whether to change the cell type composition in the original dataset')
-
     parser.add_argument('--confounder', type=str, default='batch',
                         help='the name of the confounder variable')
 
@@ -337,12 +334,6 @@ def main( ):
                         help='number of samples from aggregated posterior to get empirical MI')
 
     #for MMD
-    parser.add_argument('--MMD_kernel_mul', type=float, default=2.0,
-                        help='the multiplier value to calculate bandwidth')
-
-    parser.add_argument('--MMD_kernel_num', type=int, default=15,
-                        help='the number of kernels to get MMD')
-
     parser.add_argument('--MMD_bandwidths', type=str, default='1,2,5,8,10',
                         help='the list of bandwidths')
 
@@ -455,47 +446,19 @@ def main( ):
         dataset2 = TabulaMuris('droplet', save_path=data_save_path)
         dataset1.subsample_genes(dataset1.nb_genes)
         dataset2.subsample_genes(dataset2.nb_genes)
-        #whether to change cell compositions in the dataset or not
-        if args.change_composition == True:
-            dataset1_labels = dataset1.__dict__['labels']
-            dataset1_labels_df = pd.DataFrame.from_dict({'label': dataset1_labels[:, 0].tolist()})
-            dataset1_celltypes = dataset1.__dict__['cell_types']
-            dataset1_celltypes_df = pd.DataFrame.from_dict({'cell_type': dataset1_celltypes.tolist()})
-            dataset1_celltypes_df['label'] = pd.Series(np.array(list(range(dataset1_celltypes_df.shape[0]))),index=dataset1_celltypes_df.index)
-
-            delete_labels_celltypes = dataset1_celltypes_df[dataset1_celltypes_df.cell_type.isin(['granulocyte', 'nan', 'monocyte', 'hematopoietic precursor cell', 'granulocytopoietic cell'])]
-            dataset1.__dict__['_X'] = sparse.csr_matrix(dataset1.__dict__['_X'].toarray()[~dataset1_labels_df.label.isin(delete_labels_celltypes.loc[:, 'label'].values.tolist())])
-            for key in ['local_means', 'local_vars', 'batch_indices', 'labels']:
-                dataset1.__dict__[key] = dataset1.__dict__[key][~dataset1_labels_df.label.isin(delete_labels_celltypes.loc[:,'label'].values.tolist())]
-            dataset1.__dict__['n_labels'] = 18
-            dataset1.__dict__['cell_types'] = np.delete(dataset1.__dict__['cell_types'], delete_labels_celltypes.loc[:, 'label'].values.tolist())
-
-            dataset1_celltypes_new = dataset1.__dict__['cell_types']
-            dataset1_celltypes_df_new = pd.DataFrame.from_dict({'cell_type': dataset1_celltypes_new.tolist()})
-            dataset1_celltypes_df_new['label'] = pd.Series(np.array(list(range(dataset1_celltypes_df_new.shape[0]))),index=dataset1_celltypes_df_new.index)
-            label_change = dataset1_celltypes_df.merge(dataset1_celltypes_df_new, how='right', left_on='cell_type', right_on='cell_type').iloc[:, 1:]
-            label_change.columns = ['label','new_label']
-
-            dataset1_labels_new = dataset1.__dict__['labels']
-            dataset1_labels_df_new = pd.DataFrame.from_dict({'label': dataset1_labels_new[:, 0].tolist()})
-
-            dataset1.__dict__['labels'] = dataset1_labels_df_new.merge(label_change, how='left', left_on='label', right_on='label').loc[:,'new_label'].values.reshape(dataset1.__dict__['labels'].shape[0],1)
-
         gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
     elif args.dataset_name == 'TM_MCA_Lung':
         dataset1 = TabulaMuris('facs', save_path=data_save_path, tissue='Lung')
         dataset2 = MCA(save_path=data_save_path, tissue='Lung')
         dataset1.subsample_genes(dataset1.nb_genes)
         dataset2.subsample_genes(dataset2.nb_genes)
-        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
+        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2) # cell number, gene number: 8863, 12702
     elif args.dataset_name == 'macaque_retina':
         dataset1 = Macaque_Retina('macaque_retina', '', 'fovea', save_path=data_save_path)
         dataset2 = Macaque_Retina('macaque_retina', '', 'periphery', save_path=data_save_path)
         dataset1.subsample_genes(dataset1.nb_genes)
         dataset2.subsample_genes(dataset2.nb_genes)
-        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2)
-    elif args.dataset_name == 'pbmc':
-        gene_dataset = PbmcDataset(save_path=data_save_path)
+        gene_dataset = GeneExpressionDataset.concat_datasets(dataset1, dataset2) # cell number, gene number:
 
     #generate a random seed to split training and testing dataset
     np.random.seed(1011)
