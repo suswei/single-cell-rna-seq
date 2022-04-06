@@ -11,10 +11,10 @@
 
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=2-10:00:00
+#SBATCH --time=1-10:00:00
 
 # Batch arrays
-#SBATCH --array=0
+#SBATCH --array=0-19
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)

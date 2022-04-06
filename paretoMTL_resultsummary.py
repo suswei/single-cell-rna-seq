@@ -118,7 +118,7 @@ def pareto_front(inputPoints, index_list, ReferencePoints):
     # when hypervolume is calculated, the rectangles of dominated points will be covered by those of non-dominated points
     hv = hypervolume(inputPoints)
     hypervolume_value = hv.compute(ReferencePoints)
-    percentage_value = len(list(paretoPoints1)) / 10
+    percentage_value = len(list(paretoPoints1)) / 12
 
     return pp, index_list_Pareto, hypervolume_value, percentage_value
 
@@ -552,7 +552,7 @@ def main( ):
 
         print('{}'.format(args.dataset))
         print('{} versus {}'.format(args.pareto_front_x, args.pareto_front_y))
-        print(hypervolume_mean_std)
+        print(percentage_mean_std)
 
 # Run the actual program
 if __name__ == "__main__":
