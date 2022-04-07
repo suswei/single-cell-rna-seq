@@ -10,13 +10,13 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # adv_estimator means estimator for confounding effect, it could be 'MINE', 'MMD', 'stdz_MMD' (stdz_MMD means standardize the dimension of z, then use MMD)
     hyperparameter_config = {
-        'dataset_name': ['macaque_retina'], #tabula_muris
+        'dataset_name': ['TM_MCA_Lung'], #tabula_muris
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10],
-        'batch_size': [256], #2 GPUs
+        'batch_size': [128], #2 GPUs
         'adv_estimator': ['MINE'], #stdMMD 'MMD_bandwidths': ['1,2,5,8,10'], --MMD_bandwidths %s, temp['MMD_bandwidths'],
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
@@ -27,7 +27,7 @@ def main(taskid):
         'adv_epochs': [1],
         'MC': list(range(10)),
         'weight': [0,1],
-        'num_workers': [4] #4
+        'num_workers': [1] #4
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
