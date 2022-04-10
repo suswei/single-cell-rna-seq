@@ -44,7 +44,7 @@ def construct_trainer_vae(gene_dataset, args):
 
 def decoder_training(trainer_vae, args):
 
-    print(trainer_vae.model.module)
+    #print(trainer_vae.model.module)
 
     if torch.cuda.device_count() > 1:
         for q in trainer_vae.model.module.z_encoder.parameters():
