@@ -51,7 +51,7 @@ def reference_point(dataframe_dict, methods_list, pareto_front_x, pareto_front_y
             obj1_max = max(obj1_max, IdealNadirMMD_obj1_max)
             obj2_max = max(obj2_max, IdealNadirMMD_obj2_max)
 
-    ref_point = [obj1_max + 0.01, obj2_max + 0.01]
+    ref_point = [obj1_max + 0.001, obj2_max + 0.001]
     return ref_point
 
 def simple_cull(inputPoints, dominates, return_index: bool=False, min_max: str='min'):
@@ -528,8 +528,8 @@ def main( ):
         if args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
             ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, hypervolume_AllMethods, percentage_AllMethods = CollectPoints_AllMethods(
                 dataframe_dict, MC, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.ParetoCandidates_ParetoPoints, ReferencePoints)
-            #draw_scatter_plot(ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, args.methods_list, args.pareto_front_x, args.pareto_front_y,
-            #                  MC, dir_path, args.ParetoCandidates_ParetoPoints)
+            draw_scatter_plot(ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, args.methods_list, args.pareto_front_x, args.pareto_front_y,
+                              MC, dir_path, args.ParetoCandidates_ParetoPoints)
 
             hypervolume_dataframe_oneMC = pd.DataFrame.from_dict(hypervolume_AllMethods)
             percentage_dataframe_oneMC = pd.DataFrame.from_dict(percentage_AllMethods)
@@ -544,7 +544,7 @@ def main( ):
     if args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
         hypervolume_dataframe_mean = hypervolume_dataframe.mean(axis=0).reset_index(name='mean')
         hypervolume_dataframe_std = hypervolume_dataframe.std(axis=0).reset_index(name='std')
-        hypervolume_mean_std = hypervolume_dataframe_mean.merge(hypervolume_dataframe_std, how='inner', on='index').round(2)
+        hypervolume_mean_std = hypervolume_dataframe_mean.merge(hypervolume_dataframe_std, how='inner', on='index')
 
         percentage_dataframe_mean = percentage_dataframe.mean(axis=0).reset_index(name='mean')
         percentage_dataframe_std = percentage_dataframe.std(axis=0).reset_index(name='std')
@@ -552,7 +552,7 @@ def main( ):
 
         print('{}'.format(args.dataset))
         print('{} versus {}'.format(args.pareto_front_x, args.pareto_front_y))
-        print(percentage_mean_std)
+        print(hypervolume_mean_std)
 
 # Run the actual program
 if __name__ == "__main__":

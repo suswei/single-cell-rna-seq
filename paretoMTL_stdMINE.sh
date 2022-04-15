@@ -10,10 +10,10 @@
 #SBATCH --mem 5000
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=3-0:0:00
+#SBATCH --time=4-0:0:00
 
 # Batch arrays
-#SBATCH --array=0-99
+#SBATCH --array=99
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
