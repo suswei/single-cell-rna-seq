@@ -10,15 +10,14 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # adv_estimator means estimator for confounding effect, it could be 'MINE', 'MMD', 'stdz_MMD' (stdz_MMD means standardize the dimension of z, then use MMD)
     hyperparameter_config = {
-        'dataset_name': ['macaque_retina'], #tabula_muris
+        'dataset_name': ['TM_MCA_Lung'], #tabula_muris
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10],
-        'batch_size': [256], #2 GPUs
-        'adv_estimator': ['stdMMD'], #stdMMD 'MMD_bandwidths': ['1,2,5,8,10'], --MMD_bandwidths %s, temp['MMD_bandwidths'],
-        'MMD_bandwidths': ['1,2,5,8,10'],
+        'batch_size': [128], #2 GPUs
+        'adv_estimator': ['MINE'], #stdMMD 'MMD_bandwidths': ['1,2,5,8,10'], --MMD_bandwidths %s, temp['MMD_bandwidths'],
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
@@ -28,7 +27,7 @@ def main(taskid):
         'adv_epochs': [1],
         'MC': list(range(10)),
         'weight': [0,1],
-        'num_workers': [4] #4
+        'num_workers': [1] #4
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -38,10 +37,10 @@ def main(taskid):
     os.system("python3 paretoMTL_main.py --ideal_nadir --use_batches "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --batch_size %s "
-              "--adv_estimator %s --MMD_bandwidths %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
+              "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
               "--lr %s --adv_lr %s --epochs %s --adv_epochs %s --MC %s --weight %s --num_workers %s"
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
-                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['MMD_bandwidths'],
+                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'],
                  temp['adv_n_hidden'], temp['adv_n_layers'], temp['adv_activation_fun'], temp['lr'], temp['adv_lr'], temp['epochs'],
                  temp['adv_epochs'], temp['MC'], temp['weight'], temp['num_workers'])
               )
