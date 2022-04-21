@@ -10,29 +10,29 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # adv_estimator means estimator for confounding effect, it could be 'MINE', 'MMD', 'stdz_MMD' (stdz_MMD means standardize the dimension of z, then use MMD)
     hyperparameter_config = {
-        'dataset_name': ['TM_MCA_Lung'],#
+        'dataset_name': ['macaque_retina'],#
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10],
-        'batch_size': [128], #2 GPUs
+        'batch_size': [256], #2 GPUs
         'adv_estimator': ['MINE'],
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'lr': [1e-3],
+        'lr': [5e-3], #1e-3
         'adv_lr': [5e-5],
-        'obj1_max': [8510],  #
-        'obj1_min': [3040],  #
-        'obj2_max': [0.389],  #
-        'obj2_min': [-0.085], #
+        'obj1_max': [3335],  #
+        'obj1_min': [3007],  #
+        'obj2_max': [0.149],  #
+        'obj2_min': [-0.029], #
         'epochs': [150], #
         'adv_epochs': [1],
         'n_tasks': [2],
         'MC': list(range(20)),
         'npref_prefidx': [{'npref': n, 'pref_idx': i} for n, i in zip([10]*10, list(range(10)))],
-        'num_workers': [1] #1
+        'num_workers': [4] #1
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
