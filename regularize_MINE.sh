@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="regularize_stdMMD"
+#SBATCH --job-name="tabula_muris regularize_stdMINE"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
+#SBATCH --mem 5000
 
-#SBATCH --partition=gpgpu
-#SBATCH --qos=gpgpuresplat
-#SBATCH --gres=gpu:p100:2
+#run --partition=gpgpu
+#run --qos=gpgpuresplat
+#run --gres=gpu:p100:2
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=2-0:00:00
+#SBATCH --time=3-0:00:00
 
 # Batch arrays
 #SBATCH --array=0-99
@@ -41,7 +42,7 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-module load fosscuda/2019b
-python3 regularize_stdMMD.py ${SLURM_ARRAY_TASK_ID}
+# module load fosscuda/2019b
+python3 regularize_MINE.py ${SLURM_ARRAY_TASK_ID}
 
 

@@ -1,22 +1,19 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="paretoMTL_stdMMD"
+#SBATCH --job-name="tabula_muris estimate_ideal_nadir_MINE"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=4
-
-#SBATCH --partition=gpgpu
-#SBATCH --qos=gpgpuresplat
-#SBATCH --gres=gpu:p100:2
+#SBATCH --cpus-per-task=1
+#SBATCH --mem 5000
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=2-0:0:00
+#SBATCH --time=3-0:0:00
 
 # Batch arrays
-#SBATCH --array=0-99
+#SBATCH --array=0-19
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
@@ -41,6 +38,5 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-module load fosscuda/2019b
-python3 paretoMTL_stdMMD.py ${SLURM_ARRAY_TASK_ID}
+python3 estimate_ideal_nadir_MINE.py ${SLURM_ARRAY_TASK_ID}
 

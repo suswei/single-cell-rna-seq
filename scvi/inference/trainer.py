@@ -42,8 +42,8 @@ class Trainer:
     def __init__(self, model, gene_dataset, num_workers=1, metrics_to_monitor=None,
                  benchmark=False, verbose=False, frequency=None, weight_decay=1e-6, early_stopping_kwargs=dict(),
                  data_loader_kwargs=dict(), save_path='None', batch_size=128, adv_estimator='None',
-                 adv_n_hidden=128, adv_n_layers=10, adv_activation_fun='ELU', unbiased_loss=True, adv_w_initial='Normal',
-                 MMD_kernel_mul: float=2, MMD_kernel_num: int=5, MMD_bandwidths: list=[1,2,5,8,10], batch_ratio: list=[], nsamples: int=1e5):
+                 adv_n_hidden=128, adv_n_layers=10, adv_activation_fun='ELU', adv_w_initial='Normal',
+                 MMD_bandwidths: list=[1,2,5,8,10], batch_ratio: list=[], nsamples: int=1e5):
 
         self.model = model
         self.gene_dataset = gene_dataset
@@ -60,8 +60,8 @@ class Trainer:
         if self.adv_estimator == 'MINE':
             adv_input_dim = self.model.n_latent + self.model.n_batch
             self.adv_model = MINE_Net(input_dim=adv_input_dim, n_hidden=adv_n_hidden, n_layers=adv_n_layers,
-                             activation_fun=adv_activation_fun, unbiased_loss=unbiased_loss, initial=adv_w_initial)
-        elif self.adv_estimator in ['MMD','stdMMD']:
+                             activation_fun=adv_activation_fun, initial=adv_w_initial)
+        elif self.adv_estimator == 'MMD':
             self.MMD_loss = MMD_loss(bandwidths=MMD_bandwidths)
 
         self.batch_ratio = batch_ratio
@@ -380,8 +380,8 @@ class Trainer:
                 loss.backward()
                 self.optimizer.step()
 
-                #dignosis why the loss becomes NaN when adv_estimator is stdMMD
-                if self.adv_estimator == 'stdMMD':
+                #dignosis why the loss becomes NaN when adv_estimator is MMD
+                if self.adv_estimator == 'MMD':
                     for param in self.model.parameters():
                         print('epoch: {}, minibatch: {}, is there NaN in weights of the neural network?'.format(self.epoch,minibatch_index))
                         print(torch.isnan(param).any())
@@ -409,8 +409,6 @@ class Trainer:
 
         if ideal_nadir:
             string = 'ideal_nadir_{}'.format(self.adv_estimator)
-            if self.adv_estimator in ['MMD', 'stdMMD']:
-                string = 'ideal_nadir_MMD'
         elif self.adv_estimator == 'MINE':
             string = 'regularizeMINE'
         else:

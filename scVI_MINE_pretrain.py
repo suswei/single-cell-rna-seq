@@ -8,25 +8,24 @@ def main(taskid):
 
     # dataset_name could be 'tabula_muris'
     # nuisance_variable is 'batch'
-    # adv_estimator means estimator for confounding effect, it could be 'MINE', 'MMD', 'stdz_MMD' (stdz_MMD means standardize the dimension of z, then use MMD)
+    # conf_estimator means estimator for confounding effect, it could be 'MINE', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
     hyperparameter_config = {
-        'dataset_name': ['TM_MCA_Lung'], #tabula_muris
+        'dataset_name': ['tabula_muris'], #
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10],
         'batch_size': [128], #2 GPUs
-        'adv_estimator': ['MINE'], #stdMMD 'MMD_bandwidths': ['1,2,5,8,10'], --MMD_bandwidths %s, temp['MMD_bandwidths'],
+        'adv_estimator': ['MINE'],
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'lr': [1e-3],
-        'adv_lr': [5e-5],
-        'epochs': [150], #250
-        'adv_epochs': [1],
-        'MC': list(range(10)),
-        'weight': [0,1],
+        'pre_epochs': [150], #150
+        'pre_adv_epochs': [400],
+        'pre_lr': [1e-3],
+        'pre_adv_lr': [5e-5],
+        'MC': list(range(20)),
         'num_workers': [1] #4
     }
     keys, values = zip(*hyperparameter_config.items())
@@ -34,15 +33,15 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 paretoMTL_main.py --ideal_nadir --use_batches "
+    os.system("python3 main.py --pre_train --MCs 20 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
-              "--n_layers_decoder %s --n_hidden %s --n_latent %s --batch_size %s "
+              "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
-              "--lr %s --adv_lr %s --epochs %s --adv_epochs %s --MC %s --weight %s --num_workers %s"
+              "--pre_epochs %s --pre_adv_epochs %s --pre_lr %s --pre_adv_lr %s --MC %s --num_workers %s "
               % (taskid, temp['dataset_name'], temp['confounder'], temp['n_layers_encoder'], temp['n_layers_decoder'],
-                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'],
-                 temp['adv_n_hidden'], temp['adv_n_layers'], temp['adv_activation_fun'], temp['lr'], temp['adv_lr'], temp['epochs'],
-                 temp['adv_epochs'], temp['MC'], temp['weight'], temp['num_workers'])
+                 temp['n_hidden'], temp['n_latent'], temp['batch_size'], temp['adv_estimator'], temp['adv_n_hidden'],
+                 temp['adv_n_layers'], temp['adv_activation_fun'], temp['pre_epochs'], temp['pre_adv_epochs'],
+                 temp['pre_lr'], temp['pre_adv_lr'], temp['MC'], temp['num_workers'])
               )
 
 if __name__ == "__main__":

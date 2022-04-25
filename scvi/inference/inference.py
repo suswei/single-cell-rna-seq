@@ -78,7 +78,7 @@ class UnsupervisedTrainer(Trainer):
                 sample1, sample2 = self.adv_load_minibatch(z, batch_index)
                 adv_loss, obj2_minibatch = self.adv_loss(sample1, sample2)
 
-            elif self.adv_estimator in ['MMD','stdMMD']:
+            elif self.adv_estimator == 'MMD':
                 for onebatch_index in range(self.gene_dataset.n_batches):
                     sample1, sample2 = self.adv_load_minibatch(z, batch_index, float(onebatch_index), self.gene_dataset.n_batches)
                     adv_loss_one, obj2_minibatch_one = self.adv_loss(sample1, sample2)
@@ -130,14 +130,14 @@ class UnsupervisedTrainer(Trainer):
             shuffle_index = torch.randperm(z.shape[0])
             shuffle_z_batch = torch.cat((z[shuffle_index], batch_dummy), 1)  # marginal
             return z_batch, shuffle_z_batch
-        elif self.adv_estimator in ['MMD','stdMMD']:
+        elif self.adv_estimator == 'MMD':
             batch_index_copy = batch_index.type(torch.FloatTensor).to(self.device)
             batch_index_copy = Variable(batch_index_copy.type(torch.FloatTensor), requires_grad=True)
-            if self.adv_estimator == 'stdMMD':
-                #standardize each dimension for z
-                z_mean = torch.mean(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
-                z_std = torch.std(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
-                z = (z - z_mean)/z_std #element by element
+
+            #standardize each dimension for z
+            z_mean = torch.mean(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
+            z_std = torch.std(z,0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
+            z = (z - z_mean)/z_std #element by element
 
             sample1 = z[(batch_index_copy[:, 0] == onebatch_index).nonzero().squeeze(1)]
             if n_batches == 2:
@@ -153,30 +153,23 @@ class UnsupervisedTrainer(Trainer):
             et = torch.exp(self.adv_model(sample2))
 
             if torch.cuda.device_count() > 1:
-                if self.adv_model.module.unbiased_loss:
-                    if self.adv_model.module.ma_et is None:
-                        self.adv_model.module.ma_et = torch.mean(et).detach().item()  # detach means will not calculate gradient for ma_et, ma_et is just a number
-                    self.adv_model.module.ma_et = (1 - self.adv_model.module.ma_rate) * self.adv_model.module.ma_et + self.adv_model.module.ma_rate * torch.mean(et).detach().item()
+                if self.adv_model.module.ma_et is None:
+                    self.adv_model.module.ma_et = torch.mean(et).detach().item()  # detach means will not calculate gradient for ma_et, ma_et is just a number
+                self.adv_model.module.ma_et = (1 - self.adv_model.module.ma_rate) * self.adv_model.module.ma_et + self.adv_model.module.ma_rate * torch.mean(et).detach().item()
 
-                    # Pay attention, this unbiased loss is not our MINE estimator,
-                    # The MINE estimator is still torch.mean(t) - torch.log(torch.mean(et)) after training
-                    # The unbiased_loss is only for getting unbiased gradient.
-                    loss = -(torch.mean(t) - (1 / self.adv_model.module.ma_et) * torch.mean(et))
-                else:
-                    loss = -(torch.mean(t) - torch.log(torch.mean(et)))
-
+                # Pay attention, this unbiased loss is not our MINE estimator,
+                # The MINE estimator is still torch.mean(t) - torch.log(torch.mean(et)) after training
+                # The unbiased_loss is only for getting unbiased gradient.
+                loss = -(torch.mean(t) - (1 / self.adv_model.module.ma_et) * torch.mean(et))
             else:
-                if self.adv_model.unbiased_loss:
-                    if self.adv_model.ma_et is None:
-                        self.adv_model.ma_et = torch.mean(et).detach().item()  # detach means will not calculate gradient for ma_et, ma_et is just a number
-                    self.adv_model.ma_et = (1 - self.adv_model.ma_rate) * self.adv_model.ma_et + self.adv_model.ma_rate * torch.mean(et).detach().item()
+                if self.adv_model.ma_et is None:
+                    self.adv_model.ma_et = torch.mean(et).detach().item()  # detach means will not calculate gradient for ma_et, ma_et is just a number
+                self.adv_model.ma_et = (1 - self.adv_model.ma_rate) * self.adv_model.ma_et + self.adv_model.ma_rate * torch.mean(et).detach().item()
 
-                    # Pay attention, this unbiased loss is not our MINE estimator,
-                    # The MINE estimator is still torch.mean(t) - torch.log(torch.mean(et)) after training
-                    # The unbiased_loss is only for getting unbiased gradient.
-                    loss = -(torch.mean(t) - (1 / self.adv_model.ma_et) * torch.mean(et))
-                else:
-                    loss = -(torch.mean(t) - torch.log(torch.mean(et)))
+                # Pay attention, this unbiased loss is not our MINE estimator,
+                # The MINE estimator is still torch.mean(t) - torch.log(torch.mean(et)) after training
+                # The unbiased_loss is only for getting unbiased gradient.
+                loss = -(torch.mean(t) - (1 / self.adv_model.ma_et) * torch.mean(et))
 
             MINE_estimator_minibatch = torch.mean(t) - torch.log(torch.mean(et))
 

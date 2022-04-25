@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="paretoMTL_pretrain"
+#SBATCH --job-name="tabula_muris paretoMTL_pretrain"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
@@ -39,6 +39,6 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-python3 paretoMTL_pretrain.py ${SLURM_ARRAY_TASK_ID}
+python3 scVI_MINE_pretrain.py ${SLURM_ARRAY_TASK_ID}
 
 

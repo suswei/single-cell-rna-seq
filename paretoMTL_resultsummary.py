@@ -350,6 +350,8 @@ def load_result(dir_path, hyperparameter_config, method):
             config = pickle.load(open(config_path, "rb"))
             results = pickle.load(open(results_path, "rb"))
 
+            print(config)
+
             if 'regularize' in method:
                 config_keys = ['adv_estimator', 'MC', 'nweight', 'obj1_min', 'obj1_max', 'obj2_min', 'obj2_max']
             elif 'pareto' in method:

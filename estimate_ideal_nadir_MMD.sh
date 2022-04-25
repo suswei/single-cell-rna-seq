@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="regularize_stdMINE"
+#SBATCH --job-name="tabula_muris estimate_ideal_nadir_MMD"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
@@ -9,15 +9,11 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem 5000
 
-#run --partition=gpgpu
-#run --qos=gpgpuresplat
-#run --gres=gpu:p100:2
-
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=3-0:00:00
+#SBATCH --time=2-0:0:00
 
 # Batch arrays
-#SBATCH --array=0-49
+#SBATCH --array=0-19
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
@@ -42,7 +38,6 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-# module load fosscuda/2019b
-python3 regularize_stdMINE.py ${SLURM_ARRAY_TASK_ID}
+python3 estimate_ideal_nadir_MMD.py ${SLURM_ARRAY_TASK_ID}
 
 

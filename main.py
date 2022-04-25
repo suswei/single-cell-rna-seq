@@ -20,18 +20,19 @@ import pickle
 
 def construct_trainer_vae(gene_dataset, args):
 
-    vae_MI = VAE_MI(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * args.use_batches,n_labels=gene_dataset.n_labels,
-                    n_hidden=args.n_hidden, n_latent=args.n_latent, n_layers_encoder=args.n_layers_encoder,
-                    n_layers_decoder=args.n_layers_decoder,dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss)
+    vae_MI = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * args.use_batches,n_labels=gene_dataset.n_labels,
+                 n_hidden=args.n_hidden, n_latent=args.n_latent, n_layers_encoder=args.n_layers_encoder,
+                 n_layers_decoder=args.n_layers_decoder,dropout_rate=args.dropout_rate, reconstruction_loss=args.reconstruction_loss,
+                 adv_loss = args.adv_loss)
 
     if args.adv_estimator == 'MINE':
 
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
                       seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, adv_n_hidden=args.adv_n_hidden,
-                      adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun, unbiased_loss=args.unbiased_loss,
+                      adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
                       adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
-    elif args.adv_estimator in ['MMD','stdMMD']:
+    elif args.adv_estimator == 'MMD':
         args.MMD_bandwidths_list = [float(k) for k in args.MMD_bandwidths.split(',')]
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
                       seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, MMD_bandwidths = args.MMD_bandwidths_list, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
@@ -77,8 +78,6 @@ def decoder_training(trainer_vae, args):
             obj1_test_list.append(obj1_test_eval)
 
     string = 'ideal_nadir_{}'.format(args.adv_estimator)
-    if args.adv_estimator in ['MMD', 'stdMMD']:
-        string = 'ideal_nadir_MMD'
     args.path = './result/{}/{}/{}'.format(args.dataset_name, args.confounder,string)
     if not os.path.exists('./result/{}/{}/{}'.format(args.dataset_name, args.confounder, string)):
         os.makedirs('./result/{}/{}/{}'.format(args.dataset_name, args.confounder,string))
@@ -107,12 +106,11 @@ def sample1_sample2(trainer_vae, sample_batch, batch_index, obj2_type, onebatch_
         shuffle_index = torch.randperm(z.shape[0])
         sample2 = torch.cat((z[shuffle_index], batch_dummy), 1)
         return sample1, sample2, z, batch_dummy
-    elif obj2_type in ['MMD', 'stdMMD']:
-        if obj2_type == 'stdMMD':
-            # standardize each dimension for z
-            z_mean = torch.mean(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
-            z_std = torch.std(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
-            z = (z - z_mean) / z_std  # element by element
+    elif obj2_type == 'MMD':
+        # standardize each dimension for z
+        z_mean = torch.mean(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
+        z_std = torch.std(z, 0).unsqueeze(0).expand(int(z.size(0)), int(z.size(1)))
+        z = (z - z_mean) / z_std  # element by element
 
         sample1 = z[(batch_index[:, 0] == onebatch_index).nonzero().squeeze(1)]
         if n_batch == 2:
@@ -137,7 +135,7 @@ def sample1_sample2_all(trainer_vae, input_data, obj2_type, onebatch_index: int=
         if obj2_type == 'MINE':
             z_all = torch.cat((z_all, z), 0)
             batch_dummy_all = torch.cat((batch_dummy_all, batch_dummy), 0)
-        elif obj2_type in ['MMD','stdMMD']:
+        elif obj2_type == 'MMD':
             z_reference_all = torch.cat((z_reference_all, sample1),0)
             z_compare_all = torch.cat((z_compare_all, sample2),0)
         elif obj2_type == 'NN':
@@ -146,7 +144,7 @@ def sample1_sample2_all(trainer_vae, input_data, obj2_type, onebatch_index: int=
 
     if obj2_type == 'MINE':
         return z_all, batch_dummy_all
-    elif obj2_type in ['MMD','stdMMD']:
+    elif obj2_type == 'MMD':
         return z_reference_all, z_compare_all
     elif obj2_type == 'NN':
         return z_all, batch_index_all
@@ -187,7 +185,7 @@ def MINE_eval(trainer_vae, MINE_network, input_data):
 
 def MINE_after_trainerVae(trainer_vae, args):
     MINE_network = MINE_Net(input_dim=trainer_vae.model.n_latent + trainer_vae.model.n_batch, n_hidden=args.adv_n_hidden, n_layers=args.adv_n_layers,
-                            activation_fun=args.adv_activation_fun, unbiased_loss=args.unbiased_loss, initial=args.adv_w_initial)
+                            activation_fun=args.adv_activation_fun, initial=args.adv_w_initial)
 
     if torch.cuda.is_available():
         MINE_network.to(trainer_vae.device)
@@ -228,7 +226,7 @@ def MINE_after_trainerVae(trainer_vae, args):
 def MMD_NN_train_test(trainer_vae, obj2_type, args):
 
     trainer_vae.model.eval()
-    if obj2_type in ['MMD','stdMMD']:
+    if obj2_type == 'MMD':
         MMD_loss_fun = MMD_loss(args.MMD_bandwidths_list)
         estimator_train, estimator_test = 0, 0
 
@@ -307,6 +305,9 @@ def main( ):
     parser.add_argument('--train_size', type=float, default=0.8,
                         help='the ratio to split the training and testing data set')
 
+    parser.add_argument('--adv_loss', action='store_true', default=True,
+                        help='whether to calculate adv loss for VAE')
+
     # for MINE
     parser.add_argument('--adv_estimator', type=str, default='MINE',
                         help='the method used to estimate confounding effect')
@@ -319,9 +320,6 @@ def main( ):
 
     parser.add_argument('--adv_activation_fun', type=str, default='ELU',
                         help='the activation function used for MINE')
-
-    parser.add_argument('--unbiased_loss', action='store_true', default=True,
-                        help='whether to use unbiased loss or not in MINE')
 
     #for empirical MI
     parser.add_argument('--empirical_MI', action='store_true', default=False,
@@ -494,7 +492,8 @@ def main( ):
     '''
     # train vae alone
     vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * True, n_labels=gene_dataset.n_labels,
-              n_hidden=128, n_latent=10, n_layers_encoder=1, n_layers_decoder=1, dropout_rate=0.1, reconstruction_loss='zinb')
+              n_hidden=128, n_latent=10, n_layers_encoder=1, n_layers_decoder=1, dropout_rate=0.1, 
+              reconstruction_loss='zinb', adv_loss=False)
     # frequency controls how often the statistics in trainer_vae.model are evaluated by compute_metrics() function in trainer.py
     trainer_vae = UnsupervisedTrainer(vae, gene_dataset, batch_size=128, train_size=args.train_size, seed=args.desired_seed, frequency=10, kl=1)
     trainer_vae.train(n_epochs=150, lr=0.001)
@@ -536,8 +535,6 @@ def main( ):
                 print('obj1_min: {}, obj1_max: {}'.format(min(minibatch_loss_list), max(minibatch_loss_list)))
 
             method='ideal_nadir_{}'.format(args.adv_estimator)
-            if args.adv_estimator in ['MMD', 'stdMMD']:
-                method = 'ideal_nadir_MMD'
         else:
             if args.regularize == True:
                 trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
@@ -546,8 +543,6 @@ def main( ):
                 taskid=args.taskid)
 
                 method = 'regularize{}'.format(args.adv_estimator)
-                if args.adv_estimator in ['MMD','stdMMD']:
-                    method = 'regularizeMMD'
 
             elif args.paretoMTL == True:
                 trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, paretoMTL=args.paretoMTL,
@@ -555,8 +550,6 @@ def main( ):
                 adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_type=args.pref_type, pref_idx = args.pref_idx, taskid=args.taskid)
 
                 method = 'pareto{}'.format(args.adv_estimator)
-                if args.adv_estimator in ['MMD','stdMMD']:
-                    method = 'paretoMMD'
 
         args.save_path = './result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)
         if not os.path.exists('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)):
@@ -590,8 +583,6 @@ def main( ):
             obj2_train, obj2_test = MINE_after_trainerVae(trainer_vae, args)
         elif trainer_vae.adv_estimator == 'MMD':
             obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'MMD', args)
-        elif trainer_vae.adv_estimator == 'stdMMD':
-            obj2_train, obj2_test = MMD_NN_train_test(trainer_vae, 'stdMMD', args)
 
         NN_train, NN_test = MMD_NN_train_test(trainer_vae, 'NN', args)
 

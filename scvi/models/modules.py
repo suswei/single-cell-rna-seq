@@ -238,14 +238,12 @@ class Decoder(nn.Module):
         return p_m, p_v
 
 class MINE_Net(nn.Module):
-    def __init__(self, input_dim, n_hidden, n_layers, activation_fun, unbiased_loss, initial):
+    def __init__(self, input_dim, n_hidden, n_layers, activation_fun, initial):
         # activation_fun could be 'ReLU', 'ELU', 'Leaky_ReLU'
-        # unbiased_loss: True or False. Whether to use unbiased loss or not
         # initial of weights: 'normal', 'xavier_uniform', 'xavier_normal', 'kaiming_uniform','kaiming_normal','orthogonal','sparse'
         # 'orthogonal', 'sparse' are not proper in our case
         super().__init__()
         self.activation_fun = activation_fun
-        self.unbiased_loss = unbiased_loss
 
         layers_dim = [input_dim] + [n_hidden]*n_layers + [1]
         self.layers = nn.Sequential(collections.OrderedDict(
@@ -277,9 +275,8 @@ class MINE_Net(nn.Module):
                 nn.init.sparse_(self.layers[i].weight, sparsity=0.1)
                 nn.init.zeros_(self.layers[i].bias)
 
-        if self.unbiased_loss:
-            self.ma_et = None
-            self.ma_rate = 0.001
+        self.ma_et = None
+        self.ma_rate = 0.001
 
     def forward(self, input):
         for one_layer in self.layers[0:-1]:
