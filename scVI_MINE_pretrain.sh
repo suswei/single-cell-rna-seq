@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="tabula_muris paretoMTL_pretrain"
+#SBATCH --job-name="TM_MCA_Lung paretoMTL_pretrain"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
@@ -11,7 +11,7 @@
 
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=1-10:00:00
+#SBATCH --time=2-10:00:00
 
 # Batch arrays
 #SBATCH --array=0-19

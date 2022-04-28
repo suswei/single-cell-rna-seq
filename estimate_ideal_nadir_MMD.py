@@ -10,7 +10,7 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # adv_estimator means estimator for confounding effect, it could be 'MINE', 'MMD'.
     hyperparameter_config = {
-        'dataset_name': ['tabula_muris'], #tabula_muris
+        'dataset_name': ['TM_MCA_Lung'], #tabula_muris
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],

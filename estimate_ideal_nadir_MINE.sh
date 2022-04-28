@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="tabula_muris estimate_ideal_nadir_MINE"
+#SBATCH --job-name="TM_MCA_Lung estimate_ideal_nadir_MINE"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
@@ -10,7 +10,7 @@
 #SBATCH --mem 5000
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=3-0:0:00
+#SBATCH --time=4-0:0:00
 
 # Batch arrays
 #SBATCH --array=0-19

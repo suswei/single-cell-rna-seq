@@ -262,7 +262,7 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
                 fig.add_trace(go.Scatter(x=points[:, 0].tolist(), y=y_jitter, mode='markers',
                                          marker_size=[k * 1 + 10 for k in index_list], marker_symbol=marker_symbol,
                                          name='{},{}'.format(method, train_test), marker_color=marker_color,
-                                         opacity=0.7, showlegend=False))
+                                         opacity=0.7, showlegend=True))
 
             obj1_all += list(points[:, 0])
             obj2_all += y_jitter
