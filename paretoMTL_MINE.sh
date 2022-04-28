@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="tabula_muris paretoMTL_stdMINE"
+#SBATCH --job-name="tabula_muris paretoMTL_MINE"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
@@ -14,7 +14,7 @@
 #run --gres=gpu:p100:2
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=3-0:0:00
+#SBATCH --time=4-0:0:00
 
 # Batch arrays
 #SBATCH --array=0-99

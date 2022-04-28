@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="TM_MCA_Lung paretoMTL_pretrain"
+#SBATCH --job-name="TM_MCA_Lung scVI_MINE_pretrain"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 

@@ -17,14 +17,14 @@ def main(taskid):
         'n_hidden': [128],
         'n_latent': [10],
         'batch_size': [128], #2 GPUs
-        'adv_estimator': ['stdMMD'],
+        'adv_estimator': ['MMD'],
         'MMD_bandwidths': ['1,2,5,8,10'],
         'epochs': [250], #
         'lr': [5e-3], #
-        'obj1_max': [19478], #
-        'obj1_min': [11121], #
-        'obj2_max': [0.290], #
-        'obj2_min': [0.019], #
+        'obj1_max': [19544], #
+        'obj1_min': [11408], #
+        'obj2_max': [0.313], #
+        'obj2_min': [0.03], #
         'n_tasks': [2],
         'MC': list(range(20)),
         'pref_type': ['even'],
