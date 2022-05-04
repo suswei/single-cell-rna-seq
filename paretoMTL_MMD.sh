@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="tabula_muris paretoMTL_MMD"
+#SBATCH --job-name="TM_MCA_Lung paretoMTL_MMD"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 

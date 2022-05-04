@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="tabula_muris regularize_MINE"
+#SBATCH --job-name="TM_MCA_Lung regularize_MINE"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 

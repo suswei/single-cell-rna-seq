@@ -14,45 +14,62 @@ import argparse
 import statistics
 import cv2
 
-def max_value(dataframe, pareto_front_x, pareto_front_y):
+def max_min_value(dataframe, pareto_front_x, pareto_front_y):
 
     if pareto_front_x == 'obj1':
         obj1_max = dataframe.loc[:, ['obj1_train_std', 'obj1_test_std']].max(axis=0).max() #_std
+        obj1_min = dataframe.loc[:, ['obj1_train_std', 'obj1_test_std']].min(axis=0).min()
     else:
         obj1_max = dataframe.loc[:, ['{}_train'.format(pareto_front_x), '{}_test'.format(pareto_front_x)]].min(axis=0).min() * (-1)
+        obj1_min = dataframe.loc[:, ['{}_train'.format(pareto_front_x), '{}_test'.format(pareto_front_x)]].max(axis=0).max() * (-1)
 
     if pareto_front_y == 'obj2':
         obj2_max = dataframe.loc[:, ['obj2_train_std', 'obj2_test_std']].max(axis=0).max()
+        obj2_min = dataframe.loc[:, ['obj2_train_std', 'obj2_test_std']].min(axis=0).min()
     elif pareto_front_y == 'NN':
         obj2_max = dataframe.loc[:, ['NN_train', 'NN_test']].max(axis=0).max()
+        obj2_min = dataframe.loc[:, ['NN_train', 'NN_test']].min(axis=0).min()
     elif pareto_front_y == 'be':
         obj2_max = dataframe.loc[:, ['be_train', 'be_test']].min(axis=0).min() * (-1)
+        obj2_min = dataframe.loc[:, ['be_train', 'be_test']].max(axis=0).max() * (-1)
 
-    return obj1_max, obj2_max
+    return obj1_max, obj2_max, obj1_min, obj2_min
 
-def reference_point(dataframe_dict, methods_list, pareto_front_x, pareto_front_y, draw_ideal_nadir):
+def Reference_GridValues(dataframe_dict, methods_list, pareto_front_x, pareto_front_y, draw_ideal_nadir, mu):
 
     results_config_AllMethods = dataframe_dict['results_config_AllMethods']
     results_config_subset = results_config_AllMethods[results_config_AllMethods.method.isin(methods_list)]
-    results_obj1_max, results_obj2_max = max_value(results_config_subset, pareto_front_x, pareto_front_y)
+    results_obj1_max, results_obj2_max, results_obj1_min, results_obj2_min = max_min_value(results_config_subset, pareto_front_x, pareto_front_y)
     obj1_max = results_obj1_max
     obj2_max = results_obj2_max
+    obj1_min = results_obj1_min
+    obj2_min = results_obj2_min
 
     if draw_ideal_nadir:
         if any('MINE' in s for s in methods_list):
             results_config_IdealNadirMINE = dataframe_dict['results_config_IdealNadirMINE']
-            IdealNadirMINE_obj1_max, IdealNadirMINE_obj2_max = max_value(results_config_IdealNadirMINE, pareto_front_x, pareto_front_y)
+            IdealNadirMINE_obj1_max, IdealNadirMINE_obj2_max, IdealNadirMINE_obj1_min, IdealNadirMINE_obj2_min = max_min_value(results_config_IdealNadirMINE, pareto_front_x, pareto_front_y)
             obj1_max = max(obj1_max, IdealNadirMINE_obj1_max)
             obj2_max = max(obj2_max, IdealNadirMINE_obj2_max)
+            obj1_min = min(obj1_min, IdealNadirMINE_obj1_min)
+            obj2_min = min(obj2_min, IdealNadirMINE_obj2_min)
 
         if any('MMD' in s for s in methods_list):
             results_config_IdealNadirMMD = dataframe_dict['results_config_IdealNadirMMD']
-            IdealNadirMMD_obj1_max, IdealNadirMMD_obj2_max = max_value(results_config_IdealNadirMMD, pareto_front_x, pareto_front_y)
+            IdealNadirMMD_obj1_max, IdealNadirMMD_obj2_max, IdealNadirMMD_obj1_min, IdealNadirMMD_obj2_min = max_min_value(results_config_IdealNadirMMD, pareto_front_x, pareto_front_y)
             obj1_max = max(obj1_max, IdealNadirMMD_obj1_max)
             obj2_max = max(obj2_max, IdealNadirMMD_obj2_max)
+            obj1_min = min(obj1_min, IdealNadirMMD_obj1_min)
+            obj2_min = min(obj2_min, IdealNadirMMD_obj2_min)
 
-    ref_point = [obj1_max + 0.001, obj2_max + 0.001]
-    return ref_point
+    obj1_max += 0.001
+    obj2_max += 0.001
+    obj1_min -= 0.001
+    obj2_min -= 0.001
+
+    ref_point = [obj1_max, obj2_max]
+    GridValues = [[obj1_min + k*mu for k in range(int((obj1_max - obj1_min)/mu)+1)] + [obj1_max], [obj2_min + k*mu for k in range(int((obj2_max - obj2_min)/mu)+1)] + [obj2_max]]
+    return ref_point, GridValues
 
 def simple_cull(inputPoints, dominates, return_index: bool=False, min_max: str='min'):
     paretoPoints = set()
@@ -97,7 +114,23 @@ def dominates(row, candidateRow, return_index, min_max):
         elif min_max == 'max':
             return sum([row[x] >= candidateRow[x] for x in range(len(row))]) == len(row)
 
-def pareto_front(inputPoints, index_list, ReferencePoints):
+def NDC_fun(ParetoPoints, GridValues):
+    Grid_Index = []
+    for ParetoPoint in ParetoPoints:
+        for i in range(len(GridValues[0])):
+            if ParetoPoint[0]>=GridValues[0][i] and ParetoPoint[0]<GridValues[0][i+1]:
+                Grid_Index_Obj1 = i
+                break
+        for j in range(len(GridValues[1])):
+            if ParetoPoint[1]>=GridValues[1][j] and ParetoPoint[1]<GridValues[1][j+1]:
+                Grid_Index_Obj2 = j
+                break
+        Grid_Index += [[Grid_Index_Obj1, Grid_Index_Obj2]]
+
+    NDC_value = len(set(tuple(x) for x in Grid_Index))
+    return NDC_value
+
+def pareto_front(inputPoints, index_list, ReferencePoints, GridValues):
 
     inputPoints_copy = inputPoints.copy()
     paretoPoints1, dominatedPoints1 = simple_cull(inputPoints_copy, dominates, False, 'min')
@@ -115,12 +148,13 @@ def pareto_front(inputPoints, index_list, ReferencePoints):
             if paretoPoint[0] == inputPoint[0] and paretoPoint[1] == inputPoint[1]:
                 index_list_Pareto += [index]
 
+    percentage_value = len(list(paretoPoints1)) / 12
     # when hypervolume is calculated, the rectangles of dominated points will be covered by those of non-dominated points
     hv = hypervolume(inputPoints)
     hypervolume_value = hv.compute(ReferencePoints)
-    percentage_value = len(list(paretoPoints1)) / 12
 
-    return pp, index_list_Pareto, hypervolume_value, percentage_value
+    NDC_value = NDC_fun(list(paretoPoints1), GridValues)
+    return pp, index_list_Pareto, percentage_value, hypervolume_value, NDC_value
 
 def objective_list(objective_name, train_test, data_frame):
     if objective_name in ['obj1','obj2']:
@@ -130,7 +164,7 @@ def objective_list(objective_name, train_test, data_frame):
     return obj_list
 
 def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, pareto_front_y, draw_ideal_nadir,
-                             ParetoCandidates_ParetoPoints, ReferencePoints: list=None):
+                             ParetoCandidates_ParetoPoints, ReferencePoints, GridValues):
 
     results_config_AllMethods = dataframe_dict['results_config_AllMethods']
 
@@ -158,8 +192,9 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
     if ParetoCandidates_ParetoPoints == 'ParetoPoints':
         ParetoPoints_AllMethods = {}
         ParetoPointsIndices_AllMethods = {}
-        hypervolume_AllMethods = {}
         percentage_AllMethods = {}
+        hypervolume_AllMethods = {}
+        NDC_AllMethods = {}
 
     for (i, method) in enumerate(methods_list):
 
@@ -214,18 +249,21 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
             if ParetoCandidates_ParetoPoints == 'ParetoCandidates':
                 ParetoCandidates_AllMethods.update({'{}_{}'.format(method, train_test): np.array(inputPoints1)})
                 ParetoCandidatesIndices_AllMethods.update({'{}_{}'.format(method, train_test): index_list})
+
             if ParetoCandidates_ParetoPoints == 'ParetoPoints':
-                ParetoPoints1, index_list_Pareto, hypervolume_value, percentage_value = pareto_front(inputPoints = inputPoints1, index_list = index_list, ReferencePoints = ReferencePoints)
+                ParetoPoints1, index_list_Pareto, percentage_value, hypervolume_value, NDC_value = pareto_front(inputPoints = inputPoints1,
+                                        index_list = index_list, ReferencePoints = ReferencePoints, GridValues=GridValues)
                 print('MC:{}, method: {}, hypervolume: {}'.format(MC, method, hypervolume_value))
                 ParetoPoints_AllMethods.update({'{}_{}'.format(method, train_test): ParetoPoints1})
                 ParetoPointsIndices_AllMethods.update({'{}_{}'.format(method, train_test): index_list_Pareto})
-                hypervolume_AllMethods.update({'{}_{}'.format(method, train_test): [hypervolume_value]})
                 percentage_AllMethods.update({'{}_{}'.format(method, train_test): [percentage_value]})
+                hypervolume_AllMethods.update({'{}_{}'.format(method, train_test): [hypervolume_value]})
+                NDC_AllMethods.update({'{}_{}'.format(method, train_test): [NDC_value]})
 
     if ParetoCandidates_ParetoPoints == 'ParetoCandidates':
         return ParetoCandidates_AllMethods, ParetoCandidatesIndices_AllMethods
     if ParetoCandidates_ParetoPoints == 'ParetoPoints':
-        return ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, hypervolume_AllMethods, percentage_AllMethods
+        return ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, percentage_AllMethods, hypervolume_AllMethods, NDC_AllMethods
 
 def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, save_path, ParetoCandidates_ParetoPoints):
 
@@ -474,6 +512,9 @@ def main( ):
     parser.add_argument('--ParetoCandidates_ParetoPoints', type=str, default='ParetoCandidates',
                         help='choose to draw all Pareto Candidates or all Pareto points')
 
+    parser.add_argument('--mu', type=float, default=0.05,
+                        help='mu for NDC calculation')
+
     parser.add_argument("--mode", default='client')
     parser.add_argument("--port", default=62364)
     args = parser.parse_args()
@@ -513,48 +554,55 @@ def main( ):
             results_config_IdealNadirMMD = load_result_IdealNadir('MMD', 10, dir_path, args.methods_list)
             dataframe_dict.update({'results_config_IdealNadirMMD': results_config_IdealNadirMMD})
 
-    if args.ParetoCandidates_ParetoPoints == 'ParetoCandidates':
-        ReferencePoints = None
-    elif args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
-        ReferencePoints = reference_point(dataframe_dict, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir)
+    if args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
+        ReferencePoints, GridValues = Reference_GridValues(dataframe_dict, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.mu)
 
     dir_path = './result/{}/{}/'.format(args.dataset, args.confounder)
 
     for MC in range(args.MCs):
         if args.ParetoCandidates_ParetoPoints == 'ParetoCandidates':
             ParetoCandidates_AllMethods, ParetoCandidatesIndices_AllMethods = CollectPoints_AllMethods(
-                dataframe_dict, MC, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.ParetoCandidates_ParetoPoints, ReferencePoints)
+                dataframe_dict, MC, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.ParetoCandidates_ParetoPoints,
+                ReferencePoints=None, GridValues=None)
             draw_scatter_plot(ParetoCandidates_AllMethods, ParetoCandidatesIndices_AllMethods, args.methods_list, args.pareto_front_x, args.pareto_front_y,
                               MC, dir_path, args.ParetoCandidates_ParetoPoints)
 
         if args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
-            ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, hypervolume_AllMethods, percentage_AllMethods = CollectPoints_AllMethods(
-                dataframe_dict, MC, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.ParetoCandidates_ParetoPoints, ReferencePoints)
+            ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, percentage_AllMethods, hypervolume_AllMethods, NDC_AllMethods = CollectPoints_AllMethods(
+                dataframe_dict, MC, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.ParetoCandidates_ParetoPoints,
+                ReferencePoints, GridValues)
             draw_scatter_plot(ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, args.methods_list, args.pareto_front_x, args.pareto_front_y,
                               MC, dir_path, args.ParetoCandidates_ParetoPoints)
 
-            hypervolume_dataframe_oneMC = pd.DataFrame.from_dict(hypervolume_AllMethods)
             percentage_dataframe_oneMC = pd.DataFrame.from_dict(percentage_AllMethods)
+            hypervolume_dataframe_oneMC = pd.DataFrame.from_dict(hypervolume_AllMethods)
+            NDC_dataframe_oneMC = pd.DataFrame.from_dict(NDC_AllMethods)
 
             if MC == 0:
-                hypervolume_dataframe = hypervolume_dataframe_oneMC
                 percentage_dataframe = percentage_dataframe_oneMC
+                hypervolume_dataframe = hypervolume_dataframe_oneMC
+                NDC_dataframe = NDC_dataframe_oneMC
             else:
-                hypervolume_dataframe = pd.concat([hypervolume_dataframe, hypervolume_dataframe_oneMC],axis=0)
                 percentage_dataframe = pd.concat([percentage_dataframe, percentage_dataframe_oneMC], axis=0)
+                hypervolume_dataframe = pd.concat([hypervolume_dataframe, hypervolume_dataframe_oneMC],axis=0)
+                NDC_dataframe = pd.concat([NDC_dataframe, NDC_dataframe_oneMC], axis=0)
 
     if args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
-        hypervolume_dataframe_mean = hypervolume_dataframe.mean(axis=0).reset_index(name='mean')
-        hypervolume_dataframe_std = hypervolume_dataframe.std(axis=0).reset_index(name='std')
-        hypervolume_mean_std = hypervolume_dataframe_mean.merge(hypervolume_dataframe_std, how='inner', on='index')
+        for metric in ['percentage', 'hypervolume', 'NDC']:
+            if metric == 'percentage':
+                metric_dataframe = percentage_dataframe
+            elif metric == 'hypervolume':
+                metric_dataframe = hypervolume_dataframe
+            else:
+                metric_dataframe = NDC_dataframe
 
-        percentage_dataframe_mean = percentage_dataframe.mean(axis=0).reset_index(name='mean')
-        percentage_dataframe_std = percentage_dataframe.std(axis=0).reset_index(name='std')
-        percentage_mean_std = percentage_dataframe_mean.merge(percentage_dataframe_std, how='inner', on='index').round(2)
+            metric_dataframe_mean = metric_dataframe.mean(axis=0).reset_index(name='mean')
+            metric_dataframe_std = metric_dataframe.std(axis=0).reset_index(name='std')
+            metric_dataframe_mean_std = metric_dataframe_mean.merge(metric_dataframe_std, how='inner', on='index').round(2)
 
-        print('{}'.format(args.dataset))
-        print('{} versus {}'.format(args.pareto_front_x, args.pareto_front_y))
-        print(hypervolume_mean_std)
+            print('{}: {}'.format(args.dataset, metric))
+            print('{} versus {}'.format(args.pareto_front_x, args.pareto_front_y))
+            print(metric_dataframe_mean_std)
 
 # Run the actual program
 if __name__ == "__main__":
