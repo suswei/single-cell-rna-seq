@@ -10,25 +10,25 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # conf_estimator means estimator for confounding effect, it is 'MMD' for cross validation
     hyperparameter_config = {
-        'dataset_name': ['TM_MCA_Lung'], #
+        'dataset_name': ['macaque_retina'], #
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
         'n_hidden': [128],
         'n_latent': [10],
-        'batch_size': [128], #2 GPU
+        'batch_size': [256], #2 GPU
         'adv_estimator': ['MMD'],
         'MMD_bandwidths': ['1,2,5,8,10'],
         'epochs': [250], #
         'lr': [5e-3], #
-        'obj1_max': [8355],  #
-        'obj1_min': [3035],  #
-        'obj2_max': [0.458],  #
-        'obj2_min': [0.023],  #
+        'obj1_max': [3332],  #
+        'obj1_min': [2964],  #
+        'obj2_max': [0.179],  #
+        'obj2_min': [0.021],  #
         'MC': list(range(20)),
         'weights_total': [10],
         'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(10)), [1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11])],
-        'num_workers': [1] #4
+        'num_workers': [4] #4
     }
     keys, values = zip(*hyperparameter_config.items())
     hyperparameter_experiments = [dict(zip(keys, v)) for v in itertools.product(*values)]
