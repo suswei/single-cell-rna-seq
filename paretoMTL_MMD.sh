@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="macaque_retina paretoMTL_MMD"
+#SBATCH --job-name="tabula_muris paretoMTL_MMD"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
+#SBATCH --mem 5000
 
-#run --mem 5000
-
-#SBATCH --partition=gpgpu
-#SBATCH --qos=gpgpuresplat
-#SBATCH --gres=gpu:p100:2
+#run --partition=gpgpu
+#run --qos=gpgpuresplat
+#run --gres=gpu:p100:2
 
 # The maximum running time of the job in days-hours:mins:sec
 #SBATCH --time=3-0:0:00
@@ -43,6 +42,6 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-module load fosscuda/2019b
+#module load fosscuda/2019b
 python3 paretoMTL_MMD.py ${SLURM_ARRAY_TASK_ID}
 

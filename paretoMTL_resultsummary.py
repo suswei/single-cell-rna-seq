@@ -522,7 +522,7 @@ def main( ):
     args.methods_list = args.methods_list.split(',')
 
     for method in args.methods_list:
-        dir_path = './result/{}/{}/{}'.format(args.dataset, args.confounder, method)
+        dir_path = './result/{}/{}/pretrain150_lr0.005/{}'.format(args.dataset, args.confounder, method)
         if 'regularize' in method:
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),
@@ -545,7 +545,7 @@ def main( ):
 
     dataframe_dict = {'results_config_AllMethods': results_config_AllMethods}
     if args.draw_ideal_nadir:
-        dir_path = './result/{}/{}'.format(args.dataset, args.confounder)
+        dir_path = './result/{}/{}/pretrain150_lr0.005'.format(args.dataset, args.confounder)
         if any('MINE' in s for s in args.methods_list):
             results_config_IdealNadirMINE = load_result_IdealNadir('MINE', 10, dir_path, args.methods_list)
             dataframe_dict.update({'results_config_IdealNadirMINE': results_config_IdealNadirMINE})
@@ -557,7 +557,7 @@ def main( ):
     if args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
         ReferencePoints, GridValues = Reference_GridValues(dataframe_dict, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.mu)
 
-    dir_path = './result/{}/{}/'.format(args.dataset, args.confounder)
+    dir_path = './result/{}/{}/pretrain150_lr0.005/'.format(args.dataset, args.confounder)
 
     for MC in range(args.MCs):
         if args.ParetoCandidates_ParetoPoints == 'ParetoCandidates':

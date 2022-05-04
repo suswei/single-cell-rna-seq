@@ -10,7 +10,7 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # conf_estimator means estimator for confounding effect, it is 'MMD' for cross validation
     hyperparameter_config = {
-        'dataset_name': ['TM_MCA_Lung'],#
+        'dataset_name': ['tabula_muris'],#
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
@@ -25,10 +25,10 @@ def main(taskid):
         'adv_epochs': [1],
         'lr': [5e-3], #1e-3
         'adv_lr': [5e-5],
-        'obj1_max': [10067],  #
-        'obj1_min': [2840],  #
-        'obj2_max': [0.629],  #
-        'obj2_min': [-0.099],  #
+        'obj1_max': [19382],  #
+        'obj1_min': [11526],  #
+        'obj2_max': [0.595],  #
+        'obj2_min': [-0.061],  #
         'MC': list(range(20)),
         'weights_total': [10],
         'nweight_weight': [{'nweight': i, 'weight': j} for i,j in zip(list(range(10)), [1/11, 2/11, 3/11, 4/11, 5/11, 6/11, 7/11, 8/11, 9/11, 10/11])],
