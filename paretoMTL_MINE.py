@@ -10,7 +10,7 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # adv_estimator means estimator for confounding effect, it could be 'MINE', 'MMD', 'stdz_MMD' (stdz_MMD means standardize the dimension of z, then use MMD)
     hyperparameter_config = {
-        'dataset_name': ['tabula_muris'],#
+        'dataset_name': ['TM_MCA_Lung'],#
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
@@ -23,10 +23,10 @@ def main(taskid):
         'adv_activation_fun': ['ELU'],
         'lr': [5e-3], #1e-3
         'adv_lr': [5e-5],
-        'obj1_max': [19382],  #
-        'obj1_min': [11526],  #
-        'obj2_max': [0.595],  #
-        'obj2_min': [-0.061], #
+        'obj1_max': [10067],  #
+        'obj1_min': [2840],  #
+        'obj2_max': [0.629],  #
+        'obj2_min': [-0.099],  #
         'epochs': [150], #
         'adv_epochs': [1],
         'n_tasks': [2],

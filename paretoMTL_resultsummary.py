@@ -57,7 +57,7 @@ def Reference_GridValues(dataframe_dict, methods_list, pareto_front_x, pareto_fr
         if any('MMD' in s for s in methods_list):
             results_config_IdealNadirMMD = dataframe_dict['results_config_IdealNadirMMD']
             IdealNadirMMD_obj1_max, IdealNadirMMD_obj2_max, IdealNadirMMD_obj1_min, IdealNadirMMD_obj2_min = max_min_value(results_config_IdealNadirMMD, pareto_front_x, pareto_front_y)
-            obj1_max = max(obj1_max, IdealNadirMMD_obj1_max)
+            obj1_max = min(max(obj1_max, IdealNadirMMD_obj1_max),1000)
             obj2_max = max(obj2_max, IdealNadirMMD_obj2_max)
             obj1_min = min(obj1_min, IdealNadirMMD_obj1_min)
             obj2_min = min(obj2_min, IdealNadirMMD_obj2_min)
@@ -66,9 +66,10 @@ def Reference_GridValues(dataframe_dict, methods_list, pareto_front_x, pareto_fr
     obj2_max += 0.001
     obj1_min -= 0.001
     obj2_min -= 0.001
-
+    print('obj1_max:{}, obj1_min: {}, obj2_max: {}, obj2_min: {}'.format(obj1_max, obj1_min, obj2_max, obj2_min))
     ref_point = [obj1_max, obj2_max]
     GridValues = [[obj1_min + k*mu for k in range(int((obj1_max - obj1_min)/mu)+1)] + [obj1_max], [obj2_min + k*mu for k in range(int((obj2_max - obj2_min)/mu)+1)] + [obj2_max]]
+
     return ref_point, GridValues
 
 def simple_cull(inputPoints, dominates, return_index: bool=False, min_max: str='min'):
@@ -154,6 +155,7 @@ def pareto_front(inputPoints, index_list, ReferencePoints, GridValues):
     hypervolume_value = hv.compute(ReferencePoints)
 
     NDC_value = NDC_fun(list(paretoPoints1), GridValues)
+
     return pp, index_list_Pareto, percentage_value, hypervolume_value, NDC_value
 
 def objective_list(objective_name, train_test, data_frame):
@@ -169,7 +171,6 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
     results_config_AllMethods = dataframe_dict['results_config_AllMethods']
 
     '''
-    #check any rows that contain infinity value
     subset_results_config_AllMethods = results_config_AllMethods[(results_config_AllMethods == np.inf).any(axis=1)]
     if subset_results_config_AllMethods.shape[0] > 0:
         results_config_AllMethods= pd.concat([results_config_AllMethods, subset_results_config_AllMethods]).drop_duplicates(keep=False)
@@ -212,6 +213,8 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
             obj1_list = objective_list(pareto_front_x, train_test, results_config_oneMC_oneMethod)
             obj2_list = objective_list(pareto_front_y, train_test, results_config_oneMC_oneMethod)
 
+            obj1_list_test_convergence = objective_list('obj1', train_test, results_config_oneMC_oneMethod)
+
             if draw_ideal_nadir:
                 if 'MINE' in method:
                     Input_DataFrame = results_config_IdealNadirMINE_oneMC
@@ -221,8 +224,12 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
                 obj1_first_last = objective_list(pareto_front_x, train_test, Input_DataFrame)
                 obj2_first_last = objective_list(pareto_front_y, train_test, Input_DataFrame)
 
+                obj1_first_last_test_convergence = objective_list('obj1', train_test, Input_DataFrame)
+
                 obj1 = [obj1_first_last[0]] + obj1_list + [obj1_first_last[-1]]
                 obj2 = [obj2_first_last[0]] + obj2_list + [obj2_first_last[-1]]
+
+                obj1_test_convergence = [obj1_first_last_test_convergence[0]] + obj1_list_test_convergence + [obj1_first_last_test_convergence[-1]]
 
                 if 'MMD' in method:
                     print('obj1: {}'.format(obj1))
@@ -230,6 +237,8 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
             else:
                 obj1 = obj1_list
                 obj2 = obj2_list
+
+                obj1_test_convergence = obj1_list_test_convergence
 
             if pareto_front_x == 'obj1' and pareto_front_y == 'be':
                 obj2 = [(-1) * k for k in obj2]
@@ -239,12 +248,25 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
                 obj1 = [(-1) * k for k in obj1]
                 obj2 = [(-1) * k for k in obj2]
 
+
+            #check if obj1_train_std or obj1_test_std>1000, if so, we think the training process is not convergent
+            non_convergent_index = [i for i, j in enumerate(obj1_test_convergence) if j > 1000]
+            if len(non_convergent_index)>0:
+                for i in reversed(non_convergent_index):
+                    del obj1[i]
+                for i in reversed(non_convergent_index):
+                    del obj2[i]
+
             inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
 
             if draw_ideal_nadir:
                 index_list = [0] + [int(k)+1 for k in list(results_config_oneMC_oneMethod.loc[:, 'index'])] + [11]
             else:
                 index_list = [int(k) for k in list(results_config_oneMC_oneMethod.loc[:, 'index'])]
+
+            if len(non_convergent_index)>0:
+                for i in reversed(non_convergent_index):
+                    del index_list[i]
 
             if ParetoCandidates_ParetoPoints == 'ParetoCandidates':
                 ParetoCandidates_AllMethods.update({'{}_{}'.format(method, train_test): np.array(inputPoints1)})
@@ -522,7 +544,7 @@ def main( ):
     args.methods_list = args.methods_list.split(',')
 
     for method in args.methods_list:
-        dir_path = './result/{}/{}/pretrain150_lr0.005/{}'.format(args.dataset, args.confounder, method)
+        dir_path = './result/{}/{}/pretrain100_lr0.005/{}'.format(args.dataset, args.confounder, method)
         if 'regularize' in method:
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),
@@ -545,7 +567,7 @@ def main( ):
 
     dataframe_dict = {'results_config_AllMethods': results_config_AllMethods}
     if args.draw_ideal_nadir:
-        dir_path = './result/{}/{}/pretrain150_lr0.005'.format(args.dataset, args.confounder)
+        dir_path = './result/{}/{}/pretrain100_lr0.005'.format(args.dataset, args.confounder)
         if any('MINE' in s for s in args.methods_list):
             results_config_IdealNadirMINE = load_result_IdealNadir('MINE', 10, dir_path, args.methods_list)
             dataframe_dict.update({'results_config_IdealNadirMINE': results_config_IdealNadirMINE})
@@ -557,7 +579,7 @@ def main( ):
     if args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
         ReferencePoints, GridValues = Reference_GridValues(dataframe_dict, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.mu)
 
-    dir_path = './result/{}/{}/pretrain150_lr0.005/'.format(args.dataset, args.confounder)
+    dir_path = './result/{}/{}/pretrain100_lr0.005/'.format(args.dataset, args.confounder)
 
     for MC in range(args.MCs):
         if args.ParetoCandidates_ParetoPoints == 'ParetoCandidates':
@@ -600,9 +622,26 @@ def main( ):
             metric_dataframe_std = metric_dataframe.std(axis=0).reset_index(name='std')
             metric_dataframe_mean_std = metric_dataframe_mean.merge(metric_dataframe_std, how='inner', on='index').round(2)
 
+            metric_dataframe_mean_std_sorted = metric_dataframe_mean_std.iloc[[0,2,1,3],:]
+            metric_dataframe_mean_std_sorted=metric_dataframe_mean_std_sorted.reset_index(drop=True)
             print('{}: {}'.format(args.dataset, metric))
             print('{} versus {}'.format(args.pareto_front_x, args.pareto_front_y))
-            print(metric_dataframe_mean_std)
+            print(metric_dataframe_mean_std_sorted)
+
+            metric_dataframe_mean_std_sorted['range_start'] = metric_dataframe_mean_std_sorted['mean'] - metric_dataframe_mean_std_sorted['std']
+            metric_dataframe_mean_std_sorted['range_end'] = metric_dataframe_mean_std_sorted['mean'] + metric_dataframe_mean_std_sorted['std']
+            if metric_dataframe_mean_std_sorted.loc[0,'range_start']<=metric_dataframe_mean_std_sorted.loc[1,'range_end'] and metric_dataframe_mean_std_sorted.loc[1,'range_start']<=metric_dataframe_mean_std_sorted.loc[0,'range_end']:
+                print('train, not significant')
+            else:
+                print('train, significant')
+
+            if metric_dataframe_mean_std_sorted.loc[2, 'range_start'] <= metric_dataframe_mean_std_sorted.loc[
+                3, 'range_end'] and metric_dataframe_mean_std_sorted.loc[3, 'range_start'] <= \
+                metric_dataframe_mean_std_sorted.loc[2, 'range_end']:
+                print('test, not significant')
+            else:
+                print('test, significant')
+
 
 # Run the actual program
 if __name__ == "__main__":
