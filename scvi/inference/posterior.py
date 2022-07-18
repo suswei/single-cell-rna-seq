@@ -1,5 +1,3 @@
-
-
 from abc import abstractmethod
 import copy
 
@@ -9,6 +7,7 @@ import scipy
 import torch
 import os
 from matplotlib import pyplot as plt
+import seaborn as sns
 from scipy.stats import kde, entropy
 from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
@@ -17,7 +16,7 @@ from sklearn.metrics import normalized_mutual_info_score as NMI
 from sklearn.metrics import silhouette_score
 from sklearn.mixture import GaussianMixture as GMM
 from sklearn.neighbors import NearestNeighbors, KNeighborsRegressor
-from sklearn.utils.linear_assignment_ import linear_assignment
+from scipy.optimize import linear_sum_assignment as linear_assignment
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SequentialSampler, SubsetRandomSampler, RandomSampler
 
@@ -71,7 +70,6 @@ class Posterior:
 
     def __init__(self, model, gene_dataset, shuffle=False, indices=None, use_cuda=True, data_loader_kwargs=dict()):
         '''
-
         When added to annotation, has a private name attribute
         '''
         self.model = model
@@ -577,15 +575,24 @@ class Posterior:
                 else:
                     plt_labels = [str(i) for i in range(len(np.unique(indices)))]
                 plt.figure(figsize=(10, 10))
+                colors = ['#7e1e9c', '#15b01a', '#0343df', '#ff81c0', '#653700', '#e50000', '#95d0fc', '#029386', '#f97306','#96f97b',
+                          '#c20078', '#ffff14', '#04d9ff', '#929591', '#bf77f6', '#00ffff', '#13eac9', '#6e750e','#06470c', '#d1b26f',
+                          '#000000', '#ff028d', '#ffb07c', '#8e82fe', '#8f1402', '#658b38', '#fac205','#5b7c99', '#be0119', '#cdc50a']
+                rgb_values = sns.color_palette(colors)
+                # Map label to RGB
+                color_map = dict(zip(plt_labels, rgb_values))
                 for i, label in zip(range(n), plt_labels):
-                    plt.scatter(latent[indices == i, 0], latent[indices == i, 1], label=label)
-                plt.legend()
+                    plt.scatter(latent[indices == i, 0], latent[indices == i, 1], label=label, c=np.array([color_map[label]]))
+                if len(plt_labels)>10:
+                    plt.legend(prop = {'size': 5})
+                else:
+                    plt.legend()
             elif color_by == 'batches and labels':
-                fig, axes = plt.subplots(1, 2, figsize=(14, 7))
+                fig, axes = plt.subplots(1, 2, figsize=(20, 10))
                 batch_indices = batch_indices.ravel()
                 for i in range(n_batch):
                     axes[0].scatter(latent[batch_indices == i, 0], latent[batch_indices == i, 1], label=str(i))
-                axes[0].set_title("batch coloring")
+                axes[0].set_title("batch coloring", fontsize=25)
                 axes[0].axis("off")
                 axes[0].legend()
 
@@ -594,11 +601,21 @@ class Posterior:
                     plt_labels = self.gene_dataset.cell_types
                 else:
                     plt_labels = [str(i) for i in range(len(np.unique(indices)))]
+
+                colors = ['#7e1e9c', '#15b01a', '#0343df', '#ff81c0', '#653700', '#e50000', '#95d0fc', '#029386', '#f97306','#96f97b',
+                          '#c20078', '#ffff14', '#04d9ff', '#929591', '#bf77f6', '#00ffff', '#13eac9', '#6e750e','#06470c', '#d1b26f',
+                          '#000000', '#ff028d', '#ffb07c', '#8e82fe', '#8f1402', '#658b38', '#fac205','#5b7c99', '#be0119', '#cdc50a']
+                rgb_values = sns.color_palette(colors)
+                # Map label to RGB
+                color_map = dict(zip(plt_labels, rgb_values))
                 for i, cell_type in zip(range(self.gene_dataset.n_labels), plt_labels):
-                    axes[1].scatter(latent[indices == i, 0], latent[indices == i, 1], label=cell_type)
-                axes[1].set_title("label coloring")
+                    axes[1].scatter(latent[indices == i, 0], latent[indices == i, 1], label=cell_type, c=np.array([color_map[cell_type]]))
+                if len(plt_labels) > 10:
+                    axes[1].legend(prop = {'size': 6})
+                else:
+                    axes[1].legend()
+                axes[1].set_title("cell type coloring", fontsize=25)
                 axes[1].axis("off")
-                axes[1].legend()
         plt.axis("off")
         plt.tight_layout()
         if save_name:
@@ -690,7 +707,6 @@ def get_bayes_factors(px_scale, all_labels, cell_idx, other_cell_idx=None, genes
     res = np.log(res + 1e-8) - np.log(1 - res + 1e-8)
     return res
 
-
 def plot_imputation(original, imputed, show_plot=True, title="Imputation"):
     y = imputed
     x = original
@@ -776,9 +792,9 @@ def unsupervised_clustering_accuracy(y, y_pred):
         if y_ in mapping:
             reward_matrix[mapping[y_pred_], mapping[y_]] += 1
     cost_matrix = reward_matrix.max() - reward_matrix
-    ind = linear_assignment(cost_matrix)
+    row_ind, col_ind = linear_assignment(cost_matrix)
+    ind = np.concatenate((row_ind.reshape(-1, 1), col_ind.reshape(-1, 1)), axis=1)
     return sum([reward_matrix[i, j] for i, j in ind]) * 1.0 / y_pred.size, ind
-
 
 def knn_purity(latent, label, n_neighbors=30):
     nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(latent)

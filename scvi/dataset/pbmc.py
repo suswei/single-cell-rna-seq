@@ -1,5 +1,5 @@
 import pickle
-import os
+
 import numpy as np
 import pandas as pd
 
@@ -25,24 +25,29 @@ class PbmcDataset(GeneExpressionDataset):
 
     """
 
-    def __init__(self, save_path='data/'):
+    def __init__(self, save_path='data/', filter_out_de_genes=True, use_symbols=True):
         self.save_path = save_path
         self.urls = ['https://github.com/YosefLab/scVI-data/raw/master/gene_info.csv',
                      'https://github.com/YosefLab/scVI-data/raw/master/pbmc_metadata.pickle']
 
         self.download_names = ['gene_info_pbmc.csv', 'pbmc_metadata.pickle']
         self.download()
-        self.de_metadata = pd.read_csv(os.path.join(self.save_path, 'gene_info_pbmc.csv'), sep=',')
+        self.de_metadata = pd.read_csv(self.save_path + 'gene_info_pbmc.csv', sep=',')
 
-        pbmc_metadata = pickle.load(open(os.path.join(self.save_path, 'pbmc_metadata.pickle'), 'rb'))
+        pbmc_metadata = pickle.load(open(self.save_path + 'pbmc_metadata.pickle', 'rb'))
 
-        pbmc = GeneExpressionDataset.concat_datasets(
-            Dataset10X("pbmc8k", save_path=save_path),
-            Dataset10X("pbmc4k", save_path=save_path)
-        )
+        pbmc8k = Dataset10X("pbmc8k", save_path=save_path)
+        pbmc8k.subsample_genes(pbmc8k.nb_genes)
+        if use_symbols:
+            pbmc8k.gene_names = pbmc8k.gene_symbols
+        pbmc4k = Dataset10X("pbmc4k", save_path=save_path)
+        if use_symbols:
+            pbmc4k.gene_names = pbmc4k.gene_symbols
+        pbmc4k.subsample_genes(pbmc4k.nb_genes)
+        pbmc = GeneExpressionDataset.concat_datasets(pbmc8k, pbmc4k)
         self.barcodes = pd.concat(pbmc.barcodes).values.ravel().astype(str)
-        super().__init__(pbmc.X, pbmc.local_means, pbmc.local_vars,
-                         pbmc.batch_indices, pbmc.labels, pbmc.gene_names)
+        super(PbmcDataset, self).__init__(pbmc.X, pbmc.local_means, pbmc.local_vars,
+                                          pbmc.batch_indices, pbmc.labels, pbmc.gene_names)
 
         dict_barcodes = dict(zip(self.barcodes, np.arange(len(self.barcodes))))
         subset_cells = []
@@ -51,6 +56,7 @@ class PbmcDataset(GeneExpressionDataset):
             if barcode in dict_barcodes:  # barcodes with end -11 filtered on 10X website (49 cells)
                 subset_cells += [dict_barcodes[barcode]]
         self.update_cells(subset_cells=np.array(subset_cells))
+        self.subsample_genes(self.nb_genes)
         idx_metadata = np.array([not barcode.endswith('11') for barcode in barcodes_metadata], dtype=np.bool)
         self.design = pbmc_metadata['design'][idx_metadata]
         self.raw_qc = pbmc_metadata['raw_qc'][idx_metadata]
@@ -64,12 +70,13 @@ class PbmcDataset(GeneExpressionDataset):
         self.labels, self.n_labels = arrange_categories(labels)
         self.cell_types = pbmc_metadata['list_clusters'][:self.n_labels]
 
-        genes_to_keep = list(self.de_metadata['ENSG'].values)  # only keep the genes for which we have de data
-        difference = list(set(genes_to_keep).difference(set(pbmc.gene_names)))  # Non empty only for unit tests
-        for gene in difference:
-            genes_to_keep.remove(gene)
-        self.filter_genes(genes_to_keep)
-        self.de_metadata = self.de_metadata.head(len(genes_to_keep))  # this would only affect the unit tests
+        if filter_out_de_genes:
+            genes_to_keep = list(self.de_metadata['GS'].values)  # only keep the genes for which we have de data
+            difference = list(set(genes_to_keep).difference(set(pbmc.gene_names)))  # Non empty only for unit tests
+            for gene in difference:
+                genes_to_keep.remove(gene)
+            self.filter_genes(genes_to_keep)
+            self.de_metadata = self.de_metadata.head(len(genes_to_keep))  # this would only affect the unit tests
 
 
 class PurifiedPBMCDataset(GeneExpressionDataset):
@@ -93,10 +100,12 @@ class PurifiedPBMCDataset(GeneExpressionDataset):
         for cell_type in cell_types:
             dataset = Dataset10X(cell_type, save_path=save_path)
             dataset.cell_types = np.array([cell_type])
+            dataset.subsample_genes(dataset.nb_genes)
             datasets += [dataset]
 
         pbmc = GeneExpressionDataset.concat_datasets(*datasets, shared_batches=True)
-        pbmc.subsample_genes(subset_genes=(np.array(pbmc.X.sum(axis=0)) > 0).ravel())
-        super().__init__(pbmc.X, pbmc.local_means, pbmc.local_vars,
-                         pbmc.batch_indices, pbmc.labels,
-                         gene_names=pbmc.gene_names, cell_types=pbmc.cell_types)
+        print('concatenation worked')
+        pbmc.subsample_genes(pbmc.nb_genes)
+        super(PurifiedPBMCDataset, self).__init__(pbmc.X, pbmc.local_means, pbmc.local_vars,
+                                                  pbmc.batch_indices, pbmc.labels,
+                                                  gene_names=pbmc.gene_names, cell_types=pbmc.cell_types)
