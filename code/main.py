@@ -29,8 +29,7 @@ def construct_trainer_vae(gene_dataset, args):
 
         trainer_vae = UnsupervisedTrainer(vae_MI, gene_dataset, num_workers=args.num_workers, batch_size=args.batch_size, train_size=args.train_size,
                       seed=args.desired_seed, frequency=10, kl=1, adv_estimator=args.adv_estimator, adv_n_hidden=args.adv_n_hidden,
-                      adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun,
-                      adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
+                      adv_n_layers=args.adv_n_layers, adv_activation_fun=args.adv_activation_fun, adv_w_initial=args.adv_w_initial, batch_ratio=args.batch_ratio, nsamples=args.nsamples)
 
     elif args.adv_estimator == 'MMD':
         args.MMD_bandwidths_list = [float(k) for k in args.MMD_bandwidths.split(',')]
