@@ -210,7 +210,7 @@ def MINE_simulation_summary( ):
         'case_idx': list(range(7)),
         'MC': list(range(20))
     }
-    dir_path = './result/MINE_simulation1'
+    dir_path = '../result/MINE_simulation1'
     MINE_simulation1_summary(hyperparameter_config=hyperparameter_config, save_path=dir_path)
 
     #for simulation 2
@@ -222,7 +222,7 @@ def MINE_simulation_summary( ):
         'gaussian_covariance_type': ['all_identity', 'partial_identity'],
         'MC': list(range(20))
     }
-    dir_path = './result/MINE_simulation2'
+    dir_path = '../result/MINE_simulation2'
 
     MINE_simulation2_summary(hyperparameter_config= hyperparameter_config, save_path=dir_path)
 
