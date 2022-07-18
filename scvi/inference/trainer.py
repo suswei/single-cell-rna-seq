@@ -16,7 +16,7 @@ from tqdm import trange
 from scvi.inference.posterior import Posterior
 import matplotlib.pyplot as plt
 
-from paretoMTL_helper import circle_points, get_d_paretomtl_init, get_d_paretomtl
+from code.paretoMTL_helper import circle_points, get_d_paretomtl_init, get_d_paretomtl
 
 class Trainer:
     r"""The abstract Trainer class for training a PyTorch model and monitoring its statistics. It should be

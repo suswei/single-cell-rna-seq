@@ -78,9 +78,9 @@ def decoder_training(trainer_vae, args):
             obj1_test_list.append(obj1_test_eval)
 
     string = 'extreme_points_{}'.format(args.adv_estimator)
-    args.path = './result/{}/{}/{}'.format(args.dataset_name, args.confounder,string)
-    if not os.path.exists('./result/{}/{}/{}'.format(args.dataset_name, args.confounder, string)):
-        os.makedirs('./result/{}/{}/{}'.format(args.dataset_name, args.confounder,string))
+    args.path = '../result/{}/{}/{}'.format(args.dataset_name, args.confounder,string)
+    if not os.path.exists('../result/{}/{}/{}'.format(args.dataset_name, args.confounder, string)):
+        os.makedirs('../result/{}/{}/{}'.format(args.dataset_name, args.confounder,string))
 
     trainer_vae.diagnosis_plot(obj1_train_list, obj1_test_list, args.path, 'obj1')
 
@@ -435,9 +435,9 @@ def main( ):
         args.adv_w_initial = 'normal'
 
     #load dataset
-    data_save_path = './data/%s/' % (args.dataset_name)
-    if not os.path.exists('./data/%s/' % (args.dataset_name)):
-        os.makedirs('./data/%s/' % (args.dataset_name))
+    data_save_path = '../data/%s/' % (args.dataset_name)
+    if not os.path.exists('../data/%s/' % (args.dataset_name)):
+        os.makedirs('../data/%s/' % (args.dataset_name))
 
     if args.dataset_name == 'tabula_muris':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
@@ -474,9 +474,9 @@ def main( ):
 
     args.desired_seed = int(desired_seeds[0, index])
 
-    args.save_path = './result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index)
-    if not os.path.exists('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index)):
-        os.makedirs('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index))
+    args.save_path = '../result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index)
+    if not os.path.exists('../result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index)):
+        os.makedirs('../result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index))
 
     if args.empirical_MI == True:
         for i in range(gene_dataset.n_batches-1):
@@ -551,9 +551,9 @@ def main( ):
 
                 method = 'pareto{}'.format(args.adv_estimator)
 
-        args.save_path = './result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)
-        if not os.path.exists('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)):
-            os.makedirs('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,method, args.taskid))
+        args.save_path = '../result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)
+        if not os.path.exists('../result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)):
+            os.makedirs('../result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,method, args.taskid))
 
         if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
             torch.save(trainer_vae.model.module.state_dict(), args.save_path + '/vae.pkl')
