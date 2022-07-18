@@ -16,7 +16,7 @@ Quick Start
 
 3. Install scVI through conda (``conda install scvi -c bioconda``) or through pip (``pip install scvi``). Alternatively, you may download or clone this repository and run ``python setup.py install``.
 
-4. Briefly speaking, there are mainly 3 steps to estimate a Pareto Front for Pareto MTL with MINE:
+4. Briefly speaking, there are 3 steps to estimate a Pareto Front for Pareto MTL with MINE:
 
    a. Pretrain scVI and MINE neural networks separately:
    trainer_vae.pretrain_extreme_regularize_paretoMTL(pre_train=pre_train, pre_epochs=pre_epochs, pre_lr=pre_lr, pre_adv_epochs=pre_adv_epochs, pre_adv_lr=pre_adv_lr, path=save_path)
