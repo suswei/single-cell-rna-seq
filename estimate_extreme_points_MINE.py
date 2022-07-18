@@ -34,7 +34,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 main.py --ideal_nadir --use_batches "
+    os.system("python3 main.py --extreme_points --use_batches "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "

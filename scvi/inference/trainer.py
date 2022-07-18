@@ -330,7 +330,7 @@ class Trainer:
                     adv_loss.backward()
                     self.adv_optimizer.step()
 
-    def regularize_fun(self, ideal_nadir: bool=False, epochs: int=150, adv_epochs: int=1,
+    def regularize_fun(self, extreme_points: bool=False, epochs: int=150, adv_epochs: int=1,
                        weight: float=0, obj1_max: float=20000, obj1_min: float=12000,
                        obj2_max: float=0.6, obj2_min: float=0, path: str='./', taskid: int=0):
 
@@ -346,13 +346,13 @@ class Trainer:
 
                 minibatch_index += 1
 
-                if ideal_nadir==True and weight == 0:
+                if extreme_points==True and weight == 0:
                     if self.adv_estimator == 'MINE':
                         self.adv_model_train(adv_epochs=adv_epochs)
                     else:
                         self.cal_loss = False
                         self.cal_adv_loss = True
-                elif ideal_nadir == True and weight == 1:
+                elif extreme_points == True and weight == 1:
                     self.cal_loss = True
                     self.cal_adv_loss = False
                 else:
@@ -363,10 +363,10 @@ class Trainer:
 
                 obj1_minibatch, _, obj2_minibatch = self.two_loss(*tensors_list)
 
-                if ideal_nadir == True and weight == 0:
+                if extreme_points == True and weight == 0:
                     loss = obj2_minibatch
                     minibatch_loss_list.append(obj2_minibatch.data)
-                elif ideal_nadir == True and weight == 1:
+                elif extreme_points == True and weight == 1:
                     loss = obj1_minibatch
                     minibatch_loss_list.append(obj1_minibatch.data)
                 else:
@@ -390,11 +390,11 @@ class Trainer:
                             print(torch.isnan(param.grad).any())
             #evaluate
             if self.epoch % 10 == 0:
-                if ideal_nadir == True and weight == 0:
+                if extreme_points == True and weight == 0:
                     obj2_train_eval, obj2_test_eval = self.obj1_obj2_eval(type='obj2')
                     loss_total_train = obj2_train_eval
                     loss_total_test = obj2_test_eval
-                elif ideal_nadir == True and weight == 1:
+                elif extreme_points == True and weight == 1:
                     obj1_train_eval, obj1_test_eval= self.obj1_obj2_eval(type='obj1')
                     loss_total_train = obj1_train_eval
                     loss_total_test = obj1_test_eval
@@ -407,8 +407,8 @@ class Trainer:
                 loss_total_train_list.append(loss_total_train)
                 loss_total_test_list.append(loss_total_test)
 
-        if ideal_nadir:
-            string = 'ideal_nadir_{}'.format(self.adv_estimator)
+        if extreme_points:
+            string = 'extreme_points_{}'.format(self.adv_estimator)
         elif self.adv_estimator == 'MINE':
             string = 'regularizeMINE'
         else:
@@ -416,11 +416,11 @@ class Trainer:
         path = os.path.dirname(os.path.dirname(path)) + '/{}/taskid{}'.format(string, taskid)
         self.diagnosis_plot(loss_total_train_list, loss_total_test_list, path, 'train_test_totalloss')
 
-        if ideal_nadir:
+        if extreme_points:
             return minibatch_loss_list
 
-    def pretrain_idealnadir_regularize_paretoMTL(self, pre_train: bool=False, pre_epochs: int=200, pre_lr: float=1e-3, eps: float = 0.01,
-        pre_adv_epochs: int=400, pre_adv_lr: float=5e-5, path: str='None', lr: float=1e-3, adv_lr: float=5e-5, ideal_nadir: bool=False,
+    def pretrain_extreme_regularize_paretoMTL(self, pre_train: bool=False, pre_epochs: int=200, pre_lr: float=1e-3, eps: float = 0.01,
+        pre_adv_epochs: int=400, pre_adv_lr: float=5e-5, path: str='None', lr: float=1e-3, adv_lr: float=5e-5, extreme_points: bool=False,
         paretoMTL: bool = False, n_tasks: int=2, npref: int=10, pref_type: str='even', pref_idx: int=0, taskid: int=0, epochs: int=150, adv_epochs: int=1,
         obj1_max: float = 20000, obj1_min: float = 12000, obj2_max: float = 0.6, obj2_min: float = 0, regularize: bool=False, weight: float=1/11):
 
@@ -486,9 +486,9 @@ class Trainer:
 
             self.load_dict(path=path, lr=lr, eps=eps, adv_lr=adv_lr)
 
-            if ideal_nadir :
+            if extreme_points :
 
-                minibatch_loss_list = self.regularize_fun(ideal_nadir=ideal_nadir, epochs=epochs, adv_epochs=adv_epochs, weight=weight, path=path, taskid=taskid)
+                minibatch_loss_list = self.regularize_fun(extreme_points=extreme_points, epochs=epochs, adv_epochs=adv_epochs, weight=weight, path=path, taskid=taskid)
                 return minibatch_loss_list
 
             elif regularize :

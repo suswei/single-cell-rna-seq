@@ -38,5 +38,5 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-python3 estimate_ideal_nadir_MINE.py ${SLURM_ARRAY_TASK_ID}
+python3 estimate_extreme_points_MINE.py ${SLURM_ARRAY_TASK_ID}
 

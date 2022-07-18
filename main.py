@@ -77,7 +77,7 @@ def decoder_training(trainer_vae, args):
             obj1_train_list.append(obj1_train_eval)
             obj1_test_list.append(obj1_test_eval)
 
-    string = 'ideal_nadir_{}'.format(args.adv_estimator)
+    string = 'extreme_points_{}'.format(args.adv_estimator)
     args.path = './result/{}/{}/{}'.format(args.dataset_name, args.confounder,string)
     if not os.path.exists('./result/{}/{}/{}'.format(args.dataset_name, args.confounder, string)):
         os.makedirs('./result/{}/{}/{}'.format(args.dataset_name, args.confounder,string))
@@ -351,7 +351,7 @@ def main( ):
     parser.add_argument('--pre_adv_lr', type=float, default=5e-5,
                         help='learning rate in MINE pre-training and adversarial training')
 
-    parser.add_argument('--ideal_nadir', action='store_true', default=False,
+    parser.add_argument('--extreme_points', action='store_true', default=False,
                         help='whether to get min and max value across pareto optimal points for the normalization of obj1 and obj2')
 
     #for paretoMTL
@@ -467,7 +467,7 @@ def main( ):
         index = args.taskid
     elif args.regularize:
         index = args.taskid // args.weights_total
-    elif args.ideal_nadir:
+    elif args.extreme_points:
         index = args.taskid // 2
     elif args.paretoMTL:
         index = args.taskid//args.npref
@@ -513,7 +513,7 @@ def main( ):
     trainer_vae = construct_trainer_vae(gene_dataset, args)
 
     if args.pre_train == True:
-        trainer_vae.pretrain_idealnadir_regularize_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
+        trainer_vae.pretrain_extreme_regularize_paretoMTL(pre_train=args.pre_train, pre_epochs=args.pre_epochs, pre_lr=args.pre_lr,
                         pre_adv_epochs=args.pre_adv_epochs, pre_adv_lr=args.pre_adv_lr, path=args.save_path)
 
         if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
@@ -524,9 +524,9 @@ def main( ):
         obj1_train, obj1_test = obj1_train_test_eval(trainer_vae)
         print(obj1_train, obj1_test)
     else:
-        if args.ideal_nadir== True:
-            minibatch_loss_list = trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, taskid=args.taskid, weight=args.weight,
-                ideal_nadir=args.ideal_nadir, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs, adv_epochs=args.adv_epochs)
+        if args.extreme_points== True:
+            minibatch_loss_list = trainer_vae.pretrain_extreme_regularize_paretoMTL(path=args.save_path, taskid=args.taskid, weight=args.weight,
+                extreme_points=args.extreme_points, lr=args.lr, adv_lr=args.adv_lr, epochs=args.epochs, adv_epochs=args.adv_epochs)
 
             if args.weight == 0:
                 print('obj2_min: {}, obj2_max: {}'.format(min(minibatch_loss_list), max(minibatch_loss_list)))
@@ -534,10 +534,10 @@ def main( ):
             elif args.weight == 1:
                 print('obj1_min: {}, obj1_max: {}'.format(min(minibatch_loss_list), max(minibatch_loss_list)))
 
-            method='ideal_nadir_{}'.format(args.adv_estimator)
+            method='extreme_points_{}'.format(args.adv_estimator)
         else:
             if args.regularize == True:
-                trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
+                trainer_vae.pretrain_extreme_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr,
                 regularize=args.regularize, weight=args.weight, epochs = args.epochs, adv_epochs = args.adv_epochs,
                 obj1_max=args.obj1_max, obj1_min = args.obj1_min, obj2_max = args.obj2_max, obj2_min = args.obj2_min,
                 taskid=args.taskid)
@@ -545,7 +545,7 @@ def main( ):
                 method = 'regularize{}'.format(args.adv_estimator)
 
             elif args.paretoMTL == True:
-                trainer_vae.pretrain_idealnadir_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, paretoMTL=args.paretoMTL,
+                trainer_vae.pretrain_extreme_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, paretoMTL=args.paretoMTL,
                 obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
                 adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_type=args.pref_type, pref_idx = args.pref_idx, taskid=args.taskid)
 

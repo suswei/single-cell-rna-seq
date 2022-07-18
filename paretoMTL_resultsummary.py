@@ -14,6 +14,25 @@ import argparse
 import statistics
 import cv2
 
+for x_axis in ['ari']:
+    for ParetoCandidates_ParetoPoints in ['candidates', 'paretopoints']:
+        image_path = './result/tabula_muris/batch/pretrain200_lr0.001/paretoMINE_paretoMMD_{}_be_MC3_{}'.format(x_axis, ParetoCandidates_ParetoPoints)
+        image = cv2.imread(image_path + '.png')
+        start_point = (510, 530)
+        end_point = (360, 530)
+        color = (178, 190, 181)
+        thickness = 2
+        image = cv2.arrowedLine(image, start_point, end_point,
+                            color, thickness, tipLength = 0.05)
+        start_point = (510, 350)
+        end_point = (510, 500)
+        color = (178, 190, 181)
+        thickness = 2
+        image = cv2.arrowedLine(image, start_point, end_point,
+                            color, thickness, tipLength = 0.05)
+        cv2.imwrite(image_path + '_modified.png', image)
+
+
 def max_min_value(dataframe, pareto_front_x, pareto_front_y):
 
     if pareto_front_x == 'obj1':
@@ -35,7 +54,7 @@ def max_min_value(dataframe, pareto_front_x, pareto_front_y):
 
     return obj1_max, obj2_max, obj1_min, obj2_min
 
-def Reference_GridValues(dataframe_dict, methods_list, pareto_front_x, pareto_front_y, draw_ideal_nadir, mu):
+def Reference_GridValues(dataframe_dict, methods_list, pareto_front_x, pareto_front_y, draw_extreme_points, mu):
 
     results_config_AllMethods = dataframe_dict['results_config_AllMethods']
     results_config_subset = results_config_AllMethods[results_config_AllMethods.method.isin(methods_list)]
@@ -45,22 +64,22 @@ def Reference_GridValues(dataframe_dict, methods_list, pareto_front_x, pareto_fr
     obj1_min = results_obj1_min
     obj2_min = results_obj2_min
 
-    if draw_ideal_nadir:
+    if draw_extreme_points:
         if any('MINE' in s for s in methods_list):
-            results_config_IdealNadirMINE = dataframe_dict['results_config_IdealNadirMINE']
-            IdealNadirMINE_obj1_max, IdealNadirMINE_obj2_max, IdealNadirMINE_obj1_min, IdealNadirMINE_obj2_min = max_min_value(results_config_IdealNadirMINE, pareto_front_x, pareto_front_y)
-            obj1_max = max(obj1_max, IdealNadirMINE_obj1_max)
-            obj2_max = max(obj2_max, IdealNadirMINE_obj2_max)
-            obj1_min = min(obj1_min, IdealNadirMINE_obj1_min)
-            obj2_min = min(obj2_min, IdealNadirMINE_obj2_min)
+            results_config_ExtremePointsMINE = dataframe_dict['results_config_ExtremePointsMINE']
+            ExtremePointsMINE_obj1_max, ExtremePointsMINE_obj2_max, ExtremePointsMINE_obj1_min, ExtremePointsMINE_obj2_min = max_min_value(results_config_ExtremePointsMINE, pareto_front_x, pareto_front_y)
+            obj1_max = max(obj1_max, ExtremePointsMINE_obj1_max)
+            obj2_max = max(obj2_max, ExtremePointsMINE_obj2_max)
+            obj1_min = min(obj1_min, ExtremePointsMINE_obj1_min)
+            obj2_min = min(obj2_min, ExtremePointsMINE_obj2_min)
 
         if any('MMD' in s for s in methods_list):
-            results_config_IdealNadirMMD = dataframe_dict['results_config_IdealNadirMMD']
-            IdealNadirMMD_obj1_max, IdealNadirMMD_obj2_max, IdealNadirMMD_obj1_min, IdealNadirMMD_obj2_min = max_min_value(results_config_IdealNadirMMD, pareto_front_x, pareto_front_y)
-            obj1_max = min(max(obj1_max, IdealNadirMMD_obj1_max),1000)
-            obj2_max = max(obj2_max, IdealNadirMMD_obj2_max)
-            obj1_min = min(obj1_min, IdealNadirMMD_obj1_min)
-            obj2_min = min(obj2_min, IdealNadirMMD_obj2_min)
+            results_config_ExtremePointsMMD = dataframe_dict['results_config_ExtremePointsMMD']
+            ExtremePointsMMD_obj1_max, ExtremePointsMMD_obj2_max, ExtremePointsMMD_obj1_min, ExtremePointsMMD_obj2_min = max_min_value(results_config_ExtremePointsMMD, pareto_front_x, pareto_front_y)
+            obj1_max = min(max(obj1_max, ExtremePointsMMD_obj1_max),1000)
+            obj2_max = max(obj2_max, ExtremePointsMMD_obj2_max)
+            obj1_min = min(obj1_min, ExtremePointsMMD_obj1_min)
+            obj2_min = min(obj2_min, ExtremePointsMMD_obj2_min)
 
     obj1_max += 0.001
     obj2_max += 0.001
@@ -165,7 +184,7 @@ def objective_list(objective_name, train_test, data_frame):
         obj_list = data_frame.loc[:, '{}_{}'.format(objective_name, train_test)].values.tolist()
     return obj_list
 
-def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, pareto_front_y, draw_ideal_nadir,
+def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, pareto_front_y, draw_extreme_points,
                              ParetoCandidates_ParetoPoints, ReferencePoints, GridValues):
 
     results_config_AllMethods = dataframe_dict['results_config_AllMethods']
@@ -176,13 +195,13 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
         results_config_AllMethods= pd.concat([results_config_AllMethods, subset_results_config_AllMethods]).drop_duplicates(keep=False)
     '''
 
-    if draw_ideal_nadir:
+    if draw_extreme_points:
         if any('MINE' in s for s in methods_list):
-            results_config_IdealNadirMINE = dataframe_dict['results_config_IdealNadirMINE']
-            results_config_IdealNadirMINE.sort_values(['MC', 'index'],ascending=[True, True], inplace=True)
+            results_config_ExtremePointsMINE = dataframe_dict['results_config_ExtremePointsMINE']
+            results_config_ExtremePointsMINE.sort_values(['MC', 'index'],ascending=[True, True], inplace=True)
         if any('MMD' in s for s in methods_list):
-            results_config_IdealNadirMMD = dataframe_dict['results_config_IdealNadirMMD']
-            results_config_IdealNadirMMD.sort_values(['MC', 'index'], ascending=[True, True], inplace=True)
+            results_config_ExtremePointsMMD = dataframe_dict['results_config_ExtremePointsMMD']
+            results_config_ExtremePointsMMD.sort_values(['MC', 'index'], ascending=[True, True], inplace=True)
 
     results_config_oneMC_AllMethods = results_config_AllMethods[results_config_AllMethods.MC.eq(MC)]
 
@@ -200,13 +219,13 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
     for (i, method) in enumerate(methods_list):
 
         results_config_oneMC_oneMethod = results_config_oneMC_AllMethods[results_config_oneMC_AllMethods.method.eq(method)]
-        if draw_ideal_nadir:
+        if draw_extreme_points:
             if 'MINE' in method:
-                results_config_IdealNadirMINE_oneMC = results_config_IdealNadirMINE[results_config_IdealNadirMINE.MC.eq(MC)]
+                results_config_ExtremePointsMINE_oneMC = results_config_ExtremePointsMINE[results_config_ExtremePointsMINE.MC.eq(MC)]
             elif 'MMD' in method:
-                results_config_IdealNadirMMD_oneMC = results_config_IdealNadirMMD[results_config_IdealNadirMMD.MC.eq(MC)]
+                results_config_ExtremePointsMMD_oneMC = results_config_ExtremePointsMMD[results_config_ExtremePointsMMD.MC.eq(MC)]
                 print('MC: {}, method: {}'.format(MC, method))
-                print('results_config_IdealNadirMMD_oneMC: {}'.format(results_config_IdealNadirMMD_oneMC))
+                print('results_config_ExtremePointsMMD_oneMC: {}'.format(results_config_ExtremePointsMMD_oneMC))
 
         for train_test in ['train','test']:
 
@@ -215,11 +234,11 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
 
             obj1_list_test_convergence = objective_list('obj1', train_test, results_config_oneMC_oneMethod)
 
-            if draw_ideal_nadir:
+            if draw_extreme_points:
                 if 'MINE' in method:
-                    Input_DataFrame = results_config_IdealNadirMINE_oneMC
+                    Input_DataFrame = results_config_ExtremePointsMINE_oneMC
                 elif 'MMD' in method:
-                    Input_DataFrame = results_config_IdealNadirMMD_oneMC
+                    Input_DataFrame = results_config_ExtremePointsMMD_oneMC
 
                 obj1_first_last = objective_list(pareto_front_x, train_test, Input_DataFrame)
                 obj2_first_last = objective_list(pareto_front_y, train_test, Input_DataFrame)
@@ -259,7 +278,7 @@ def CollectPoints_AllMethods(dataframe_dict, MC, methods_list, pareto_front_x, p
 
             inputPoints1 = [[obj1[k], obj2[k]] for k in range(len(obj1))]
 
-            if draw_ideal_nadir:
+            if draw_extreme_points:
                 index_list = [0] + [int(k)+1 for k in list(results_config_oneMC_oneMethod.loc[:, 'index'])] + [11]
             else:
                 index_list = [int(k) for k in list(results_config_oneMC_oneMethod.loc[:, 'index'])]
@@ -314,6 +333,16 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
             key = method + '_' + train_test
             points = points_dict[key]
             index_list = index_dict[key]
+
+            if method == 'paretoMINE':
+                method_name = 'ParetoMTL+MINE'
+            elif method == 'paretoMMD':
+                method_name = 'ParetoMTL+MMD'
+            elif method == 'regularizeMINE':
+                method_name = 'scalarization+MINE'
+            elif method == 'regularizeMMD':
+                method_name = 'scalarization+MMD'
+
             if points.shape[0] > 0:
                 if train_test == 'test':
                     y_jitter = [k+0.01 for k in points[:, 1].tolist()]
@@ -321,7 +350,7 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
                     y_jitter = points[:, 1].tolist()
                 fig.add_trace(go.Scatter(x=points[:, 0].tolist(), y=y_jitter, mode='markers',
                                          marker_size=[k * 1 + 10 for k in index_list], marker_symbol=marker_symbol,
-                                         name='{},{}'.format(method, train_test), marker_color=marker_color,
+                                         name='{}, {}'.format(method_name, train_test), marker_color=marker_color,
                                          opacity=0.7, showlegend=True))
 
             obj1_all += list(points[:, 0])
@@ -355,26 +384,26 @@ def draw_scatter_plot(points_dict, index_dict, methods_list, xaxis, yaxis, MC, s
             'xanchor': 'center',
             'yanchor': 'top'},
         legend=dict(
-            x=0.56,
+            x=0.52,
             y=0.98,
             font=dict(
                 family='Times New Roman',
-                size=20,
+                size=16,
                 color='black'
             )
         )
     )
 
     if xaxis == 'obj1':
-        xaxes_title = r'$\large \text{Loss }U_{n,std}(\phi, \theta)$'
+        xaxes_title = r'$\large \text{Loss }\overline{U}_{n}(\phi, \theta)$'
     else:
-        xaxes_title = 'negative {}'.format(xaxis)
+        xaxes_title = 'negative {}'.format(xaxis.upper())
     xvalue_adjust = 0.02
 
     if yaxis == 'obj2':
-        yaxes_title = r'$\large \text{Batch effect }V_{n,std}(\phi)$'
+        yaxes_title = r'$\large \text{Batch effect }\overline{V}_{n}(\phi)$'
     elif yaxis == 'NN':
-        yaxes_title = r'$\large \text{Batch effect }NN_n(\phi)$'
+        yaxes_title = r'$\large \text{Batch effect }NN$'
     else:
         yaxes_title = 'negative BE'
     yvalue_adjust = 0.05
@@ -416,7 +445,7 @@ def load_result(dir_path, hyperparameter_config, method):
                 config_keys = ['adv_estimator', 'MC', 'nweight', 'obj1_min', 'obj1_max', 'obj2_min', 'obj2_max']
             elif 'pareto' in method:
                 config_keys = ['adv_estimator', 'MC', 'pref_idx', 'obj1_min', 'obj1_max', 'obj2_min', 'obj2_max']
-            elif 'ideal_nadir' in method:
+            elif 'extreme_points' in method:
                 config_keys = ['adv_estimator', 'MC', 'weight']
 
             results_config = {key: [value] for key, value in config.items() if key in tuple(config_keys)}
@@ -441,14 +470,14 @@ def load_result(dir_path, hyperparameter_config, method):
     else:
         return results_config_total
 
-def load_result_IdealNadir(adv_estimator, MCs, dir_path, methods_list):
-    method = 'ideal_nadir_{}'.format(adv_estimator)
+def load_result_ExtremePoints(adv_estimator, MCs, dir_path, methods_list):
+    method = 'extreme_points_{}'.format(adv_estimator)
     new_dir_path = dir_path + '/{}'.format(method)
     hyperparameter_config = {
         'MC': list(range(MCs)),
         'weight': [0, 1]
     }
-    results_config_IdealNadir = load_result(new_dir_path, hyperparameter_config, method)
+    results_config_ExtremePoints = load_result(new_dir_path, hyperparameter_config, method)
 
     #results for two extreme points do not contain the max and min values of obj1 and obj2 for standardization
     #read in such values for standardization
@@ -456,21 +485,21 @@ def load_result_IdealNadir(adv_estimator, MCs, dir_path, methods_list):
     min_max_config_path = dir_path + '/{}/taskid0/config.pkl'.format(min_max_method)
     min_max_config = pickle.load(open(min_max_config_path, "rb"))
 
-    results_config_IdealNadir['obj1_max'] = min_max_config['obj1_max']
-    results_config_IdealNadir['obj1_min'] = min_max_config['obj1_min']
-    results_config_IdealNadir['obj2_max'] = min_max_config['obj2_max']
-    results_config_IdealNadir['obj2_min'] = min_max_config['obj2_min']
+    results_config_ExtremePoints['obj1_max'] = min_max_config['obj1_max']
+    results_config_ExtremePoints['obj1_min'] = min_max_config['obj1_min']
+    results_config_ExtremePoints['obj2_max'] = min_max_config['obj2_max']
+    results_config_ExtremePoints['obj2_min'] = min_max_config['obj2_min']
 
-    results_config_IdealNadir_std = std_obj1_obj2(results_config_IdealNadir)
+    results_config_ExtremePoints_std = std_obj1_obj2(results_config_ExtremePoints)
 
-    results_config_IdealNadir_std['index'] = results_config_IdealNadir_std.apply(lambda row: int(row.weight * 11), axis=1)
+    results_config_ExtremePoints_std['index'] = results_config_ExtremePoints_std.apply(lambda row: int(row.weight * 11), axis=1)
 
-    print('results_config_total_std shape: {},{}'.format(results_config_IdealNadir_std.shape[0],results_config_IdealNadir_std.shape[1]))
-    print('columns are: {}'.format(results_config_IdealNadir_std.columns))
-    print('obj1_max: {}'.format(set(results_config_IdealNadir_std.loc[:,'obj1_max'])))
-    print('obj2_min: {}'.format(set(results_config_IdealNadir_std.loc[:, 'obj2_min'])))
+    print('results_config_total_std shape: {},{}'.format(results_config_ExtremePoints_std.shape[0],results_config_ExtremePoints_std.shape[1]))
+    print('columns are: {}'.format(results_config_ExtremePoints_std.columns))
+    print('obj1_max: {}'.format(set(results_config_ExtremePoints_std.loc[:,'obj1_max'])))
+    print('obj2_min: {}'.format(set(results_config_ExtremePoints_std.loc[:, 'obj2_min'])))
 
-    return results_config_IdealNadir_std
+    return results_config_ExtremePoints_std
 
 def diagnosis(dir_path, hyperparameter_config, method):
 
@@ -528,7 +557,7 @@ def main( ):
     parser.add_argument('--diagnosis', action='store_true', default=False,
                         help='whether to visualize diagnosis plot')
 
-    parser.add_argument('--draw_ideal_nadir', action='store_true', default=False,
+    parser.add_argument('--draw_extreme_points', action='store_true', default=False,
                         help='whether to draw all input points or not')
 
     parser.add_argument('--ParetoCandidates_ParetoPoints', type=str, default='ParetoCandidates',
@@ -544,7 +573,7 @@ def main( ):
     args.methods_list = args.methods_list.split(',')
 
     for method in args.methods_list:
-        dir_path = './result/{}/{}/pretrain100_lr0.005/{}'.format(args.dataset, args.confounder, method)
+        dir_path = './result/{}/{}/pretrain150_lr0.001/{}'.format(args.dataset, args.confounder, method)
         if 'regularize' in method:
             hyperparameter_config = {
                 'MC': list(range(args.MCs)),
@@ -566,32 +595,32 @@ def main( ):
             diagnosis(dir_path, hyperparameter_config, method)
 
     dataframe_dict = {'results_config_AllMethods': results_config_AllMethods}
-    if args.draw_ideal_nadir:
-        dir_path = './result/{}/{}/pretrain100_lr0.005'.format(args.dataset, args.confounder)
+    if args.draw_extreme_points:
+        dir_path = './result/{}/{}/pretrain150_lr0.001'.format(args.dataset, args.confounder)
         if any('MINE' in s for s in args.methods_list):
-            results_config_IdealNadirMINE = load_result_IdealNadir('MINE', 10, dir_path, args.methods_list)
-            dataframe_dict.update({'results_config_IdealNadirMINE': results_config_IdealNadirMINE})
+            results_config_ExtremePointsMINE = load_result_ExtremePoints('MINE', 10, dir_path, args.methods_list)
+            dataframe_dict.update({'results_config_ExtremePointsMINE': results_config_ExtremePointsMINE})
 
         if any('MMD' in s for s in args.methods_list):
-            results_config_IdealNadirMMD = load_result_IdealNadir('MMD', 10, dir_path, args.methods_list)
-            dataframe_dict.update({'results_config_IdealNadirMMD': results_config_IdealNadirMMD})
+            results_config_ExtremePointsMMD = load_result_ExtremePoints('MMD', 10, dir_path, args.methods_list)
+            dataframe_dict.update({'results_config_ExtremePointsMMD': results_config_ExtremePointsMMD})
 
     if args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
-        ReferencePoints, GridValues = Reference_GridValues(dataframe_dict, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.mu)
+        ReferencePoints, GridValues = Reference_GridValues(dataframe_dict, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_extreme_points, args.mu)
 
-    dir_path = './result/{}/{}/pretrain100_lr0.005/'.format(args.dataset, args.confounder)
+    dir_path = './result/{}/{}/pretrain150_lr0.001/'.format(args.dataset, args.confounder)
 
     for MC in range(args.MCs):
         if args.ParetoCandidates_ParetoPoints == 'ParetoCandidates':
             ParetoCandidates_AllMethods, ParetoCandidatesIndices_AllMethods = CollectPoints_AllMethods(
-                dataframe_dict, MC, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.ParetoCandidates_ParetoPoints,
+                dataframe_dict, MC, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_extreme_points, args.ParetoCandidates_ParetoPoints,
                 ReferencePoints=None, GridValues=None)
             draw_scatter_plot(ParetoCandidates_AllMethods, ParetoCandidatesIndices_AllMethods, args.methods_list, args.pareto_front_x, args.pareto_front_y,
                               MC, dir_path, args.ParetoCandidates_ParetoPoints)
 
         if args.ParetoCandidates_ParetoPoints == 'ParetoPoints':
             ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, percentage_AllMethods, hypervolume_AllMethods, NDC_AllMethods = CollectPoints_AllMethods(
-                dataframe_dict, MC, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_ideal_nadir, args.ParetoCandidates_ParetoPoints,
+                dataframe_dict, MC, args.methods_list, args.pareto_front_x, args.pareto_front_y, args.draw_extreme_points, args.ParetoCandidates_ParetoPoints,
                 ReferencePoints, GridValues)
             draw_scatter_plot(ParetoPoints_AllMethods, ParetoPointsIndices_AllMethods, args.methods_list, args.pareto_front_x, args.pareto_front_y,
                               MC, dir_path, args.ParetoCandidates_ParetoPoints)
