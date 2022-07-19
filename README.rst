@@ -20,13 +20,13 @@ Quick Start
 
    a. Pretrain scVI and MINE neural networks separately:
 
-      trainer_vae.pretrain_extreme_regularize_paretoMTL(pre_train=pre_train, pre_epochs=pre_epochs, pre_lr=pre_lr,
-      pre_adv_epochs=pre_adv_epochs, pre_adv_lr=pre_adv_lr, path=save_path)
+      trainer_vae.pretrain_extreme_regularize_paretoMTL(pre_train=True, pre_epochs=150, pre_lr=1e-3,
+      pre_adv_epochs=400, pre_adv_lr=5e-5, path=save_path)
 
    b. Obtain the minimum and maximum value for the two objectives for standardization, and the two extreme points of the Pareto Front:
 
-      minibatch_loss_list = trainer_vae.pretrain_extreme_regularize_paretoMTL(path=save_path, weight=weight, extreme_points=extreme_points,
-      lr=lr, adv_lr=adv_lr, epochs=epochs, adv_epochs=adv_epochs).
+      minibatch_loss_list = trainer_vae.pretrain_extreme_regularize_paretoMTL(path=save_path, weight=0, extreme_points=True,
+      lr=1e-3, adv_lr=5e-5, epochs=150, adv_epochs=1).
 
       When weight equals 0, we will get minimum and maximum value of the MINE,  and the extreme point which has the smallest MINE value.
 
@@ -34,9 +34,9 @@ Quick Start
 
    c. Obtain K Pareto optimal points by running Pareto MTL with MINE K times with different preference vector each time:
 
-      trainer_vae.pretrain_extreme_regularize_paretoMTL(path=save_path, lr=lr, adv_lr=adv_lr, paretoMTL=paretoMTL,
-      obj1_max=obj1_max, obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, epochs = epochs,
-      adv_epochs=adv_epochs, n_tasks = n_tasks, npref = npref, pref_type=pref_type, pref_idx = pref_idx)
+      trainer_vae.pretrain_extreme_regularize_paretoMTL(path=save_path, lr=1e-3, adv_lr=5e-5, paretoMTL=True,
+      obj1_max=obj1_max, obj1_min=obj1_min, obj2_max=obj2_max, obj2_min=obj2_min, epochs = 150,
+      adv_epochs=1, n_tasks = 2, npref = 10, pref_idx = 0)
 
 References
 ----------
