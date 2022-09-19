@@ -10,7 +10,7 @@ def main(taskid):
     # nuisance_variable is 'batch'
     # conf_estimator means estimator for confounding effect, it could be 'MINE', 'NN' (NN stands for nearest neighbor), 'aggregated_posterior'
     hyperparameter_config = {
-        'dataset_name': ['TM_MCA_Lung'], #
+        'dataset_name': ['tabula_muris'], #
         'confounder': ['batch'],
         'n_layers_encoder': [2],
         'n_layers_decoder': [2],
@@ -21,11 +21,11 @@ def main(taskid):
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'pre_epochs': [100], #150
+        'pre_epochs': [200], #150
         'pre_adv_epochs': [400],
         'pre_lr': [1e-3],
         'pre_adv_lr': [5e-5],
-        'MC': list(range(20)),
+        'MC': list(range(10)),
         'num_workers': [1] #4
     }
     keys, values = zip(*hyperparameter_config.items())
@@ -33,7 +33,7 @@ def main(taskid):
 
     temp = hyperparameter_experiments[taskid]
 
-    os.system("python3 main.py --pre_train --MCs 20 "
+    os.system("python3 main.py --pre_train --MCs 10 "
               "--taskid %s --dataset_name %s --confounder %s --n_layers_encoder %s "
               "--n_layers_decoder %s --n_hidden %s --n_latent %s --use_batches --batch_size %s "
               "--adv_estimator %s --adv_n_hidden %s --adv_n_layers %s --adv_activation_fun %s "
