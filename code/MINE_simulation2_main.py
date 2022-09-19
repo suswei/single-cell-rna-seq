@@ -8,8 +8,7 @@ import math
 import pandas as pd
 import torch
 import torch.optim as optim
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from scvi.models.modules import MINE_Net, Nearest_Neighbor_Estimate
+from code.scvi import MINE_Net, Nearest_Neighbor_Estimate
 from scipy.stats import multivariate_normal
 from torch.distributions.multivariate_normal import MultivariateNormal
 from torch.distributions.bernoulli import Bernoulli

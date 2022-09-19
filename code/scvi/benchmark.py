@@ -1,11 +1,11 @@
 import numpy as np
 from sklearn.decomposition import PCA
 
-from scvi.dataset import CortexDataset
-from scvi.inference import UnsupervisedTrainer, TrainerFish
-from scvi.inference.annotation import compute_accuracy_nn
-from scvi.inference.posterior import proximity_imputation
-from scvi.models import VAE, VAEF
+from code.scvi import CortexDataset
+from code.scvi import UnsupervisedTrainer, TrainerFish
+from code.scvi import compute_accuracy_nn
+from code.scvi.inference.posterior import proximity_imputation
+from code.scvi import VAE, VAEF
 
 
 def cortex_benchmark(n_epochs=250, use_cuda=True, save_path='data/', show_plot=True):

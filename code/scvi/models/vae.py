@@ -6,9 +6,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal, kl_divergence as kl
 
-from scvi.models.log_likelihood import log_zinb_positive, log_nb_positive
-from scvi.models.modules import Encoder, DecoderSCVI
-from scvi.models.utils import one_hot
+from code.scvi import log_zinb_positive, log_nb_positive
+from code.scvi import Encoder, DecoderSCVI
+from code.scvi import one_hot
 
 torch.backends.cudnn.benchmark = True
 

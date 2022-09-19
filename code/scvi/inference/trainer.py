@@ -10,10 +10,10 @@ import torch
 from torch.autograd import Variable
 from sklearn.model_selection._split import _validate_shuffle_split
 from torch.utils.data.sampler import SubsetRandomSampler
-from scvi.models.modules import MINE_Net, MMD_loss
+from code.scvi import MINE_Net, MMD_loss
 from tqdm import trange
 
-from scvi.inference.posterior import Posterior
+from code.scvi.inference.posterior import Posterior
 import matplotlib.pyplot as plt
 
 from code.paretoMTL_helper import circle_points, get_d_paretomtl_init, get_d_paretomtl

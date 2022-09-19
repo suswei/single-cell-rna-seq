@@ -1,14 +1,12 @@
 import collections
 from typing import Iterable
-import scipy
 import torch
 from torch import nn as nn
 from torch.distributions import Normal
 
-from scvi.models.utils import one_hot
+from code.scvi import one_hot
 import math
 import torch.nn.functional as F
-from torch.autograd import Variable
 from torch.distributions.categorical import Categorical
 from torch.distributions.multivariate_normal import MultivariateNormal
 

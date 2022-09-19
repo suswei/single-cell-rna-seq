@@ -6,16 +6,16 @@
 
 import numpy as np
 
-from scvi.benchmark import all_benchmarks, benchmark, benchmark_fish_scrna
-from scvi.dataset import BrainLargeDataset, CortexDataset, RetinaDataset, BrainSmallDataset, HematoDataset, \
+from code.scvi.benchmark import all_benchmarks, benchmark, benchmark_fish_scrna
+from code.scvi import BrainLargeDataset, CortexDataset, RetinaDataset, BrainSmallDataset, HematoDataset, \
     LoomDataset, AnnDataset, CsvDataset, CiteSeqDataset, CbmcDataset, PbmcDataset, SyntheticDataset, \
     SeqfishDataset, SmfishDataset, BreastCancerDataset, MouseOBDataset, \
     GeneExpressionDataset, PurifiedPBMCDataset
-from scvi.inference import JointSemiSupervisedTrainer, AlternateSemiSupervisedTrainer, ClassifierTrainer, \
+from code.scvi import JointSemiSupervisedTrainer, AlternateSemiSupervisedTrainer, ClassifierTrainer, \
     UnsupervisedTrainer, AdapterTrainer
-from scvi.inference.annotation import compute_accuracy_rf, compute_accuracy_svc
-from scvi.models import VAE, SCANVI, VAEC
-from scvi.models.classifier import Classifier
+from code.scvi import compute_accuracy_rf, compute_accuracy_svc
+from code.scvi import VAE, SCANVI, VAEC
+from code.scvi import Classifier
 import os.path
 
 use_cuda = True

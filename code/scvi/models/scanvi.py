@@ -4,10 +4,10 @@ import numpy as np
 import torch
 from torch.distributions import Normal, Categorical, kl_divergence as kl
 
-from scvi.models.classifier import Classifier
-from scvi.models.modules import Decoder, Encoder
-from scvi.models.utils import broadcast_labels
-from scvi.models.vae import VAE
+from code.scvi import Classifier
+from code.scvi import Decoder, Encoder
+from code.scvi import broadcast_labels
+from code.scvi import VAE
 
 
 class SCANVI(VAE):

@@ -1,10 +1,10 @@
 import torch
 from torch.distributions import Normal, Categorical, kl_divergence as kl
 
-from scvi.models.classifier import Classifier
-from scvi.models.modules import Encoder, DecoderSCVI
-from scvi.models.utils import broadcast_labels
-from scvi.models.vae import VAE
+from code.scvi import Classifier
+from code.scvi import Encoder, DecoderSCVI
+from code.scvi import broadcast_labels
+from code.scvi import VAE
 
 
 class VAEC(VAE):

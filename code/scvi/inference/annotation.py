@@ -9,10 +9,10 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from torch.nn import functional as F
 
-from scvi.inference import Posterior
-from scvi.inference import Trainer
-from scvi.inference.inference import UnsupervisedTrainer
-from scvi.inference.posterior import unsupervised_clustering_accuracy
+from code.scvi import Posterior
+from code.scvi import Trainer
+from code.scvi import UnsupervisedTrainer
+from code.scvi.inference.posterior import unsupervised_clustering_accuracy
 
 
 class AnnotationPosterior(Posterior):

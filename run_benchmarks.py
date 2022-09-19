@@ -3,12 +3,12 @@
 """Run all the benchmarks with specific parameters"""
 import argparse
 
-from scvi.benchmark import harmonization_benchmarks, \
+from code.scvi.benchmark import harmonization_benchmarks, \
     annotation_benchmarks, all_benchmarks
-from scvi.dataset import BrainLargeDataset, CortexDataset, SyntheticDataset, CsvDataset, \
+from code.scvi import BrainLargeDataset, CortexDataset, SyntheticDataset, CsvDataset, \
     RetinaDataset, BrainSmallDataset, HematoDataset, LoomDataset, AnnDataset, CbmcDataset, PbmcDataset
-from scvi.inference import UnsupervisedTrainer, SemiSupervisedTrainer
-from scvi.models import VAE, VAEC, SCANVI
+from code.scvi import UnsupervisedTrainer, SemiSupervisedTrainer
+from code.scvi import VAE, VAEC, SCANVI
 
 
 def load_datasets(dataset_name, save_path='data/', url=None):

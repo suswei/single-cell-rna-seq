@@ -5,7 +5,7 @@ from . import Trainer
 import numpy as np
 from torch.autograd import Variable
 import pandas as pd
-from scvi.models.modules import Nearest_Neighbor_Estimate, EmpiricalMI_From_Aggregated_Posterior
+from code.scvi import Nearest_Neighbor_Estimate, EmpiricalMI_From_Aggregated_Posterior
 
 plt.switch_backend('agg')
 

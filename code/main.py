@@ -7,15 +7,12 @@ import torch
 import torch.utils.data
 from torch.autograd import Variable
 import torch.optim as optim
-from scvi.dataset.dataset import GeneExpressionDataset
-from scvi.dataset.tabula_muris import TabulaMuris
-from scvi.dataset.macaque_retina import Macaque_Retina
-from scvi.dataset.pbmc import PbmcDataset
+from scvi import GeneExpressionDataset
+from scvi import TabulaMuris
+from scvi import Macaque_Retina
 from scvi.dataset.MCA import MCA
-from scvi.models import *
-from scvi.inference import UnsupervisedTrainer
-from scvi.models.modules import MINE_Net, Nearest_Neighbor_Estimate, MMD_loss
-from scipy import sparse
+from scvi import UnsupervisedTrainer
+from scvi import MINE_Net, Nearest_Neighbor_Estimate, MMD_loss
 import pickle
 
 def construct_trainer_vae(gene_dataset, args):

@@ -20,7 +20,7 @@ from scipy.optimize import linear_sum_assignment as linear_assignment
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SequentialSampler, SubsetRandomSampler, RandomSampler
 
-from scvi.models.log_likelihood import compute_log_likelihood, compute_marginal_log_likelihood
+from code.scvi import compute_log_likelihood, compute_marginal_log_likelihood
 
 
 class SequentialSubsetSampler(SubsetRandomSampler):

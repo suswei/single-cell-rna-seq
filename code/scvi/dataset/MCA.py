@@ -1,5 +1,5 @@
 import pandas as pd
-from scvi.dataset.dataset import GeneExpressionDataset
+from code.scvi import GeneExpressionDataset
 import numpy as np
 from scipy.sparse import csr_matrix
 

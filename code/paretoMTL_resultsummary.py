@@ -3,15 +3,10 @@ import itertools
 import numpy as np
 import pandas as pd
 pd.options.mode.chained_assignment = None
-from scvi.dataset.tabula_muris import TabulaMuris
-from scipy import sparse
 import pickle
 from pygmo import hypervolume
-import math
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import argparse
-import statistics
 import cv2
 
 for x_axis in ['ari']:
