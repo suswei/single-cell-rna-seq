@@ -2,8 +2,8 @@ from numpy import loadtxt
 from scipy.io import mmread
 import scipy.sparse as sparse
 
-from code.scvi.inference.posterior import *
-from code.scvi import GeneExpressionDataset
+from scvi.inference.posterior import *
+from .dataset import GeneExpressionDataset
 from copy import deepcopy
 
 #get_matrix_from_dir and assign_label are copied directly from scvi/harmonization/utils_chenling.py from the code for

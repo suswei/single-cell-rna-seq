@@ -1,56 +1,20 @@
+import os
+import argparse
+from random import randint
+import pickle
+
 import numpy as np
 import math
 import pandas as pd
 import torch
 import torch.optim as optim
-from code.scvi import MINE_Net, discrete_continuous_info
+from scvi.models.modules import MINE_Net, Nearest_Neighbor_Estimate
 from scipy.stats import multivariate_normal
 from torch.distributions.multivariate_normal import MultivariateNormal
 from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.categorical import Categorical
 from torch.utils.data import TensorDataset
 from torch.autograd import Variable
-#import plotly.graph_objects as go
-
-def generate_data_MINE_simulation1(args):
-    # The parameters for the 7 cases
-    # weight of each category for the categorical variable
-    p_tensor = torch.from_numpy(np.array(
-        [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-         [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.17, 0.19], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-         [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-         [0.01, 0.01, 0.01, 0.01, 0.01, 0.03, 0.2, 0.2, 0.3, 0.22]])).type(torch.FloatTensor)
-
-    # mean of the gaussian disribution
-    mu_tensor = torch.from_numpy(np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 2, 4, 6, 8, 10, 12, 14, 16, 18],
-                                           [0, 0, 100, 100, 200, 200, 0, 0, 0, 0], [0, 1, 2, 2, 2, 3, 3, 3, 3, 4],
-                                           [0, 2, 4, 0, 0, 2, 0, 0, 0, 0], [0, 20, 40, 60, 80, 100, 120, 140, 160, 180],
-                                           [0, 20, 40, 60, 80, 100, 120, 140, 160, 180]])).type(torch.FloatTensor)
-
-    # the sd matrix of the gaussian distribution
-    sigma_tensor = torch.from_numpy(np.array([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                                              [1, 1, 20, 20, 40, 40, 1, 1, 1, 1], [1, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5],
-                                              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 2, 3, 4, 5, 5, 8, 8, 10, 10],
-                                              [1, 2, 3, 4, 5, 5, 8, 8, 10, 10]])).type(torch.FloatTensor)
-
-    p_list = p_tensor[args.case_idx, :]
-    mu_list = mu_tensor[args.case_idx, :]
-    sigma_list = sigma_tensor[args.case_idx, :]
-
-    x_tensor = torch.empty(0, 1)
-    y_tensor = torch.empty(0, args.gaussian_dim)
-
-    categorical = Categorical(p_list)
-
-    for i in range(2 * args.samplesize):
-        x = categorical.sample()
-
-        y = MultivariateNormal(torch.FloatTensor([mu_list[x.item()].item()] * args.gaussian_dim),
-                               ((sigma_list[x.item()]) ** 2) * torch.eye(args.gaussian_dim)).sample()
-        x_tensor = torch.cat((x_tensor, x.reshape(1, 1).type(torch.FloatTensor)), 0)
-        y_tensor = torch.cat((y_tensor, y.reshape(1, args.gaussian_dim)), 0)
-
-    return x_tensor, y_tensor
 
 def density_ratio(args, x, category_index, component_mean1, component_mean2, KL):
     #sample y and calulate log density ratio of p(y|x) and p(y) to estimate the empirical mutual information
@@ -107,66 +71,58 @@ def density_ratio(args, x, category_index, component_mean1, component_mean2, KL)
 
         return log_density_ratio #for empirical D(p(y|x=0)||p(y|x=1))
 
-
 def generate_data_MINE_simulation2(args):
+    #use random_state to make the p(y|x=0) and p(y|x=1) the same for different MCs in MINE simulation2
+    m1 = multivariate_normal(torch.zeros(args.gaussian_dim), torch.eye(args.gaussian_dim))
+    component_mean1 = torch.from_numpy(m1.rvs(size=args.mixture_component_num, random_state=8)).type(torch.FloatTensor)
 
-    if args.confounder_type == 'discrete':
+    m2 = multivariate_normal(torch.zeros(args.gaussian_dim) + torch.tensor(args.mean_diff),
+                            torch.eye(args.gaussian_dim))
+    component_mean2 = torch.from_numpy(m2.rvs(size=args.mixture_component_num, random_state=8)).type(torch.FloatTensor)
 
-        #use random_state to make the p(y|x=0) and p(y|x=1) the same for different MCs in MINE simulation2
-        m1 = multivariate_normal(torch.zeros(args.gaussian_dim), torch.eye(args.gaussian_dim))
-        component_mean1 = torch.from_numpy(m1.rvs(size=args.mixture_component_num, random_state=8)).type(torch.FloatTensor)
+    bernoulli = Bernoulli(torch.tensor([0.5])) #assume x=0 and x=1 are with equal probability
+    categorical = Categorical(torch.tensor([1/args.mixture_component_num]*args.mixture_component_num))
 
-        m2 = multivariate_normal(torch.zeros(args.gaussian_dim) + torch.tensor(args.mean_diff),
-                                torch.eye(args.gaussian_dim))
-        component_mean2 = torch.from_numpy(m2.rvs(size=args.mixture_component_num, random_state=8)).type(torch.FloatTensor)
+    log_density_ratio_list = []
+    x_tensor = torch.empty(0,1)
+    y_tensor = torch.empty(0, args.gaussian_dim)
+    for i in range(2*args.samplesize):
+        x = bernoulli.sample()
+        category_index = categorical.sample()
+        KL = 'joint-marginal'
+        y, log_density_ratio = density_ratio(args, x.item(), category_index.item(),
+                                                        component_mean1, component_mean2, KL)
 
-        bernoulli = Bernoulli(torch.tensor([0.5])) #assume x=0 and x=1 are with equal probability
-        categorical = Categorical(torch.tensor([1/args.mixture_component_num]*args.mixture_component_num))
+        x_tensor = torch.cat((x_tensor, x.reshape(1,1)),0)
+        y_tensor = torch.cat((y_tensor, y.reshape(1, args.gaussian_dim)),0)
+        log_density_ratio_list += [log_density_ratio]
 
-        log_density_ratio_list = []
-        x_tensor = torch.empty(0,1)
-        y_tensor = torch.empty(0, args.gaussian_dim)
-        for i in range(2*args.samplesize):
-            x = bernoulli.sample()
-            category_index = categorical.sample()
-            KL = 'joint-marginal'
-            y, log_density_ratio = density_ratio(args, x.item(), category_index.item(),
-                                                            component_mean1, component_mean2, KL)
+    empirical_mutual_info = sum(log_density_ratio_list) / len(log_density_ratio_list)
 
-            x_tensor = torch.cat((x_tensor, x.reshape(1,1)),0)
-            y_tensor = torch.cat((y_tensor, y.reshape(1, args.gaussian_dim)),0)
-            log_density_ratio_list += [log_density_ratio]
+    #approximate the empirical D(p(y|x=0) || p(y|x=1)), D means KL-divergence.
+    log_density_ratio_list2 = []
+    for i in range(2*args.samplesize):
+        category_index = categorical.sample()
+        KL = 'CD_KL_0_1' #'CD_KL_0_1' means conditional distribution 0 and conditional distribution 1.
+        log_density_ratio = density_ratio(args, 0, category_index.item(),
+                                                        component_mean1, component_mean2, KL)
+        log_density_ratio_list2 += [log_density_ratio]
+    empirical_CD_KL_0_1 = sum(log_density_ratio_list2)/len(log_density_ratio_list2)
 
-        empirical_mutual_info = sum(log_density_ratio_list) / len(log_density_ratio_list)
+    log_density_ratio_list3 = []
+    for i in range(2 * args.samplesize):
+        category_index = categorical.sample()
+        KL = 'CD_KL_1_0'
+        log_density_ratio = density_ratio(args, 1, category_index.item(),
+                                                     component_mean1, component_mean2, KL)
+        log_density_ratio_list3 += [log_density_ratio]
+    empirical_CD_KL_1_0 = sum(log_density_ratio_list3) / len(log_density_ratio_list3)
 
-        #approximate the empirical D(p(y|x=0) || p(y|x=1)), D means KL-divergence.
-        log_density_ratio_list2 = []
-        for i in range(2*args.samplesize):
-            category_index = categorical.sample()
-            KL = 'CD_KL_0_1' #'CD_KL_0_1' means conditional distribution 0 and conditional distribution 1.
-            log_density_ratio = density_ratio(args, 0, category_index.item(),
-                                                            component_mean1, component_mean2, KL)
-            log_density_ratio_list2 += [log_density_ratio]
-        empirical_CD_KL_0_1 = sum(log_density_ratio_list2)/len(log_density_ratio_list2)
+    #NN_estimator = discrete_continuous_info(torch.transpose(x_tensor[0:1000, :], 0, 1),
+    #                                                     torch.transpose(y_tensor[0:1000, :], 0, 1))
+    NN_estimator = Nearest_Neighbor_Estimate(x_tensor[0:2000,:], y_tensor[0:2000,:])
 
-        log_density_ratio_list3 = []
-        for i in range(2 * args.samplesize):
-            category_index = categorical.sample()
-            KL = 'CD_KL_1_0'
-            log_density_ratio = density_ratio(args, 1, category_index.item(),
-                                                         component_mean1, component_mean2, KL)
-            log_density_ratio_list3 += [log_density_ratio]
-        empirical_CD_KL_1_0 = sum(log_density_ratio_list3) / len(log_density_ratio_list3)
-
-        #The dimension for x_array is (1, 2*hyperparameters['samplesize'])
-        #The dimension for y_array is (hyperparameters['gaussian_dim'], 2*hyperparameters['samplesize'])
-        #discrete_continuous_info() will be very slow if sample size is large.
-        #Therefore, only 256 datapoints are used for nearest neighbor estimate, 256 could be a minibatch size.
-
-        nearest_neighbor_estimate = discrete_continuous_info(torch.transpose(x_tensor[0:256, :], 0, 1),
-                                                             torch.transpose(y_tensor[0:256, :], 0, 1))
-
-        return empirical_mutual_info, empirical_CD_KL_0_1, empirical_CD_KL_1_0, nearest_neighbor_estimate, x_tensor, y_tensor
+    return empirical_mutual_info, empirical_CD_KL_0_1, empirical_CD_KL_1_0, NN_estimator,  x_tensor, y_tensor
 
 def train_valid_test_loader(x_tensor, y_tensor, args, KL_type, kwargs):
 
@@ -230,7 +186,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
                     activation_fun=args.activation_fun, unbiased_loss=args.unbiased_loss, initial=args.w_initial)
 
     opt_MINE = optim.Adam(MINE.parameters(), lr=args.lr)
-    # scheduler_MINE_MI = torch.optim.lr_scheduler.MultiStepLR(opt_MINE, milestones=[200], gamma=0.5)
+    #scheduler_MINE_MI = torch.optim.lr_scheduler.MultiStepLR(opt_MINE, milestones=[200], gamma=0.5)
 
     MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch = [], [], [], []
     for epoch in range(args.epochs):
@@ -267,10 +223,11 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
             #if not using unbiased loss, then negative of loss equals MINE estimator
             negative_loss_minibatch_list.append(-loss.item())
 
-        #scheduler_MINE_MI.step()
+        # scheduler_MINE_MI.step()
         if epoch % args.log_interval == 0:
             print('Train Epoch: {} \tMINE_estimator_minibatch: {:.6f}\tnegative_loss_minibatch: {:.6f}'.format(epoch, MINE_estimator_minibatch.data.item(), -loss.data.item()))
 
+        '''
         # diagnoisis of overfitting
         with torch.no_grad():  # to save memory, no intermediate activations used for gradient calculation is stored.
 
@@ -291,7 +248,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
                 valid_loss_minibatch_list.append(valid_loss_minibatch.item())
 
             valid_loss_one = np.average(valid_loss_minibatch_list)
-            scheduler_MINE_MI.step(valid_loss_one)
+            #scheduler_MINE_MI.step(valid_loss_one)
             valid_loss_epoch.append(valid_loss_one)
 
             train_loss_minibatch_list = []
@@ -310,8 +267,7 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
 
             train_loss_one = np.average(train_loss_minibatch_list)
             train_loss_epoch.append(train_loss_one)
-
-    #diagnosis_loss_plot(args, KL_type, MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch)
+        '''
 
     with torch.no_grad():
         MINE.eval()
@@ -346,44 +302,112 @@ def MINE_train(train_loader, valid_loader, test_loader, KL_type, args):
 
     return train_MINE_estimator.detach().item(), test_MINE_estimator.detach().item()
 
-'''
-def diagnosis_loss_plot(args, KL_type, MINE_estimator_minibatch_list, negative_loss_minibatch_list, valid_loss_epoch, train_loss_epoch):
+def main():
+    parser = argparse.ArgumentParser(description='MINE Simulation Study')
 
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=list(range(0, len(MINE_estimator_minibatch_list))),
-                             y=MINE_estimator_minibatch_list,
-                             mode='lines+markers', name='MINE estimator (minibatch)'))
-    fig.add_trace(go.Scatter(x=list(range(0, len(negative_loss_minibatch_list))),
-                             y=negative_loss_minibatch_list,
-                             mode='lines+markers', name='negative train loss (minibatch)'))
+    parser.add_argument('--taskid', type=int, default=1000 + randint(0, 1000),
+                        help='taskid from sbatch')
 
-    fig.update_xaxes(title_text='epochs * minibatches')
-    fig.update_layout(
-        title={'text': 'MINE estimator and negative train loss per minibatch <br> unbiased_loss: {}'.format(args.unbiased_loss),
-               'y': 0.9,
-               'x': 0.47,
-               'xanchor': 'center',
-               'yanchor': 'top'},
-        font=dict(size=10, color='black', family='Arial, sans-serif')
-    )
-    fig.write_image('{}/{}_MINE_negative_loss_per_minibatch.png'.format(args.path, KL_type))
+    parser.add_argument('--category_num', type=int, default=2,
+                        help='the number of batches')
 
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=list(range(0, args.epochs)),
-                             y=train_loss_epoch,
-                             mode='lines+markers', name='train loss (epoch)'))
-    fig.add_trace(go.Scatter(x=list(range(0, args.epochs)),
-                             y=valid_loss_epoch,
-                             mode='lines+markers', name='valid loss (epoch)'))
+    parser.add_argument('--gaussian_dim', type=int, default=2,
+                        help='the dimension of gaussian component for each batch')
 
-    fig.update_xaxes(title_text='epochs')
-    fig.update_layout(
-        title={'text': 'train loss and valid loss per epoch',
-               'y': 0.9,
-               'x': 0.47,
-               'xanchor': 'center',
-               'yanchor': 'top'},
-        font=dict(size=10, color='black', family='Arial, sans-serif')
-    )
-    fig.write_image('{}/{}_train_valid_loss_per_epoch.png'.format(args.path, KL_type))
-'''
+    parser.add_argument('--mean_diff', type=int, default=1,
+                        help='the mean difference for the two gaussians which generate the mean for the gaussian components')
+
+    parser.add_argument('--mixture_component_num', type=int, default=10,
+                        help='the number of gaussian components for the gaussian mixture for each batch')
+
+    parser.add_argument('--gaussian_covariance_type', type=str, default='all_identity',
+                        help='the covariance type of each gaussian component in the gaussian mixture for each batch')
+
+    parser.add_argument('--samplesize', type=int, default=6400,
+                        help='training sample size')
+
+    parser.add_argument('--n_hidden_node', type=int, default=128,
+                        help='number of hidden nodes per hidden layer in MINE')
+
+    parser.add_argument('--n_hidden_layer', type=int, default=10,
+                        help='number of hidden layers in MINE')
+
+    parser.add_argument('--activation_fun', type=str, default='Leaky_ReLU',
+                        help='activation function in MINE')
+
+    parser.add_argument('--unbiased_loss', action='store_true', default=False,
+                        help='whether to use unbiased loss or not in MINE')
+
+    parser.add_argument('--batch_size', type=int, default=128,
+                        help='batch size for MINE training')
+
+    parser.add_argument('--epochs', type=int, default=200,
+                        help='number of epochs in MINE training')
+
+    parser.add_argument('--lr', type=float, default=5e-5,
+                        help='learning rate in MINE training')
+
+    parser.add_argument('--MC', type=int, default=0,
+                        help='the index to show which repeation')
+
+    parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+                        help='how many epochs to wait before logging training status')
+
+    parser.add_argument('--no-cuda', action='store_true', default=False,
+                        help='disables CUDA training')
+    parser.add_argument("--mode", default='client')
+    parser.add_argument("--port", default=62364)
+
+    args = parser.parse_args()
+
+    args.cuda = not args.no_cuda and torch.cuda.is_available()
+    print("args.cuda is " + str(args.cuda))
+
+    if args.activation_fun == 'Leaky_ReLU':
+        args.w_initial = 'kaiming_normal'
+        args.unbiased_loss_type = 'type1'
+    elif args.activation_fun in ['ReLU', 'ELU']:
+        args.w_initial = 'normal'
+
+    kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+
+    path = './result/MINE_simulation2/taskid{}'.format(args.taskid)
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    args.path = path
+
+    empirical_mutual_info, empirical_CD_KL_0_1,empirical_CD_KL_1_0, NN_estimator, x_tensor, y_tensor = generate_data_MINE_simulation2(args)
+    print('empirical_mutual_info: {}, empirical_CD_KL_0_1: {}, empirical_CD_KL_1_0: {}'.format(
+        empirical_mutual_info, empirical_CD_KL_0_1, empirical_CD_KL_1_0))
+
+    train_loader, valid_loader, test_loader = train_valid_test_loader(x_tensor, y_tensor, args, 'MI', kwargs)
+    MI_MINE_train, MI_MINE_test = MINE_train(train_loader, valid_loader, test_loader, 'MI', args)
+
+    train_loader, valid_loader, test_loader = train_valid_test_loader(x_tensor, y_tensor, args, 'CD_KL_0_1', kwargs)
+    CD_KL_0_1_MINE_train, CD_KL_0_1_MINE_test = MINE_train(train_loader, valid_loader, test_loader, 'CD_KL_0_1', args)
+
+    train_loader, valid_loader, test_loader = train_valid_test_loader(x_tensor, y_tensor, args, 'CD_KL_1_0', kwargs)
+    CD_KL_1_0_MINE_train, CD_KL_1_0_MINE_test = MINE_train(train_loader, valid_loader, test_loader, 'CD_KL_1_0', args)
+
+    args_dict = vars(args)
+    with open('{}/config.pkl'.format(path), 'wb') as f:
+        pickle.dump(args_dict, f)
+
+    results = {'empirical_mutual_info': [empirical_mutual_info],
+               'empirical_CD_KL_0_1': [empirical_CD_KL_0_1],
+               'empirical_CD_KL_1_0': [empirical_CD_KL_1_0],
+               'NN_estimator': [NN_estimator],
+               'MI_MINE_train': [MI_MINE_train],
+               'MI_MINE_test': [MI_MINE_test],
+               'CD_KL_0_1_MINE_train': [CD_KL_0_1_MINE_train],
+               'CD_KL_0_1_MINE_test': [CD_KL_0_1_MINE_test],
+               'CD_KL_1_0_MINE_train': [CD_KL_1_0_MINE_train],
+               'CD_KL_1_0_MINE_test': [CD_KL_1_0_MINE_test]
+               }
+    print(results)
+    with open('{}/results.pkl'.format(path), 'wb') as f:
+        pickle.dump(results, f)
+
+if __name__ == "__main__":
+    main()

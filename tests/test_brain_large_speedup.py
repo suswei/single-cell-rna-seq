@@ -3,7 +3,7 @@
 
 """Test improved calculation of log_zinb_positive and log_nb_positive for better performance on brain_large."""
 
-from code.scvi import SyntheticDataset
+from scvi import SyntheticDataset
 import torch
 import torch.nn.functional as F
 

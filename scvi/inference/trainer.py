@@ -10,13 +10,13 @@ import torch
 from torch.autograd import Variable
 from sklearn.model_selection._split import _validate_shuffle_split
 from torch.utils.data.sampler import SubsetRandomSampler
-from code.scvi import MINE_Net, MMD_loss
+from scvi.models.modules import MINE_Net, MMD_loss
 from tqdm import trange
 
-from code.scvi.inference.posterior import Posterior
+from scvi.inference.posterior import Posterior
 import matplotlib.pyplot as plt
 
-from code.paretoMTL_helper import circle_points, get_d_paretomtl_init, get_d_paretomtl
+from paretoMTL_helper import circle_points, get_d_paretomtl_init, get_d_paretomtl
 
 class Trainer:
     r"""The abstract Trainer class for training a PyTorch model and monitoring its statistics. It should be

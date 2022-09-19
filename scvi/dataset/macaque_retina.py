@@ -1,5 +1,5 @@
 import pandas as pd
-from code.scvi import GeneExpressionDataset
+from .dataset import GeneExpressionDataset
 import numpy as np
 import scipy.sparse as sp
 
