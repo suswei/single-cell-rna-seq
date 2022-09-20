@@ -553,7 +553,7 @@ def main( ):
         args.save_path = './result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)
         if not os.path.exists('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)):
             os.makedirs('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,method, args.taskid))
-
+        '''
         if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
             torch.save(trainer_vae.model.module.state_dict(), args.save_path + '/vae.pkl')
             if args.adv_estimator == 'MINE':
@@ -570,10 +570,15 @@ def main( ):
             trainer_vae.model.to(trainer_vae.device)
         params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
         trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
+        '''
+        torch.save(trainer_vae.model.state_dict(), args.save_path + '/vae.pkl')
+        torch.save(trainer_vae.adv_model.state_dict(), args.save_path + '/MINE.pkl')
 
-        trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
-        trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
+        for time in range(3):
+            trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train{}'.format(time))
+            trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test{}'.format(time))
 
+    '''
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test_eval(trainer_vae)
 
@@ -615,7 +620,7 @@ def main( ):
         with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
             pickle.dump(results_dict, f)
         print(results_dict)
-
+    '''
 # Run the actual program
 if __name__ == "__main__":
     main()

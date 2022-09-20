@@ -11,13 +11,13 @@
 
 #run --partition=gpgpu
 #run --qos=gpgpuresplat
-#run --gres=gpu:p100:2
+#run --gres=gpu:p100:1
 
 # The maximum running time of the job in days-hours:mins:sec
 #SBATCH --time=4-0:0:00
 
 # Batch arrays
-#SBATCH --array=0-99
+#SBATCH --array=0-19
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
