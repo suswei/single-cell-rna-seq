@@ -21,7 +21,7 @@ def main(taskid):
         'adv_n_hidden': [128],
         'adv_n_layers': [10],
         'adv_activation_fun': ['ELU'],
-        'lr': [5e-3], #1e-3
+        'lr': [1e-3], #1e-3
         'adv_lr': [5e-5],
         'obj1_max': [19382],  #
         'obj1_min': [11526],  #
