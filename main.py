@@ -394,7 +394,7 @@ def main( ):
     parser.add_argument('--obj2_min', type=float, default=-0.1,
                         help='minimum value for objective 2 across minibatches')
 
-    parser.add_argument('--n_samples_tsne', type=int, default=1200,
+    parser.add_argument('--n_samples_tsne', type=int, default=1500,
                         help='the number of samples for tsne plot')
 
     parser.add_argument('--MCs', type=int, default=20,
@@ -577,7 +577,7 @@ def main( ):
         trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location=torch.device('cpu')))
         trainer_vae.adv_model.load_state_dict(torch.load(args.save_path + '/MINE.pkl', map_location=torch.device('cpu')))
 
-        for time in range(3):
+        for time in range(5):
             trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train{}'.format(time))
             trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test{}'.format(time))
 
