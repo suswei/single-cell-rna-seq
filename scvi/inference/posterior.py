@@ -618,7 +618,7 @@ class Posterior:
                 if len(plt_labels) > 10:
                     handles, labels = plt.gca().get_legend_handles_labels()
                     handles, labels = zip(*[(handles[i], labels[i]) for i in
-                                            sorted(range(len(handles)), key=lambda k: list(map(int, labels))[k])])
+                                            sorted(range(len(handles)), key=lambda k: list(map(str, labels))[k])])
                     axes[1].legend(handles, labels, prop = {'size': 6})
                 else:
                     axes[1].legend()
