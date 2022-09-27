@@ -616,7 +616,10 @@ class Posterior:
                 for i, cell_type in zip(range(self.gene_dataset.n_labels), plt_labels):
                     axes[1].scatter(latent[indices == i, 0], latent[indices == i, 1], label=cell_type, c=np.array([color_map[cell_type]]))
                 if len(plt_labels) > 10:
-                    axes[1].legend(prop = {'size': 6})
+                    handles, labels = axes[1].gca().get_legend_handles_labels()
+                    handles, labels = zip(*[(handles[i], labels[i]) for i in
+                                            sorted(range(len(handles)), key=lambda k: list(map(int, labels))[k])])
+                    axes[1].legend(handles, labels, prop = {'size': 6})
                 else:
                     axes[1].legend()
                 axes[1].set_title("cell type coloring", fontsize=25)
