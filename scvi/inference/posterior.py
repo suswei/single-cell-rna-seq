@@ -599,6 +599,7 @@ class Posterior:
                 indices = labels.ravel()
                 if hasattr(self.gene_dataset, 'cell_types'):
                     plt_labels = self.gene_dataset.cell_types
+                    sorted_plt_labels = sorted(self.gene_dataset.cell_types)
                 else:
                     n = self.gene_dataset.n_labels
                     plt_labels = [str(i) for i in range(n)]
@@ -608,7 +609,10 @@ class Posterior:
                           '#000000', '#ff028d', '#ffb07c', '#8e82fe', '#8f1402', '#658b38', '#fac205','#5b7c99', '#be0119', '#cdc50a']
                 rgb_values = sns.color_palette(colors)
                 # Map label to RGB
-                color_map = dict(zip(plt_labels, rgb_values))
+                if hasattr(self.gene_dataset, 'cell_types'):
+                    color_map = dict(zip(sorted_plt_labels, rgb_values))
+                else:
+                    color_map = dict(zip(plt_labels, rgb_values))
                 for i, cell_type in zip(range(self.gene_dataset.n_labels), plt_labels):
                     axes[1].scatter(latent[indices == i, 0], latent[indices == i, 1], label=cell_type, c=np.array([color_map[cell_type]]))
                 if len(plt_labels) > 10:

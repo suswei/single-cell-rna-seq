@@ -544,10 +544,11 @@ def main( ):
                 method = 'regularize{}'.format(args.adv_estimator)
 
             elif args.paretoMTL == True:
+                '''
                 trainer_vae.pretrain_extreme_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, paretoMTL=args.paretoMTL,
                 obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
                 adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_type=args.pref_type, pref_idx = args.pref_idx, taskid=args.taskid)
-
+                '''
                 method = 'pareto{}'.format(args.adv_estimator)
 
         args.save_path = './result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)
@@ -571,8 +572,10 @@ def main( ):
         params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
         trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
         '''
-        torch.save(trainer_vae.model.state_dict(), args.save_path + '/vae.pkl')
-        torch.save(trainer_vae.adv_model.state_dict(), args.save_path + '/MINE.pkl')
+        #torch.save(trainer_vae.model.state_dict(), args.save_path + '/vae.pkl')
+        #torch.save(trainer_vae.adv_model.state_dict(), args.save_path + '/MINE.pkl')
+        trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location=torch.device('cpu')))
+        trainer_vae.adv_model.load_state_dict(torch.load(args.save_path + '/MINE.pkl', map_location=torch.device('cpu')))
 
         for time in range(3):
             trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train{}'.format(time))
