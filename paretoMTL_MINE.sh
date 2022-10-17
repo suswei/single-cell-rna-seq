@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the job:
-#SBATCH --job-name="TM_MCA_Lung scVI_MINE_pretrain"
+#SBATCH --job-name="tabula_muris paretoMTL_MINE"
 #SBATCH --account=punim0890
 #SBATCH -p physical
 
@@ -10,10 +10,10 @@
 #SBATCH --mem 5000
 
 # The maximum running time of the job in days-hours:mins:sec
-#SBATCH --time=2-10:00:00
+#SBATCH --time=4-10:00:00
 
 # Batch arrays
-#SBATCH --array=0-9
+#SBATCH --array=0-19
 
 # Send yourself an email when the job:
 # aborts abnormally (fails)
@@ -38,6 +38,6 @@ fi
 module load anaconda3/2020.07
 source activate sharedenv
 module load web_proxy
-python3 scVI_MINE_pretrain.py ${SLURM_ARRAY_TASK_ID}
-
+# module load fosscuda/2019b
+python3 paretoMTL_MINE.py ${SLURM_ARRAY_TASK_ID}
 

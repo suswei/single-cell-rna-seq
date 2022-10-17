@@ -6,7 +6,6 @@ from scvi.models.modules import Encoder, DecoderSCVI
 from scvi.models.utils import broadcast_labels
 from scvi.models.vae import VAE
 
-
 class VAEC(VAE):
     r"""A semi-supervised Variational auto-encoder model - inspired from M2 model,
     as described in (https://arxiv.org/pdf/1406.5298.pdf)

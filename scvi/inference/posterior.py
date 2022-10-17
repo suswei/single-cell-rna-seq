@@ -573,7 +573,7 @@ class Posterior:
                 if hasattr(self.gene_dataset, 'cell_types') and color_by == 'labels':
                     plt_labels = self.gene_dataset.cell_types
                 else:
-                    plt_labels = [str(i) for i in range(len(np.unique(indices)))]
+                    plt_labels = [str(i) for i in range(n)]
                 plt.figure(figsize=(10, 10))
                 colors = ['#7e1e9c', '#15b01a', '#0343df', '#ff81c0', '#653700', '#e50000', '#95d0fc', '#029386', '#f97306','#96f97b',
                           '#c20078', '#ffff14', '#04d9ff', '#929591', '#bf77f6', '#00ffff', '#13eac9', '#6e750e','#06470c', '#d1b26f',
@@ -599,19 +599,27 @@ class Posterior:
                 indices = labels.ravel()
                 if hasattr(self.gene_dataset, 'cell_types'):
                     plt_labels = self.gene_dataset.cell_types
+                    sorted_plt_labels = sorted(self.gene_dataset.cell_types)
                 else:
-                    plt_labels = [str(i) for i in range(len(np.unique(indices)))]
+                    n = self.gene_dataset.n_labels
+                    plt_labels = [str(i) for i in range(n)]
 
                 colors = ['#7e1e9c', '#15b01a', '#0343df', '#ff81c0', '#653700', '#e50000', '#95d0fc', '#029386', '#f97306','#96f97b',
                           '#c20078', '#ffff14', '#04d9ff', '#929591', '#bf77f6', '#00ffff', '#13eac9', '#6e750e','#06470c', '#d1b26f',
                           '#000000', '#ff028d', '#ffb07c', '#8e82fe', '#8f1402', '#658b38', '#fac205','#5b7c99', '#be0119', '#cdc50a']
                 rgb_values = sns.color_palette(colors)
                 # Map label to RGB
-                color_map = dict(zip(plt_labels, rgb_values))
+                if hasattr(self.gene_dataset, 'cell_types'):
+                    color_map = dict(zip(sorted_plt_labels, rgb_values))
+                else:
+                    color_map = dict(zip(plt_labels, rgb_values))
                 for i, cell_type in zip(range(self.gene_dataset.n_labels), plt_labels):
                     axes[1].scatter(latent[indices == i, 0], latent[indices == i, 1], label=cell_type, c=np.array([color_map[cell_type]]))
                 if len(plt_labels) > 10:
-                    axes[1].legend(prop = {'size': 6})
+                    handles, labels = plt.gca().get_legend_handles_labels()
+                    handles, labels = zip(*[(handles[i], labels[i]) for i in
+                                            sorted(range(len(handles)), key=lambda k: list(map(str, labels))[k])])
+                    axes[1].legend(handles, labels, prop = {'size': 6})
                 else:
                     axes[1].legend()
                 axes[1].set_title("cell type coloring", fontsize=25)

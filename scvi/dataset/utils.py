@@ -3,7 +3,7 @@ from scipy.io import mmread
 import scipy.sparse as sparse
 
 from scvi.inference.posterior import *
-from scvi.dataset import GeneExpressionDataset
+from .dataset import GeneExpressionDataset
 from copy import deepcopy
 
 #get_matrix_from_dir and assign_label are copied directly from scvi/harmonization/utils_chenling.py from the code for

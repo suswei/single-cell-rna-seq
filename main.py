@@ -77,9 +77,9 @@ def decoder_training(trainer_vae, args):
             obj1_test_list.append(obj1_test_eval)
 
     string = 'extreme_points_{}'.format(args.adv_estimator)
-    args.path = '../result/{}/{}/{}'.format(args.dataset_name, args.confounder,string)
-    if not os.path.exists('../result/{}/{}/{}'.format(args.dataset_name, args.confounder, string)):
-        os.makedirs('../result/{}/{}/{}'.format(args.dataset_name, args.confounder,string))
+    args.path = './result/{}/{}/{}'.format(args.dataset_name, args.confounder,string)
+    if not os.path.exists('./result/{}/{}/{}'.format(args.dataset_name, args.confounder, string)):
+        os.makedirs('./result/{}/{}/{}'.format(args.dataset_name, args.confounder,string))
 
     trainer_vae.diagnosis_plot(obj1_train_list, obj1_test_list, args.path, 'obj1')
 
@@ -394,7 +394,7 @@ def main( ):
     parser.add_argument('--obj2_min', type=float, default=-0.1,
                         help='minimum value for objective 2 across minibatches')
 
-    parser.add_argument('--n_samples_tsne', type=int, default=1200,
+    parser.add_argument('--n_samples_tsne', type=int, default=1500,
                         help='the number of samples for tsne plot')
 
     parser.add_argument('--MCs', type=int, default=20,
@@ -434,9 +434,9 @@ def main( ):
         args.adv_w_initial = 'normal'
 
     #load dataset
-    data_save_path = '../data/%s/' % (args.dataset_name)
-    if not os.path.exists('../data/%s/' % (args.dataset_name)):
-        os.makedirs('../data/%s/' % (args.dataset_name))
+    data_save_path = './data/%s/' % (args.dataset_name)
+    if not os.path.exists('./data/%s/' % (args.dataset_name)):
+        os.makedirs('./data/%s/' % (args.dataset_name))
 
     if args.dataset_name == 'tabula_muris':
         dataset1 = TabulaMuris('facs', save_path=data_save_path)
@@ -473,9 +473,9 @@ def main( ):
 
     args.desired_seed = int(desired_seeds[0, index])
 
-    args.save_path = '../result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index)
-    if not os.path.exists('../result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index)):
-        os.makedirs('../result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index))
+    args.save_path = './result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index)
+    if not os.path.exists('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index)):
+        os.makedirs('./result/{}/{}/pre_train/MC{}'.format(args.dataset_name, args.confounder, index))
 
     if args.empirical_MI == True:
         for i in range(gene_dataset.n_batches-1):
@@ -544,16 +544,17 @@ def main( ):
                 method = 'regularize{}'.format(args.adv_estimator)
 
             elif args.paretoMTL == True:
+
                 trainer_vae.pretrain_extreme_regularize_paretoMTL(path=args.save_path, lr=args.lr, adv_lr=args.adv_lr, paretoMTL=args.paretoMTL,
                 obj1_max=args.obj1_max, obj1_min=args.obj1_min, obj2_max=args.obj2_max, obj2_min=args.obj2_min, epochs = args.epochs,
                 adv_epochs=args.adv_epochs, n_tasks = args.n_tasks, npref = args.npref, pref_type=args.pref_type, pref_idx = args.pref_idx, taskid=args.taskid)
 
                 method = 'pareto{}'.format(args.adv_estimator)
 
-        args.save_path = '../result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)
-        if not os.path.exists('../result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)):
-            os.makedirs('../result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,method, args.taskid))
-
+        args.save_path = './result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)
+        if not os.path.exists('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder, method, args.taskid)):
+            os.makedirs('./result/{}/{}/{}/taskid{}'.format(args.dataset_name, args.confounder,method, args.taskid))
+        '''
         if torch.cuda.is_available() == True and torch.cuda.device_count() > 1:
             torch.save(trainer_vae.model.module.state_dict(), args.save_path + '/vae.pkl')
             if args.adv_estimator == 'MINE':
@@ -570,10 +571,17 @@ def main( ):
             trainer_vae.model.to(trainer_vae.device)
         params = filter(lambda p: p.requires_grad, trainer_vae.model.parameters())
         trainer_vae.optimizer = torch.optim.Adam(params, lr=args.lr, eps=0.01)
+        '''
+        torch.save(trainer_vae.model.state_dict(), args.save_path + '/vae.pkl')
+        torch.save(trainer_vae.adv_model.state_dict(), args.save_path + '/MINE.pkl')
+        #trainer_vae.model.load_state_dict(torch.load(args.save_path + '/vae.pkl', map_location=torch.device('cpu')))
+        #trainer_vae.adv_model.load_state_dict(torch.load(args.save_path + '/MINE.pkl', map_location=torch.device('cpu')))
 
-        trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train')
-        trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test')
+        for time in range(5):
+            trainer_vae.train_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_train{}'.format(time))
+            trainer_vae.test_set.show_t_sne(args.n_samples_tsne, color_by='batches and labels', save_name=args.save_path + '/tsne_batch_label_test{}'.format(time))
 
+    '''
         #obj1 for the whole training and testing set
         obj1_train, obj1_test = obj1_train_test_eval(trainer_vae)
 
@@ -615,7 +623,7 @@ def main( ):
         with open('{}/results.pkl'.format(args.save_path), 'wb') as f:
             pickle.dump(results_dict, f)
         print(results_dict)
-
+    '''
 # Run the actual program
 if __name__ == "__main__":
     main()

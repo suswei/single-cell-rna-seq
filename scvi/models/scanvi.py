@@ -9,7 +9,6 @@ from scvi.models.modules import Decoder, Encoder
 from scvi.models.utils import broadcast_labels
 from scvi.models.vae import VAE
 
-
 class SCANVI(VAE):
     r"""A semi-supervised Variational auto-encoder model - inspired from M1 + M2 model,
     as described in (https://arxiv.org/pdf/1406.5298.pdf). SCANVI stands for single-cell annotation using

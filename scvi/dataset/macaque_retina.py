@@ -1,6 +1,5 @@
-from os import walk
 import pandas as pd
-from scvi.dataset.dataset import GeneExpressionDataset
+from .dataset import GeneExpressionDataset
 import numpy as np
 import scipy.sparse as sp
 

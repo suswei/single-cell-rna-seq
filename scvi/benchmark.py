@@ -7,7 +7,6 @@ from scvi.inference.annotation import compute_accuracy_nn
 from scvi.inference.posterior import proximity_imputation
 from scvi.models import VAE, VAEF
 
-
 def cortex_benchmark(n_epochs=250, use_cuda=True, save_path='data/', show_plot=True):
     cortex_dataset = CortexDataset(save_path=save_path)
     vae = VAE(cortex_dataset.nb_genes)
