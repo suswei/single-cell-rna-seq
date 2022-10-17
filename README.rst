@@ -2,7 +2,7 @@
 Trade-off between conservation of biological variation and batch effect removal in deep generative modeling for single-cell transcriptomics
 ============================================================================================================================================
 1. The research is built upon single cell Variational Inference (scVI). The inference/trainer.py, inference/inference.py, models/vae.py, models/modules.py in the scvi directory has been modified.
-2. Refer to the code directory to reproduce all results in the research.
+2. Refer to the .sh and .py files in the main directory to reproduce all results in the research.
 
 
 Quick Start
